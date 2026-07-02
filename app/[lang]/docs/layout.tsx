@@ -18,7 +18,7 @@ export default async function Layout({
       tree={source.getPageTree(lang)}
       tabs={false}
       sidebar={{
-        banner: <DocsTabSwitcher />,
+        banner: <DocsTabSwitcher key="tab-switcher" />,
       }}
       {...baseOptions(lang)}
     >

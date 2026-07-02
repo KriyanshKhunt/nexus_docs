@@ -4,7 +4,7 @@ import { getDocsTabs } from '@/lib/docs-tabs';
 import { localizeHref, stripLocalePrefix } from '@/lib/i18n-path';
 import { cn } from '@/lib/cn';
 import Link from 'fumadocs-core/link';
-import { usePathname } from 'fumadocs-core/framework';
+import { usePathname } from 'next/navigation';
 import { useI18n } from 'fumadocs-ui/contexts/i18n';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from 'fumadocs-ui/components/ui/popover';

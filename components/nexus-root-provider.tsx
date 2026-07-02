@@ -2,7 +2,7 @@
 
 import { stripLocalePrefix, localizeHref } from '@/lib/i18n-path';
 import { i18nProvider } from '@/lib/layout.shared';
-import { usePathname, useRouter } from 'fumadocs-core/framework';
+import { usePathname, useRouter } from 'next/navigation';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { ReactNode } from 'react';
 
@@ -17,7 +17,7 @@ export function NexusRootProvider({ lang, children }: NexusRootProviderProps) {
 
   return (
     <RootProvider
-      theme={{ enabled: true, defaultTheme: 'dark' }}
+      theme={{ enabled: false }}
       i18n={{
         ...i18nProvider(lang),
         onLocaleChange: (nextLocale) => {

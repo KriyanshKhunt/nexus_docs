@@ -1,10 +1,11 @@
-@import 'tailwindcss';
-@import 'fumadocs-ui/css/neutral.css';
-@import 'fumadocs-ui/css/preset.css';
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
 }
 
 :root {
@@ -13,14 +14,14 @@
   --color-fd-muted: hsl(0, 0%, 96%);
   --color-fd-muted-foreground: hsl(0, 0%, 45%);
   --color-fd-border: hsl(0, 0%, 90%);
-  --color-fd-card: hsl(0, 0%, 100%);
+  --color-fd-card: hsl(0, 0%, 98%);
   --color-fd-card-foreground: hsl(0, 0%, 9%);
   --color-fd-secondary: hsl(0, 0%, 96%);
   --color-fd-secondary-foreground: hsl(0, 0%, 9%);
-  --color-fd-primary: hsl(0, 0%, 9%);
+  --color-fd-primary: #297bff;
   --color-fd-primary-foreground: hsl(0, 0%, 98%);
   --color-fd-ring: hsl(0, 0%, 70%);
-  --color-fd-accent: hsl(0, 0%, 96%);
+  --color-fd-accent: #d1d1d180;
   --color-fd-accent-foreground: hsl(0, 0%, 9%);
 }
 
@@ -34,30 +35,51 @@
   --color-fd-card-foreground: hsl(0, 0%, 96%);
   --color-fd-secondary: hsl(0, 0%, 11%);
   --color-fd-secondary-foreground: hsl(0, 0%, 96%);
-  --color-fd-primary: hsl(0, 0%, 96%);
+  --color-fd-primary: #a9ceff;
   --color-fd-primary-foreground: hsl(0, 0%, 6%);
   --color-fd-ring: hsl(0, 0%, 40%);
-  --color-fd-accent: hsl(0, 0%, 12%);
+  --color-fd-accent: #6868684d;
   --color-fd-accent-foreground: hsl(0, 0%, 96%);
 }
 
 a[data-card]:hover {
-  background-color: var(--color-fd-muted) !important;
-  border-color: hsl(0 0% 22%);
+  background-color: color-mix(
+    in oklab,
+    var(--color-fd-accent) 80%,
+    transparent
+  ) !important;
 }
 
 .dark a[data-card]:hover {
   border-color: hsl(0 0% 22%);
 }
 
-#nd-sidebar [data-active='true'] {
-  background: var(--color-fd-muted) !important;
+#nd-sidebar [data-active="true"] {
+  background-color: color-mix(
+    in oklab,
+    var(--color-fd-primary) 10%,
+    transparent
+  ) !important;
+  color: var(--color-fd-primary) !important;
 }
 
-#nd-toc a[data-active='true'] {
+#nd-toc a[data-active="true"] {
   background: transparent !important;
-  color: var(--color-fd-foreground) !important;
+  color: var(--color-fd-primary) !important;
   font-weight: 500;
+}
+
+.hover\:bg-fd-accent:hover:not(#nd-sidebar button),
+#nd-sidebar a:hover:not([data-active="true"]),
+[role="option"][aria-selected="true"],
+[data-search-item][aria-selected="true"],
+.nd-search-item[aria-selected="true"],
+button[aria-expanded]:hover {
+  background-color: color-mix(
+    in oklab,
+    var(--color-fd-accent) 80%,
+    transparent
+  ) !important;
 }
 
 .prose a {
@@ -67,4 +89,12 @@ a[data-card]:hover {
 
 .prose a:hover {
   text-decoration-color: var(--color-fd-foreground);
+}
+
+h1,
+h2,
+strong,
+b,
+th {
+  font-weight: 600;
 }
