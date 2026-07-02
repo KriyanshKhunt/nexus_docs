@@ -36,7 +36,7 @@ yarn add @nexus-signal/react socket.io-client
 Wrap your app (or authenticated layout):
 
 ```tsx
-import { NexusProvider } from '@nexus-signal/react';
+import { NexusProvider } from "@nexus-signal/react";
 
 export function AppShell({ user, hmac }: { user: User; hmac: string }) {
   return (
@@ -52,21 +52,40 @@ export function AppShell({ user, hmac }: { user: User; hmac: string }) {
 }
 ```
 
-| Prop | Description |
-|------|-------------|
-| `publicKey` | Environment public key (`pk_prd_…`) |
-| `subscriberId` | Same `externalId` used in triggers |
-| `hmacSignature` | From backend — see [Authentication](/docs/platform/getting-started/authentication) |
-| `backendUrl` / `apiBaseUrl` | Nexus API origin |
+<TypeTable
+  type={{
+    publicKey: {
+      type: "string",
+      description:
+        "Environment public key (starts with pk_dev_, pk_prd_, etc.). Required.",
+    },
+    subscriberId: {
+      type: "string",
+      description:
+        "Same unique subscriber externalId used in your workflow triggers. Required.",
+    },
+    hmacSignature: {
+      type: "string",
+      description:
+        "The HMAC signature generated on your backend for security. Required.",
+    },
+    backendUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description:
+        "The Nexus platform API base URL endpoint origin (can also be mapped via apiBaseUrl property).",
+    },
+  }}
+/>
 
 ## Notification bell
 
 ```tsx
-import { NotificationCenterBell } from '@nexus-signal/react';
+import { NotificationCenterBell } from "@nexus-signal/react";
 
 <header>
   <NotificationCenterBell position="bottom-end" variant="ghost" />
-</header>
+</header>;
 ```
 
 - Live WebSocket updates with unread badge
@@ -78,9 +97,9 @@ import { NotificationCenterBell } from '@nexus-signal/react';
 Full-page feed with date grouping and infinite scroll:
 
 ```tsx
-import { NotificationInbox } from '@nexus-signal/react';
+import { NotificationInbox } from "@nexus-signal/react";
 
-<NotificationInbox />
+<NotificationInbox />;
 ```
 
 Uses `GET /v1/sdk/notifications` with pagination (`hasMore`, `loadMore`).
@@ -88,9 +107,9 @@ Uses `GET /v1/sdk/notifications` with pagination (`hasMore`, `loadMore`).
 ## Preference matrix
 
 ```tsx
-import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
+import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
 
-<SubscriberPreferenceMatrix variant="borderless" groupByTopic />
+<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
 ```
 
 Renders workflow events or **topics** against channel checkboxes. Changes persist via SDK preferences API.
@@ -98,16 +117,61 @@ Renders workflow events or **topics** against channel checkboxes. Changes persis
 ## useNotifications hook
 
 ```tsx
-import { useNotifications } from '@nexus-signal/react';
+import { useNotifications } from "@nexus-signal/react";
 
 const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
   useNotifications();
 ```
 
-| Field | Type |
-|-------|------|
-| `status` | `'connected' \| 'disconnected'` |
-| `items` | In-app notification list |
+<TypeTable
+  type={{
+    items: {
+      type: "InAppNotification[]",
+      description: "Array of currently fetched in-app notification objects.",
+    },
+    unread: {
+      type: "number",
+      description: "Counter of unread and unarchived notifications.",
+    },
+    status: {
+      type: "'connected' | 'disconnected'",
+      description: "Current real-time WebSocket connection status.",
+    },
+    hasMore: {
+      type: "boolean",
+      description:
+        "Indicates if there are more historic notifications to load.",
+    },
+    loadingMore: {
+      type: "boolean",
+      description:
+        "Flag indicating whether a page fetching request is currently in flight.",
+    },
+    loadMore: {
+      type: "() => Promise<void>",
+      description:
+        "Fetches the next page of notifications and appends them to the items feed.",
+    },
+    markRead: {
+      type: "(logId: string) => Promise<void>",
+      description: "Marks a specific notification as read.",
+    },
+    markAllRead: {
+      type: "() => Promise<void>",
+      description: "Marks all current notifications as read.",
+    },
+    archive: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "Archives a specific notification, marking it as read and removing it from active unread list.",
+    },
+    remove: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "Deletes a notification entirely from the database and feed.",
+    },
+  }}
+/>
 
 ## Theming
 
@@ -116,5 +180,6 @@ Components use CSS variables (`--nexus-theme-*`) compatible with Tailwind. Overr
 ## Security
 
 <Callout type="error">
-Generate `hmacSignature` on your server for every session. Never put `secretKey` in frontend code.
+  Generate `hmacSignature` on your server for every session. Never put
+  `secretKey` in frontend code.
 </Callout>

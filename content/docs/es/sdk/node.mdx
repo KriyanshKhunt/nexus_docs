@@ -34,77 +34,144 @@ yarn add @nexus-signal/node
 ## Inicialización
 
 ```ts
-import { NexusClient } from '@nexus-signal/node';
+import { NexusClient } from "@nexus-signal/node";
 
 const nexus = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
-  baseUrl: 'https://api.nexussignal.dev',
+  baseUrl: "https://api.nexussignal.dev",
   timeout: 5000,
 });
 ```
+
+### Opciones de cliente
+
+<TypeTable
+  type={{
+    secretKey: {
+      type: "string",
+      description:
+        "Tu clave secreta de entorno (ej. sk_dev_..., sk_prd_...). Comienza con sk_ y debe tener al menos 20 caracteres (obligatorio).",
+    },
+    baseUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description: "El origen del endpoint de la API de la plataforma Nexus.",
+    },
+    timeout: {
+      type: "number",
+      default: "15000",
+      description:
+        "Límite de tiempo de espera de la solicitud en milisegundos.",
+    },
+    events: {
+      type: "object",
+      description:
+        "Devoluciones de llamada opcionales para la auditoría de eventos de resiliencia (onCircuitOpen, onCircuitClose, onBufferOverflow).",
+    },
+  }}
+/>
 
 ## Disparar un flujo
 
 ```ts
 const result = await nexus.workflows.trigger({
-  workflowName: 'billing.invoice_overdue',
+  workflowName: "billing.invoice_overdue",
   recipients: [
     {
-      externalId: 'cust_8824',
-      email: 'billing@enterprise.com',
-      phoneNumber: '+15550198234',
-      timezone: 'America/New_York',
-      locale: 'en',
-      slackWebhookUrl: 'https://hooks.slack.com/services/…',
+      externalId: "cust_8824",
+      email: "billing@enterprise.com",
+      phoneNumber: "+15550198234",
+      timezone: "America/New_York",
+      locale: "en",
+      slackWebhookUrl: "https://hooks.slack.com/services/…",
     },
   ],
   data: {
-    invoiceId: 'INV-2026-0049',
-    amountDue: '$1,250.00',
+    invoiceId: "INV-2026-0049",
+    amountDue: "$1,250.00",
   },
 });
 
 if (!result.ok) {
-  console.warn(result.error, result.queued ? '(buffered for retry)' : '');
+  console.warn(result.error, result.queued ? "(buffered for retry)" : "");
 }
 ```
 
 ### Campos de destinatario
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `externalId` | string | Tu ID de usuario (obligatorio salvo `subscriberId`) |
-| `subscriberId` | UUID | ID de suscriptor Nexus |
-| `email` | string | Para canal email |
-| `phoneNumber` | E.164 | Para SMS/WhatsApp |
-| `timezone` | IANA | Actualiza la zona horaria del suscriptor |
-| `locale` | BCP 47 | Sobrescritura de locale por trigger |
-| `slackWebhookUrl` | URL | Sobrescritura Slack por suscriptor |
-| `discordWebhookUrl` | URL | Sobrescritura Discord por suscriptor |
-| `teamsWebhookUrl` | URL | Sobrescritura Teams por suscriptor |
+<TypeTable
+  type={{
+    externalId: {
+      type: "string",
+      description:
+        "Tu ID de usuario (obligatorio salvo que se especifique subscriberId).",
+    },
+    subscriberId: {
+      type: "string (UUID)",
+      description: "El ID único interno de suscriptor de Nexus.",
+    },
+    email: {
+      type: "string",
+      description:
+        "Dirección de correo electrónico del destinatario para el canal de email.",
+    },
+    phoneNumber: {
+      type: "string",
+      description:
+        "Número de teléfono del destinatario (formato E.164) para los canales SMS y WhatsApp.",
+    },
+    timezone: {
+      type: "string",
+      description:
+        "Zona horaria del destinatario (formato IANA) para programar o retrasar notificaciones basadas en horas locales.",
+    },
+    locale: {
+      type: "string",
+      description:
+        "Sobrescritura de la configuración regional del usuario por trigger (formato BCP 47) para el renderizado localizado.",
+    },
+    slackWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook de Slack personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+    },
+    discordWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook de Discord personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+    },
+    teamsWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook de Microsoft Teams personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+    },
+  }}
+/>
 
 ## Firmas HMAC
 
 ```ts
-const hmac = nexus.auth.generateHmacSignature('cust_8824');
+const hmac = nexus.auth.generateHmacSignature("cust_8824");
 // Pásalo a NexusProvider de @nexus-signal/react — nunca expongas secretKey en el navegador
 ```
 
-También exportado de forma independiente:
+También exportado de forma independiente (requiere pasar la clave `secretKey` explícitamente):
 
 ```ts
-import { generateHmacSignature } from '@nexus-signal/node';
+import { generateHmacSignature } from "@nexus-signal/node";
+
+const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, "cust_8824");
 ```
 
 ## Schedules
 
 ```ts
 await nexus.schedules.create({
-  name: 'Monday digest',
-  workflowId: 'workflow-uuid',
-  cronExpression: '0 9 * * 1',
-  timezone: 'UTC',
-  recipients: [{ externalId: 'user_1' }],
+  name: "Monday digest",
+  workflowId: "workflow-uuid",
+  cronExpression: "0 9 * * 1",
+  timezone: "UTC",
+  recipients: [{ externalId: "user_1" }],
   data: {},
 });
 
@@ -123,9 +190,9 @@ await nexus.schedules.delete(id);
 const nexus = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!,
   events: {
-    onCircuitOpen: () => console.warn('Nexus circuit open'),
+    onCircuitOpen: () => console.warn("Nexus circuit open"),
     onCircuitClose: () => nexus.workflows.flushRetries(),
-    onBufferOverflow: (p) => console.error('Dropped:', p.workflowName),
+    onBufferOverflow: (p) => console.error("Dropped:", p.workflowName),
   },
 });
 ```

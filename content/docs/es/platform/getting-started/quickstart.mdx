@@ -3,7 +3,9 @@ title: Inicio rápido
 description: Envía tu primera notificación con Nexus Signal en minutos.
 ---
 
-## 1. Crea un workspace
+<Steps>
+<Step>
+### Crea un workspace
 
 Inicia sesión en el [dashboard](https://app.nexussignal.dev). Recibirás **tres entornos aislados**:
 
@@ -12,16 +14,22 @@ Inicia sesión en el [dashboard](https://app.nexussignal.dev). Recibirás **tres
 | Development | `pk_dev_` / `sk_dev_` | Pruebas locales + sandbox |
 | Staging | `pk_stg_` / `sk_stg` | Integración de QA |
 | Production | `pk_prd_` / `sk_prd_` | Tráfico en vivo |
+</Step>
 
-## 2. Crea un workflow
+<Step>
+### Crea un workflow
 
 **Workflows** → crea `user.signup` → añade nodos de canal Email + In-App → publica la plantilla en **Production**.
+</Step>
 
-## 3. Conecta un proveedor
+<Step>
+### Conecta un proveedor
 
 **Integrations** → añade SendGrid o Resend → pega la API key (cifrada en reposo).
+</Step>
 
-## 4. Instala el SDK de Node
+<Step>
+### Instala el SDK de Node
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
   <Tab value="npm">
@@ -46,8 +54,10 @@ yarn add @nexus-signal/node
 
   </Tab>
 </Tabs>
+</Step>
 
-## 5. Dispara desde tu servidor
+<Step>
+### Dispara desde tu servidor
 
 ```ts
 import { NexusClient } from '@nexus-signal/node';
@@ -67,6 +77,8 @@ const result = await nexus.workflows.trigger({
 <Callout type="success">
 Una llamada exitosa devuelve **HTTP 202** con `{ accepted: true }`. Revisa **Audit Logs** o el simulador **Sandbox** de Development.
 </Callout>
+</Step>
+</Steps>
 
 ## Próximos pasos
 
