@@ -1,0 +1,67 @@
+---
+title: Construye tu primer flujo
+description: Crea un flujo de bienvenida multicanal con plantilla, trigger y campana in-app.
+---
+
+Esta guía construye un flujo de bienvenida **user.signup**: email + notificación in-app.
+
+## 1. Crear el flujo
+
+Dashboard → **Workflows** → Nuevo flujo llamado `user.signup`.
+
+Añade nodos:
+
+```
+Trigger → Channel (Email) → Channel (In-App)
+```
+
+Activa **Suppress when online** en el nodo Email si quieres entrega consciente de presencia.
+
+## 2. Escribir plantillas
+
+Abre **Templates** para este flujo.
+
+**Email (HTML):**
+```html
+<h1>Welcome, {{ data.name }}!</h1>
+<p>Thanks for joining. Your account ID is {{ subscriber.externalId }}.</p>
+```
+
+**In-App:**
+```json
+{ "title": "Welcome!", "body": "Hi {{ data.name }}, glad you're here." }
+```
+
+Promueve la plantilla a **Production Active**.
+
+## 3. Crear un suscriptor de prueba
+
+**Subscribers** → Añade suscriptor con tu `externalId` de prueba y email.
+
+## 4. Disparar desde código
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.signup',
+  recipients: [{ externalId: 'test_user', email: 'you@example.com' }],
+  data: { name: 'Test User' },
+});
+```
+
+En Development, el email aparece en **Sandbox**. In-app requiere el SDK React.
+
+## 5. Añadir campana in-app
+
+```tsx
+<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
+  <NotificationCenterBell />
+</NexusProvider>
+```
+
+Dispara de nuevo — el badge de la campana se actualiza en tiempo real.
+
+## Próximos pasos
+
+- Añade [envío inteligente](/docs/platform/features/smart-send-time) en email
+- Asigna el flujo a un [topic](/docs/platform/features/topics)
+- Añade [ventana de entrega](/docs/platform/features/delivery-windows) para envíos de marketing

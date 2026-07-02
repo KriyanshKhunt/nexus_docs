@@ -1,0 +1,65 @@
+---
+title: Autenticación
+description: Claves secretas, claves públicas y firmas HMAC para una integración segura con Nexus Signal.
+---
+
+Nexus Signal usa **API keys con alcance por entorno**. Credenciales distintas aplican a triggers de servidor frente a componentes del SDK orientados al navegador.
+
+## Tipos de clave
+
+| Clave | Prefijo | Usado por | Exposición |
+|-------|---------|-----------|------------|
+| **Clave secreta** | `sk_*` | Server SDK, triggers de workflow, schedule SDK | **Solo servidor — nunca en el navegador** |
+| **Clave pública** | `pk_*` | React SDK, inbox API, WebSocket join | Segura para incrustar en el frontend |
+
+Las claves secretas se envían como `Authorization: Bearer sk_prd_…` en las peticiones de trigger.
+
+Las claves públicas se envían como `x-nexus-public-key` en las rutas del SDK.
+
+## Autenticación de trigger de workflow
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+```
+
+La API valida la clave, resuelve el entorno y la organización, y devuelve **202 Accepted** mientras el worker procesa la entrega de forma asíncrona.
+
+## HMAC para tiempo real (in-app)
+
+Las conexiones WebSocket del navegador no pueden usar claves secretas. En su lugar:
+
+1. **Tu backend** genera una firma HMAC con la clave secreta y el ID del suscriptor
+2. **Tu frontend** pasa la firma a `NexusProvider`
+
+```ts
+// Server — @nexus-signal/node
+const hmac = nexus.auth.generateHmacSignature('user_123');
+
+// Client — @nexus-signal/react
+<NexusProvider
+  publicKey="pk_prd_…"
+  subscriberId="user_123"
+  hmacSignature={hmac}
+  backendUrl="https://api.nexussignal.dev"
+/>
+```
+
+La plataforma verifica: `HMAC-SHA256(secretKey, subscriberExternalId)`.
+
+<Callout type="error">
+Regenera el HMAC en cada carga de página o sesión — trátalo como un token de sesión de corta duración derivado de la autenticación de tu backend.
+</Callout>
+
+## Autenticación del dashboard
+
+El dashboard web usa sesiones JWT (email/contraseña, magic link, GitHub u OAuth de Google) con MFA opcional. Los miembros del equipo obtienen acceso basado en roles: Owner, Admin, Developer o Marketer.
+
+## Rotación de claves
+
+Rota las claves secretas desde **Settings → API Keys**. Las claves antiguas pueden deprecarse sin downtime si rotas tanto el servidor como la generación de HMAC a la vez.
+
+## Relacionado
+
+- [Autenticación](/docs/platform/getting-started/authentication) — qué clave va dónde

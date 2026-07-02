@@ -1,0 +1,34 @@
+---
+title: Digest y throttle
+description: Agrupa alertas ruidosas y limita la tasa por suscriptor para evitar la fatiga de notificaciones.
+---
+
+## Nodo Digest
+
+Colapsa eventos de alta frecuencia en **una notificación resumen** tras una ventana deslizante (predeterminado **30 minutos**).
+
+### Comportamiento
+
+1. Los eventos que llegan a un nodo Digest se almacenan en una lista Redis por suscriptor/flujo/nodo
+2. El estado se establece en `QUEUED_IN_DIGEST`
+3. Cuando expira la ventana, el worker compila una plantilla resumen con los elementos agrupados en `triggerData.digest`
+4. Se despacha una sola notificación
+
+**Caso de uso:** «Tienes 12 comentarios nuevos» en lugar de 12 pushes separados.
+
+## Nodo Throttle
+
+Limita la tasa de cuántas notificaciones pasan dentro de una ventana temporal.
+
+| Ajuste | Ejemplo |
+|--------|---------|
+| `maxCount` | 3 |
+| `windowSeconds` | 60 |
+| `divertToDigest` | true — el exceso va a digest en lugar de descartarse |
+
+**Caso de uso:** Evita tormentas de alertas durante importaciones masivas o picos de eventos tipo DDoS.
+
+## Relacionado
+
+- [Flujos](/docs/platform/concepts/workflows)
+- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)

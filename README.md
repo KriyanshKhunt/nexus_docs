@@ -16,7 +16,7 @@ Open [http://localhost:3001](http://localhost:3001).
 | English (default) | `/docs/platform` |
 | Español | `/es/docs/platform` |
 
-Use the language switcher in the docs navbar to change locale.
+Use the language switcher in the docs navbar to change locale. All 39 pages are available in both languages.
 
 ## Build
 
@@ -29,14 +29,18 @@ npm start
 
 ```
 content/docs/
-  $/              Shared meta.json (sidebar structure)
-  en/             English MDX pages
-  es/             Spanish MDX pages (fallback to en when missing)
+  $/              Shared meta.json (sidebar page order)
+  en/             English MDX pages (39 pages)
+  es/             Spanish MDX pages (39 pages)
 app/[lang]/       Next.js App Router + Fumadocs layouts
-lib/i18n.ts       Locale config (en, es)
-lib/source.ts     Content loader
+lib/
+  i18n.ts         Locale config (en, es)
+  i18n-path.ts    Locale-aware href helpers
+  ui-copy.ts      Home page translations
+  docs-tabs.tsx   Sidebar section switcher labels
+  source.ts       Content loader
+proxy.ts          Locale routing (Next.js 16)
 source.config.ts  Fumadocs MDX config
-middleware.ts     Locale routing + /docs → /docs/platform redirect
 ```
 
 ## Deploy

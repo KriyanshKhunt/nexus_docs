@@ -1,0 +1,47 @@
+---
+title: Triggers programados
+description: Notificaciones cron y programadas de una sola vez sin construir tu propio job runner.
+---
+
+Programa disparos de flujo desde el dashboard o el Node SDK — no hace falta cron externo.
+
+## Tipos
+
+| Tipo | Campo | Ejemplo |
+|------|-------|---------|
+| **Recurrente** | `cronExpression` | `0 9 * * 1` (lunes 9 AM) |
+| **Una sola vez** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+
+Ambos admiten `timezone` (UTC por defecto) y payload estático de `recipients` + `data`.
+
+## Dashboard
+
+Página **Schedules** — crear, pausar, editar, eliminar. Consulta `nextFireAt` y `lastFiredAt`.
+
+## Node SDK
+
+```ts
+await nexus.schedules.create({
+  name: 'Weekly digest',
+  workflowId: 'wf_uuid',
+  cronExpression: '0 9 * * 1',
+  timezone: 'America/New_York',
+  recipients: [{ externalId: 'user_1' }],
+  data: { week: '2026-W27' },
+});
+```
+
+```ts
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## Ejecución
+
+Un cron del worker evalúa los schedules vencidos cada **60 segundos** (máximo 100 schedules activos por entorno).
+
+## Relacionado
+
+- [Referencia API — Schedules](/docs/api/schedules)
+- [Node SDK](/docs/sdk/node)

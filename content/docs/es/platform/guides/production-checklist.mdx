@@ -1,0 +1,57 @@
+---
+title: Checklist de producción
+description: Verifica tu integración con Nexus Signal antes de cambiar a claves de Production.
+---
+
+Usa este checklist antes de enrutar tráfico real a Production.
+
+## Claves y entornos
+
+- [ ] Clave secreta de Production (`sk_prd_`) almacenada en gestor de secretos — no en git
+- [ ] Staging probado con `sk_stg_` y claves reales de proveedor
+- [ ] Clave pública (`pk_prd_`) solo en variables de entorno del frontend
+
+## Proveedores
+
+- [ ] Todos los proveedores requeridos conectados y **test connection** superado
+- [ ] Reparto de pesos configurado si usas varios proveedores por capa
+- [ ] Costos unitarios de proveedor definidos para [analítica de costos](/docs/platform/features/cost-analytics)
+- [ ] Presupuesto mensual opcional configurado con email de alerta verificado
+
+## Flujos
+
+- [ ] Plantillas promovidas a **Production Active** (no Draft)
+- [ ] Flujos marcados como **active**
+- [ ] Rutas de failover probadas vía modo chaos de Development
+- [ ] Ventanas de entrega definidas para envíos de marketing orientados al usuario
+- [ ] Topics asignados y matriz de preferencias probada
+
+## Integración SDK
+
+- [ ] HMAC generado en el servidor por sesión
+- [ ] Circuit breaker / reintentos del SDK Node implementados
+- [ ] `externalId` del suscriptor coincide con tus IDs de usuario de auth
+
+## Cumplimiento y operaciones
+
+- [ ] Proceso de purge GDPR documentado (API de eliminación de suscriptor)
+- [ ] Roles de equipo asignados (Owner, Developer, Marketer)
+- [ ] MFA activado para cuentas de administrador
+- [ ] Retención del audit log y plan de monitorización definidos
+
+## Facturación
+
+- [ ] Plan acorde al volumen esperado
+- [ ] Preferencia de límite de gasto configurada
+- [ ] Acceso al portal de facturación Stripe para administradores
+
+## Puesta en marcha
+
+1. Cambia el entorno del dashboard a **Production**
+2. Despliega el backend con el secreto `sk_prd_`
+3. Envía un trigger canary al equipo interno
+4. Monitoriza **Audit Logs** y **Overview** durante la primera hora
+
+<Callout type="warn">
+El sandbox de Development **no** funciona en Production. Cada trigger pasa por proveedores reales e incurre en cargos del proveedor.
+</Callout>

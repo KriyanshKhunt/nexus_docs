@@ -1,0 +1,43 @@
+---
+title: Topics
+description: Suscripciones a notificaciones por categoría — Marketing, Security, Product Updates.
+---
+
+**Topics** permiten a los usuarios optar por entrar o salir de **categorías** en lugar de nombres individuales de eventos de flujo.
+
+## Modelo
+
+| Campo | Descripción |
+|-------|-------------|
+| `name` | Clave de máquina (p. ej. `marketing`) |
+| `displayName` | Etiqueta en la UI |
+| `defaultStatus` | `OPTED_IN`, `OPTED_OUT` o `REQUIRED` |
+| `sortOrder` | Orden en la matriz de preferencias |
+
+Máximo **50 topics** por entorno.
+
+## Asignar flujos
+
+Vincula un flujo a un topic mediante `topicId`. La evaluación de preferencias comprueba las claves `topic:{name}` en el perfil del suscriptor.
+
+## Dashboard
+
+Gestiona topics en **Settings → Topics**. Asigna flujos desde el desplegable del editor de flujos.
+
+## SDK
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+También incluido en `GET /v1/sdk/notification-events` para la matriz de preferencias.
+
+## React SDK
+
+`<SubscriberPreferenceMatrix groupByTopic />` renderiza los topics como filas con casillas de canal.
+
+## Relacionado
+
+- [React SDK](/docs/sdk/react)
+- [SDK API](/docs/api/sdk)

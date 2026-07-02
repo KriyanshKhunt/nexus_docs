@@ -1,0 +1,17 @@
+{
+  "title": "Funciones",
+  "pages": [
+    "index",
+    "cost-reduction",
+    "smart-send-time",
+    "ai-content",
+    "delivery-windows",
+    "i18n",
+    "digest-throttle",
+    "failover",
+    "topics",
+    "schedules",
+    "cost-analytics",
+    "sandbox"
+  ]
+}

@@ -1,0 +1,145 @@
+---
+title: SDK Node.js
+description: "@nexus-signal/node — triggers de flujos, schedules y firmas HMAC."
+---
+
+SDK del lado del servidor para disparar flujos desde tus rutas API, workers o scripts.
+
+## Instalación
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/node
+```
+
+  </Tab>
+</Tabs>
+
+## Inicialización
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
+  baseUrl: 'https://api.nexussignal.dev',
+  timeout: 5000,
+});
+```
+
+## Disparar un flujo
+
+```ts
+const result = await nexus.workflows.trigger({
+  workflowName: 'billing.invoice_overdue',
+  recipients: [
+    {
+      externalId: 'cust_8824',
+      email: 'billing@enterprise.com',
+      phoneNumber: '+15550198234',
+      timezone: 'America/New_York',
+      locale: 'en',
+      slackWebhookUrl: 'https://hooks.slack.com/services/…',
+    },
+  ],
+  data: {
+    invoiceId: 'INV-2026-0049',
+    amountDue: '$1,250.00',
+  },
+});
+
+if (!result.ok) {
+  console.warn(result.error, result.queued ? '(buffered for retry)' : '');
+}
+```
+
+### Campos de destinatario
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `externalId` | string | Tu ID de usuario (obligatorio salvo `subscriberId`) |
+| `subscriberId` | UUID | ID de suscriptor Nexus |
+| `email` | string | Para canal email |
+| `phoneNumber` | E.164 | Para SMS/WhatsApp |
+| `timezone` | IANA | Actualiza la zona horaria del suscriptor |
+| `locale` | BCP 47 | Sobrescritura de locale por trigger |
+| `slackWebhookUrl` | URL | Sobrescritura Slack por suscriptor |
+| `discordWebhookUrl` | URL | Sobrescritura Discord por suscriptor |
+| `teamsWebhookUrl` | URL | Sobrescritura Teams por suscriptor |
+
+## Firmas HMAC
+
+```ts
+const hmac = nexus.auth.generateHmacSignature('cust_8824');
+// Pásalo a NexusProvider de @nexus-signal/react — nunca expongas secretKey en el navegador
+```
+
+También exportado de forma independiente:
+
+```ts
+import { generateHmacSignature } from '@nexus-signal/node';
+```
+
+## Schedules
+
+```ts
+await nexus.schedules.create({
+  name: 'Monday digest',
+  workflowId: 'workflow-uuid',
+  cronExpression: '0 9 * * 1',
+  timezone: 'UTC',
+  recipients: [{ externalId: 'user_1' }],
+  data: {},
+});
+
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## Resiliencia
+
+- **Circuit breaker** — se abre tras 5 fallos, se recupera automáticamente tras 60s
+- **Retry buffer** — peticiones fallidas en cola en memoria (máx. 500)
+- **`flushRetries()`** — reenvía triggers en buffer cuando la plataforma está sana
+
+```ts
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  events: {
+    onCircuitOpen: () => console.warn('Nexus circuit open'),
+    onCircuitClose: () => nexus.workflows.flushRetries(),
+    onBufferOverflow: (p) => console.error('Dropped:', p.workflowName),
+  },
+});
+```
+
+## Forma de respuesta
+
+```ts
+type NexusResult<T> = {
+  ok: boolean;
+  status: number;
+  data?: T;
+  error?: string;
+  queued?: boolean; // true si se almacenó localmente en buffer
+};
+```
+
+Los triggers exitosos devuelven **HTTP 202** con `{ accepted: true, results: [...] }`.

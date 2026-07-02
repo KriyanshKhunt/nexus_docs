@@ -1,0 +1,47 @@
+---
+title: Envío inteligente
+description: Timing de entrega con IA — llega a cada usuario en su hora pico de engagement.
+---
+
+**Envío inteligente** aprende cuándo cada suscriptor abre, lee o hace clic en las notificaciones, y retrasa la entrega hasta su **hora local pico**.
+
+## Activar en un nodo de canal
+
+En el canvas del flujo, activa **AI Send Time** en cualquier nodo de canal (Email, SMS, Push, etc.).
+
+Excluidos automáticamente: In-App, Webhook, triggers programados y flujos con un nodo Delivery Window.
+
+## Cómo funciona el modelo
+
+1. Nexus rastrea eventos `OPENED`, `READ` y `CLICKED` por suscriptor (ventana de 60 días)
+2. Construye una cuadrícula de puntuación de engagement por hora (día de la semana × hora) en la **zona horaria local del suscriptor**
+3. Almacena las puntuaciones en Redis (actualizadas cada 6 horas vía cron)
+4. En la entrega, el worker retrasa hasta la próxima ocurrencia de la hora óptima
+
+Si no hay datos suficientes, la hora de respaldo es **10:00 hora local**.
+
+## Visibilidad en el dashboard
+
+Abre el perfil de un suscriptor en el dashboard para ver el **mapa de calor de engagement** — una cuadrícula 24×7 que muestra cuándo interactúa.
+
+## Ejemplo
+
+| Suscriptor | Zona horaria | Hora pico | Comportamiento |
+|------------|--------------|-----------|----------------|
+| Alex | `America/New_York` | 2 PM mar | Confirmación de pedido retrasada hasta el martes 2 PM ET |
+| Yuki | `Asia/Tokyo` | 8 PM | Email de marketing espera hasta las 8 PM JST |
+
+Pasa la zona horaria en el trigger para mantener las puntuaciones precisas:
+
+```ts
+recipients: [{ externalId: 'user_1', timezone: 'America/Chicago' }]
+```
+
+## Registro del ciclo de vida
+
+Los envíos retrasados registran `SMART_TIMING_HOLD` en el ciclo de vida de auditoría con `optimalHour`, `delayMs` y `timezone`.
+
+## Relacionado
+
+- [Ventanas de entrega](/docs/platform/features/delivery-windows) — límites horarios estrictos (el timing inteligente se aplaza si coexisten)
+- [Reducción de costos](/docs/platform/features/cost-reduction) — combina timing + supresión para máximo ROI

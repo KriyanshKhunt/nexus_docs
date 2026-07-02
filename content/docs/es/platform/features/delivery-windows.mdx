@@ -1,0 +1,43 @@
+---
+title: Ventanas de entrega
+description: Entrega según zona horaria — envía solo entre las horas permitidas en la hora local del suscriptor.
+---
+
+Los nodos **Delivery Window** garantizan que las notificaciones nunca lleguen en horas inapropiadas (p. ej. 9 AM–9 PM en la zona horaria del usuario).
+
+## Configuración en el canvas
+
+Añade un nodo **Delivery Window** con:
+
+- `windowStart` — `"09:00"`
+- `windowEnd` — `"21:00"`
+- `urgent` — omite la ventana para alertas críticas (opcional)
+
+## Zona horaria del suscriptor
+
+Establécela en el perfil del suscriptor o pásala por trigger:
+
+```ts
+recipients: [{ externalId: 'user_1', timezone: 'Europe/London' }]
+```
+
+Usa identificadores de zona horaria IANA. Si no está definida, usa UTC como respaldo.
+
+## Comportamiento
+
+| Situación | Acción |
+|-----------|--------|
+| Dentro de la ventana | Continúa de inmediato |
+| Fuera de la ventana | Retiene en cola; el job retrasado de BullMQ se reanuda al abrir la próxima ventana |
+| `urgent: true` | Entrega de inmediato sin importar la ventana |
+
+## Casos de uso
+
+- Emails de marketing — solo en horario laboral
+- Notificaciones push — evita horas de sueño
+- SMS — horas de silencio compatibles con normativa
+
+## Relacionado
+
+- [Envío inteligente](/docs/platform/features/smart-send-time) — optimiza *qué* hora; la ventana de entrega define las horas *permitidas*
+- [API de suscriptores](/docs/api/sdk)

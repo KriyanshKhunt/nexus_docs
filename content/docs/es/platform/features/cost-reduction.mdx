@@ -1,0 +1,63 @@
+---
+title: Reducción de costos
+description: Supresión por presencia, pruebas en sandbox y enrutamiento ponderado para reducir el gasto en proveedores.
+---
+
+Nexus Signal incluye varias funciones diseñadas para **reducir el gasto innecesario en proveedores** sin sacrificar la entregabilidad.
+
+## Supresión por presencia
+
+Cuando un suscriptor tiene una conexión **WebSocket activa** (está usando tu app en este momento), Nexus puede omitir canales externos costosos y entregar **solo in-app**.
+
+### Comportamiento predeterminado
+
+En los nodos de canal, estos canales se suprimen cuando el usuario está online:
+
+- Web Push
+- Mobile Push
+- SMS
+- WhatsApp
+
+**In-app** siempre entrega por WebSocket. Activa `suppressWhenOnline` en el nodo de canal para controlarlo explícitamente.
+
+### Cómo funciona
+
+1. El SDK de React mantiene un WebSocket con heartbeat
+2. Redis rastrea `presence:sub:{subscriberId}` (TTL de 45 s)
+3. El worker comprueba la presencia antes de despachar canales externos
+4. Las entregas omitidas registran `SKIPPED_BY_PREFERENCE` con el paso del ciclo de vida `PRESENCE_SUPPRESSION`
+
+**Resultado:** Sin SMS redundantes de $0.05 cuando el usuario ya está mirando tu app.
+
+## Modo sandbox (Development)
+
+En el entorno **Development**, las llamadas salientes a proveedores se reemplazan por un **simulador virtual**. Ves vistas previas de push, SMS y email en el dashboard sin gasto en APIs.
+
+Consulta [Modo sandbox](/docs/platform/features/sandbox).
+
+## Enrutamiento ponderado de proveedores
+
+Ejecuta varias cuentas de proveedor por canal y reparte el tráfico por porcentaje:
+
+```json
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Configúralo en **Integrations → Weight sliders**. El worker tira 1–100 y elige un proveedor — útil para migraciones graduales y distribución de carga.
+
+## Failover con circuit breaker
+
+Cuando un proveedor falla repetidamente (5 errores en 60 s), el circuito se abre y el tráfico se enruta a alternativas sanas o ramas de failover del flujo — evitando gasto desperdiciado en reintentos contra un endpoint caído.
+
+## Impacto combinado
+
+Los equipos suelen reducir el gasto mediante:
+
+1. Suprimir push/SMS redundantes para usuarios activos
+2. Probar en sandbox antes de envíos en producción
+3. Enrutar automáticamente lejos de proveedores con fallos
+
+## Relacionado
+
+- [Envío inteligente](/docs/platform/features/smart-send-time) — gasta mejor, no solo menos
+- [Analítica de costos](/docs/platform/features/cost-analytics) — mide lo que ahorras

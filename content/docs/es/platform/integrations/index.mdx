@@ -1,0 +1,39 @@
+---
+title: Integraciones
+description: Conecta tus proveedores de email, SMS, push, mensajería e IA a Nexus Signal.
+---
+
+Nexus Signal se integra con **tus cuentas de proveedor existentes**. Configura las claves una vez en el hub **Integraciones** del dashboard.
+
+<Cards>
+  <Card title="Catálogo de proveedores" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend y más." />
+  <Card title="Canales de mensajería" href="/docs/platform/integrations/messaging-channels" description="Slack, Discord, Teams — webhooks por suscriptor." />
+  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Endpoints HTTP personalizados para cualquier payload." />
+</Cards>
+
+## Capas de integración
+
+| Capa | Ejemplos |
+|------|----------|
+| Email | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
+| SMS | Twilio, Vonage, Plivo, Sinch |
+| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
+| Push | Firebase FCM, Apple APNs |
+| Mensajería | Slack, Discord, Microsoft Teams |
+| Webhook | Endpoints HTTP personalizados |
+| IA | OpenAI, Anthropic (generación de contenido) |
+
+## Configuración de pesos
+
+Cuando existen varios proveedores en una capa, define los pesos de tráfico (deben sumar 100):
+
+```http
+PUT /v1/integrations/weights/email
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Capas: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+
+<Callout type="info">
+Consulta [BYOP](/docs/platform/concepts/byop) para entender por qué Nexus nunca aplica markup sobre los costos del proveedor.
+</Callout>

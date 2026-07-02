@@ -1,0 +1,46 @@
+---
+title: Bring Your Own Provider
+description: Usa tus propias claves de SendGrid, Twilio y Resend — cero markup por mensaje de Nexus.
+---
+
+**BYOP (Bring Your Own Provider)** es la base de Nexus Signal. Nosotros orquestamos la entrega; **tú** posees las relaciones con los carriers y pagas a los proveedores directamente.
+
+## Qué hace Nexus
+
+- Constructor visual de workflows y motor de plantillas
+- Enrutamiento inteligente, failover y circuit breaking entre **tus** cuentas de proveedor
+- Preferencias de suscriptores, topics e inbox APIs
+- Analítica, audit logs y seguimiento de costos
+
+## Qué no hace Nexus
+
+- Revender ancho de banda de SMS o email
+- Aplicar markup por mensaje
+- Encerrarte en un solo carrier
+
+## Capas de proveedores soportadas
+
+Configura uno o más proveedores por canal en **Integrations**, luego establece **pesos de tráfico** (p. ej. 70% SendGrid, 30% Resend para email).
+
+Consulta el [catálogo completo de proveedores](/docs/platform/integrations/providers).
+
+## Credenciales cifradas
+
+Las API keys de proveedores se almacenan cifradas en la bóveda `providerKeys` de tu organización. Solo se descifran en el momento del despacho dentro de los workers.
+
+## Las claves de IA también son BYOP
+
+La generación de contenido con IA usa **tu** API key de OpenAI o Anthropic (integraciones `openai_ai`, `anthropic_ai`). Nexus no proxy las llamadas de IA a través de una clave compartida.
+
+## Por qué importa
+
+| Plataformas tradicionales | Nexus Signal |
+|---------------------------|--------------|
+| SMS/email empaquetados con markup | Pagas a Twilio/SendGrid directamente |
+| Difícil cambiar de proveedor | Enrutamiento ponderado + failover entre vendors |
+| Costos de entrega opacos | [Analítica de costos](/docs/platform/features/cost-analytics) por workflow |
+
+## Relacionado
+
+- [Integraciones](/docs/platform/integrations)
+- [Enrutamiento ponderado](/docs/platform/features/cost-reduction#weighted-provider-routing)

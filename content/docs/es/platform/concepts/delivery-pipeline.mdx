@@ -1,0 +1,49 @@
+---
+title: Pipeline de entrega
+description: Ejecución paso a paso desde la ingestión del trigger hasta el despacho al proveedor y la telemetría.
+---
+
+Cuando llamas a `workflows.trigger`, este pipeline se ejecuta de forma asíncrona.
+
+```mermaid
+sequenceDiagram
+  participant App as Tu app
+  participant API as Express API
+  participant Q as BullMQ
+  participant W as Worker
+  participant P as Provider
+
+  App->>API: POST /v1/workflows/trigger
+  API->>API: Validate + quota check
+  API->>Q: Enqueue job
+  API-->>App: 202 Accepted
+  Q->>W: Pick up job
+  W->>W: Preference + presence gates
+  W->>W: Compile template
+  W->>P: Dispatch channel
+  P-->>W: Response metadata
+  W->>W: Update execution log
+```
+
+## Resumen de pasos
+
+| Paso | Qué ocurre |
+|------|------------|
+| **Ingestion** | Validar clave, resolver suscriptores, crear log, encolar |
+| **Worker pickup** | Cargar workflow, plantilla, contexto de organización |
+| **Gates** | Preferencias, supresión por presencia, smart timing, ventana de entrega |
+| **Compile** | Handlebars + resolución de locale + URLs de click tracking |
+| **Dispatch** | Router ponderado de proveedores → adaptador de carrier |
+| **Telemetry** | WebSocket (in-app), click tracking, callbacks de carrier |
+
+## Estados del ciclo de vida
+
+`INGESTED` → `QUEUED` → `PROCESSING` → `DISPATCHED` → `DELIVERED` → `READ` / `OPENED` / `FAILED`
+
+Especiales: `SKIPPED_BY_PREFERENCE`, `QUEUED_IN_DIGEST`, `FAILED_PROVIDER_DOWN`
+
+<Callout type="warn">
+Los triggers programados y las retenciones de smart timing reingresan a la cola con un delay — el estado puede mostrar `QUEUED` durante la espera.
+</Callout>
+
+Consulta la línea de tiempo completa en el drill-down de **Audit Logs**.

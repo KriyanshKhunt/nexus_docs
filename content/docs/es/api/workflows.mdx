@@ -1,0 +1,70 @@
+---
+title: API de flujos
+description: POST /v1/workflows/trigger — ingesta eventos de flujo desde tu backend.
+---
+
+## Disparar flujo
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+Idempotency-Key: optional-unique-key
+```
+
+### Cuerpo de la petición
+
+```json
+{
+  "workflowName": "order.shipped",
+  "recipients": [
+    {
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "timezone": "America/Los_Angeles",
+      "locale": "en"
+    }
+  ],
+  "data": {
+    "orderId": "ORD-9912",
+    "trackingUrl": "https://carrier.com/track/9912"
+  }
+}
+```
+
+### Respuesta — 202 Accepted
+
+```json
+{
+  "accepted": true,
+  "workflow": "order.shipped",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "logId": "uuid",
+      "subscriberId": "uuid",
+      "status": "queued"
+    }
+  ],
+  "billing": { "quotaStatus": "ok" }
+}
+```
+
+### Códigos de error
+
+| Estado | Significado |
+|--------|-------------|
+| 400 | Validación fallida |
+| 401 | Clave secreta inválida o ausente |
+| 404 | Flujo no encontrado |
+| 409 | Flujo deshabilitado |
+| 402/429 | Cuota excedida o rate limited |
+
+## CRUD de flujos en dashboard
+
+Rutas autenticadas del dashboard bajo `/v1/workflows/dashboard` para crear, actualizar, eliminar, test trigger y estadísticas A/B.
+
+## SDK Node
+
+Prefiere [`@nexus-signal/node`](/docs/sdk/node) para triggers tipados, reintentos y circuit breaking.

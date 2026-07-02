@@ -1,0 +1,50 @@
+---
+title: Workflows
+description: Canvas visual de workflows — triggers, canales, delays, digests, failover y más.
+---
+
+Un **workflow** es una automatización con nombre (`order.shipped`, `user.signup`) respaldada por un **árbol de pasos** del canvas visual.
+
+## Trigger
+
+Todo workflow comienza con un nodo **Trigger** que define el namespace del evento. Tu llamada al SDK usa `workflowName` coincidiendo con este identificador.
+
+## Tipos de nodo
+
+| Nodo | Propósito |
+|------|-----------|
+| **Channel** | Enviar por Email, SMS, Push, In-App, WhatsApp, Slack, Discord, Teams o Webhook |
+| **Delay** | Esperar una duración fija antes del siguiente paso |
+| **Wait Until** | Esperar hasta una marca de tiempo del payload del trigger (p. ej. 24 h antes de la cita) |
+| **Delivery Window** | Entregar solo entre horas en la zona horaria local del suscriptor |
+| **Digest** | Agrupar eventos de alta frecuencia en un resumen (ventana predeterminada de 30 min) |
+| **Throttle** | Limitar la tasa de alertas por suscriptor; desvío opcional a digest |
+| **Failover** | Canal primario → esperar lectura → canal de respaldo |
+| **A/B Split** | División de tráfico por porcentaje con seguimiento de engagement |
+| **Smart Timing** | Activar en nodos de canal — retrasar a la hora pico del suscriptor |
+
+## Opciones de nodo de canal
+
+En cualquier nodo **Channel** puedes activar:
+
+- **`suppressWhenOnline`** — omitir canales externos si el usuario tiene WebSocket activo (consulta [reducción de costos](/docs/platform/features/cost-reduction))
+- **`smartTiming`** — optimización de hora de envío con IA (consulta [envío inteligente](/docs/platform/features/smart-send-time))
+
+## Plantillas
+
+Cada workflow tiene **plantillas** versionadas (Draft → Production Active). El contenido admite variables Handlebars:
+
+```html
+<p>Hi {{ subscriber.externalId }}, your order {{ data.orderId }} shipped.</p>
+```
+
+Las plantillas multi-locale usan claves de locale — consulta [i18n](/docs/platform/features/i18n).
+
+## Workflow ↔ Topic
+
+Asigna un workflow a un [Topic](/docs/platform/features/topics) para que los suscriptores gestionen preferencias por categoría en lugar de nombres de evento individuales.
+
+## Relacionado
+
+- [Guía del primer workflow](/docs/platform/guides/first-workflow)
+- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)

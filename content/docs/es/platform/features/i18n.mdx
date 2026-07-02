@@ -1,0 +1,47 @@
+---
+title: Plantillas multidioma
+description: Plantillas según locale — un flujo, contenido en cada idioma.
+---
+
+Llega a usuarios globales sin duplicar flujos.
+
+## Estructura de plantilla
+
+Almacena variantes por locale en `contentTemplates`:
+
+```json
+{
+  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
+  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" },
+  "fr": { "email_subject": "Votre commande est expédiée", "sms_body": "Expédié !" }
+}
+```
+
+## Orden de resolución de locale
+
+1. Override `_locale` por trigger (desde el recipient en el trigger)
+2. Campo `locale` del suscriptor
+3. Respaldo a `en`
+
+## Establecer locale en el trigger
+
+```ts
+recipients: [{ externalId: 'user_1', locale: 'es' }]
+```
+
+## Locales soportados
+
+`en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `ko`, `zh`, `ar`, `hi`, `nl`, `pl` — validados como etiquetas BCP 47.
+
+## Editor de plantillas
+
+Usa las **pestañas de locale** en el estudio de plantillas del dashboard para añadir o quitar idiomas. El emulador de dispositivo previsualiza cada locale.
+
+## Generación con IA
+
+La generación de contenido con IA acepta un parámetro `locale` para producir copy traducido en un solo paso.
+
+## Relacionado
+
+- [Flujos](/docs/platform/concepts/workflows)
+- [Topics](/docs/platform/features/topics)

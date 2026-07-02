@@ -1,0 +1,99 @@
+---
+title: API de suscriptores
+description: Endpoints de dashboard para gestionar suscriptores — crear, actualizar, exportar y purge GDPR.
+---
+
+Requiere JWT de dashboard + contexto de workspace.
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/v1/subscribers` | Listar suscriptores (paginado, buscable) |
+| POST | `/v1/subscribers` | Crear suscriptor |
+| GET | `/v1/subscribers/:id` | Obtener suscriptor por ID |
+| PUT | `/v1/subscribers/:id` | Actualizar suscriptor |
+| DELETE | `/v1/subscribers/:id` | Purge GDPR — elimina suscriptor e historial de entrega |
+| GET | `/v1/subscribers/:id/export` | Exportar datos del suscriptor (GDPR) |
+| GET | `/v1/subscribers/:id/engagement` | Modelo de engagement — datos de envío inteligente |
+
+Roles: crear/actualizar/eliminar requieren `OWNER`, `ADMIN` o `DEVELOPER`.
+
+## Listar suscriptores
+
+```http
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "subscribers": [
+    {
+      "id": "uuid",
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "locale": "en",
+      "timezone": "America/Los_Angeles",
+      "globalUnsubscribed": false,
+      "deliveryCount": 128
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "environment": "PRODUCTION"
+}
+```
+
+## Crear suscriptor
+
+```http
+POST /v1/subscribers
+Content-Type: application/json
+```
+
+```json
+{
+  "externalId": "user_42",
+  "email": "alex@acme.io",
+  "phoneNumber": "+15551234567",
+  "timezone": "America/Los_Angeles",
+  "locale": "en",
+  "preferences": {
+    "order.shipped": { "EMAIL": true, "SMS": false }
+  }
+}
+```
+
+## Actualizar suscriptor
+
+```http
+PUT /v1/subscribers/:id
+```
+
+Actualiza `email`, `phoneNumber`, `timezone`, `locale`, `preferences` o `globalUnsubscribed`.
+
+## Exportación y purge GDPR
+
+```http
+GET /v1/subscribers/:id/export
+DELETE /v1/subscribers/:id
+```
+
+La exportación devuelve un bundle JSON del perfil del suscriptor e historial de entrega. El purge elimina permanentemente al suscriptor, limpia el estado de presencia en Redis y escribe una entrada en el audit log.
+
+## Datos de engagement
+
+```http
+GET /v1/subscribers/:id/engagement
+```
+
+Devuelve puntuaciones de engagement por canal usadas por [Envío inteligente](/docs/platform/features/smart-send-time).
+
+## Relacionado
+
+- [API SDK](/docs/api/sdk) — inbox y preferencias en el navegador
+- [Plantillas multilingües](/docs/platform/features/i18n) — campo `locale`
+- [SDK Node](/docs/sdk/node) — trigger con sobrescritura de `locale`

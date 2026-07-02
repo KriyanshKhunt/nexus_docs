@@ -1,6 +1,6 @@
 'use client';
 
-import { docsTabs, docsTabsEs } from '@/lib/docs-tabs';
+import { getDocsTabs } from '@/lib/docs-tabs';
 import { localizeHref, stripLocalePrefix } from '@/lib/i18n-path';
 import { cn } from '@/lib/cn';
 import Link from 'fumadocs-core/link';
@@ -19,14 +19,12 @@ export function DocsTabSwitcher() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { locale = 'en' } = useI18n();
-  const tabs = locale === 'es' ? docsTabsEs : docsTabs;
+  const tabs = useMemo(() => getDocsTabs(locale), [locale]);
 
-  const selected = useMemo(
-    () => tabs.findLast((tab) => isTabActive(tab.url, pathname)),
+  const current = useMemo(
+    () => tabs.findLast((tab) => isTabActive(tab.url, pathname)) ?? tabs[0],
     [pathname, tabs],
   );
-
-  const current = selected ?? tabs[0];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -52,11 +50,10 @@ export function DocsTabSwitcher() {
       >
         {tabs.map((tab) => {
           const active = isTabActive(tab.url, pathname);
-          const href = localizeHref(tab.url, locale);
           return (
             <Link
               key={tab.url}
-              href={href}
+              href={localizeHref(tab.url, locale)}
               onClick={() => setOpen(false)}
               className={cn(
                 'flex items-center gap-2 rounded-md p-2 transition-colors',

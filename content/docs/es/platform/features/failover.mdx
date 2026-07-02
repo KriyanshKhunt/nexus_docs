@@ -1,0 +1,37 @@
+---
+title: Failover
+description: Respaldo automático de canal cuando falla la entrega principal o queda sin leer.
+---
+
+El nodo **Failover** garantiza que las alertas críticas lleguen a los usuarios aunque falle el canal principal.
+
+## Configuración
+
+| Campo | Descripción |
+|-------|-------------|
+| `primaryChannel` | Primer intento (p. ej. `MOBILE_PUSH`) |
+| `fallbackChannel` | Respaldo (p. ej. `SMS`) |
+| `timeoutSeconds` | Espera de acuse de lectura antes del respaldo (10–3600, predeterminado 120) |
+
+## Flujo
+
+1. Despacha el canal principal → estado `DISPATCHED`
+2. Inicia cuenta regresiva en Redis para acuse de lectura
+3. Si el usuario abre la notificación (evento de lectura WebSocket/SDK) → listo
+4. Si expira el timeout sin lectura → despacha el canal de respaldo
+5. Respaldo inmediato si el principal falla o el circuit breaker está abierto
+
+## Ejemplo
+
+> Enviar notificación push. Si no se lee tras 120 segundos, enviar SMS.
+
+Ideal para OTP, alertas de seguridad y recordatorios de citas.
+
+## Pruebas con Chaos mode
+
+Activa **Chaos Mode** en las integraciones de Development para simular fallos de proveedor y ver el failover ejecutarse en vivo en los logs de auditoría.
+
+## Relacionado
+
+- [Reducción de costos — circuit breaker](/docs/platform/features/cost-reduction)
+- [Sandbox](/docs/platform/features/sandbox)

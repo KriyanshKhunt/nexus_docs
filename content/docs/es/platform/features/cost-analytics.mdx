@@ -1,0 +1,51 @@
+---
+title: Analítica de costos
+description: Rastrea el gasto en proveedores por canal, flujo y proveedor con alertas de presupuesto.
+---
+
+Sabe exactamente cuánto cuestan las notificaciones — algo que la mayoría de plataformas de notificaciones no ofrece.
+
+## Configuración
+
+1. **Integrations → Provider costs** — establece el costo por mensaje por proveedor (p. ej. SendGrid $0.001, Twilio $0.05)
+2. **Settings → Budget** — tope mensual opcional `costBudgetUsd`
+
+## Dashboard
+
+La tarjeta **Overview → Monthly Spend** muestra:
+
+- Gasto total en este ciclo de facturación
+- Desglose por proveedor y canal
+- Desglose por flujo
+- % de presupuesto usado e insignia de excedido
+
+## API
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "totalCostUsd": 847.32,
+  "budgetUsd": 1000,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
+  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+}
+```
+
+## Alertas de presupuesto
+
+Cuando el gasto supera `costBudgetUsd`, los propietarios de la org reciben **una alerta por email** una vez por ciclo de facturación.
+
+## Correlación de ROI
+
+Combina datos de costo con telemetría de conversión (`OPENED`, `CLICKED`) de los logs de auditoría para identificar flujos de alto costo y bajo engagement.
+
+## Relacionado
+
+- [Reducción de costos](/docs/platform/features/cost-reduction)
+- [API de analítica](/docs/api/analytics)

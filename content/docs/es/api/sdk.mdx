@@ -1,0 +1,83 @@
+---
+title: API SDK
+description: Endpoints autenticados con clave pública para inbox in-app y preferencias de suscriptor.
+---
+
+Todas las rutas requieren el header: `x-nexus-public-key: pk_prd_…`
+
+## Notificaciones (inbox)
+
+### Listar notificaciones
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=unread
+```
+
+| Query | Valores |
+|-------|---------|
+| `filter` | `unread`, `read`, `archived` |
+| `dateFrom` / `dateTo` | Timestamps ISO |
+
+```json
+{
+  "notifications": [
+    {
+      "logId": "uuid",
+      "title": "Order shipped",
+      "body": "Track your package",
+      "read": false,
+      "archived": false,
+      "at": "2026-07-02T14:00:00.000Z",
+      "workflowName": "order.shipped"
+    }
+  ],
+  "total": 128,
+  "page": 1,
+  "limit": 50,
+  "hasMore": true
+}
+```
+
+### Marcar como leído
+
+```http
+POST /v1/sdk/notifications/:logId/read
+POST /v1/sdk/notifications/mark-all-read
+Body: { "subscriberExternalId": "user_42" }
+```
+
+### Archivar / eliminar
+
+```http
+POST /v1/sdk/notifications/:logId/archive
+DELETE /v1/sdk/notifications/:logId
+```
+
+## Preferencias
+
+```http
+GET /v1/sdk/subscribers/:externalId/preferences
+PUT /v1/sdk/subscribers/:externalId/preferences
+```
+
+```json
+{
+  "preferences": {
+    "order.shipped": { "EMAIL": true, "SMS": false },
+    "topic:marketing": { "EMAIL": false }
+  }
+}
+```
+
+## Eventos y topics
+
+```http
+GET /v1/sdk/notification-events
+GET /v1/sdk/topics
+```
+
+Devuelve flujos activos, lista de topics y canales de preferencia disponibles para la matriz React.
+
+## SDK React
+
+Estos endpoints alimentan automáticamente los componentes de [`@nexus-signal/react`](/docs/sdk/react).

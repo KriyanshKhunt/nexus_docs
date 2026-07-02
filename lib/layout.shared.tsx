@@ -1,8 +1,9 @@
 import { i18n, i18nConfig } from '@/lib/i18n';
+import { localizeHref } from '@/lib/i18n-path';
 import { defineI18nUI } from 'fumadocs-ui/i18n';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 
-export const { provider: i18nProvider, ...i18nUIConfig } = defineI18nUI(i18n, {
+export const { provider: i18nProvider } = defineI18nUI(i18n, {
   en: {
     displayName: 'English',
     search: 'Search documentation…',
@@ -30,7 +31,7 @@ export function baseOptions(locale: string): BaseLayoutProps {
           </span>
         </span>
       ),
-      url: locale === 'en' ? '/docs/platform' : `/${locale}/docs/platform`,
+      url: localizeHref('/docs/platform', locale),
     },
     links: [
       {

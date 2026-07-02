@@ -1,0 +1,46 @@
+---
+title: Canales de mensajería
+description: Slack, Discord y Microsoft Teams — webhooks de org y enrutamiento por suscriptor.
+---
+
+Entrega notificaciones directamente en herramientas de chat de equipo.
+
+## Configuración a nivel de org
+
+Configura las URLs de incoming webhook en **Integraciones** para cada plataforma. Todos los suscriptores comparten el webhook de la org salvo que se sobrescriba.
+
+## Enrutamiento por suscriptor
+
+Pasa URLs de webhook en los destinatarios del trigger para canales específicos del usuario (p. ej. webhook de DM personal de Slack):
+
+```ts
+recipients: [
+  {
+    externalId: 'user_1',
+    slackWebhookUrl: 'https://hooks.slack.com/services/T…/B…/…',
+    discordWebhookUrl: 'https://discord.com/api/webhooks/…',
+    teamsWebhookUrl: 'https://outlook.office.com/webhook/…',
+  },
+]
+```
+
+Las URLs del suscriptor **sobrescriben** las credenciales de la org en el momento del dispatch. Las URLs persisten en el perfil del suscriptor para triggers futuros.
+
+## Formatos de payload
+
+| Canal | Formato |
+|-------|---------|
+| Slack | `{ "text": "…" }` |
+| Discord | `{ "content": "…" }` |
+| Teams | Adaptive Card con texto en el body |
+
+Las plantillas admiten campos de contenido `slack`, `discord` y `ms_teams` con variantes i18n.
+
+## Canvas de flujos
+
+Añade nodos de canal **Slack**, **Discord** o **Teams** al árbol de pasos de tu flujo.
+
+## Relacionado
+
+- [Campos de destinatario del SDK Node](/docs/sdk/node)
+- [Integraciones](/docs/platform/integrations)

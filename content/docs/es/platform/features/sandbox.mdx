@@ -1,0 +1,35 @@
+---
+title: Modo sandbox
+description: Prueba flujos de notificación de extremo a extremo en Development sin llamadas reales a APIs de proveedores.
+---
+
+**Modo sandbox** es automático en el entorno **Development**. La entrega saliente (excepto in-app) se simula en lugar de llamar a SendGrid, Twilio, etc.
+
+## Qué verás
+
+La página **Sandbox** del dashboard muestra:
+
+- Vistas previas simuladas de push y SMS en el teléfono
+- Bandeja de email simulada
+- Actualizaciones del feed in-app por WebSocket
+
+## Cómo funciona
+
+Los workers detectan `environment.name === DEVELOPMENT'` y enrutan por `dispatchSandbox`, publicando un evento en tiempo real `sandbox_delivery` con el payload compilado.
+
+## Chaos mode
+
+Activa **Chaos Mode** en las integraciones de Development para forzar fallos artificiales de proveedor — prueba [failover](/docs/platform/features/failover) y rutas de circuit breaker sin afectar Staging ni Production.
+
+## Cuándo usarlo
+
+| Entorno | Sandbox | Proveedores reales |
+|---------|---------|-------------------|
+| Development | ✅ Siempre (para canales externos) | In-app usa WebSocket real |
+| Staging | ❌ | ✅ |
+| Production | ❌ | ✅ |
+
+## Relacionado
+
+- [Entornos](/docs/platform/getting-started/environments)
+- [Inicio rápido](/docs/platform/getting-started/quickstart)

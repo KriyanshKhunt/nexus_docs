@@ -1,0 +1,39 @@
+---
+title: Entornos
+description: Development, Staging y Production — claves, datos y comportamiento aislados.
+---
+
+Cada workspace de Nexus incluye **tres entornos**. Cada uno es un ámbito totalmente aislado para workflows, suscriptores, plantillas, schedules y topics.
+
+## Matriz de entornos
+
+| | Development | Staging | Production |
+|---|-------------|---------|------------|
+| **Clave pública** | `pk_dev_*` | `pk_stg_*` | `pk_prd_*` |
+| **Clave secreta** | `sk_dev_*` | `sk_stg_*` | `sk_prd_*` |
+| **Modo sandbox** | Sí — entrega simulada | No | No |
+| **Modo chaos** | Opcional — probar failover | No | No |
+| **Proveedores reales** | Solo si desactivas la ruta sandbox | Sí | Sí |
+
+## Sandbox (solo Development)
+
+En **Development**, los canales salientes (excepto in-app) se enrutan por el **sandbox virtual** en lugar de APIs reales de carriers. Los payloads se transmiten por WebSocket al simulador del dashboard — prueba workflows complejos **sin gastar créditos de proveedores**.
+
+Consulta [Modo sandbox](/docs/platform/features/sandbox) para más detalles.
+
+## Cambiar de entorno
+
+Usa el selector de entorno en la barra superior del dashboard. Todas las llamadas a la API deben usar la clave secreta correspondiente a ese entorno.
+
+<Callout type="warn">
+Nunca uses claves de Production en archivos `.env` locales que se suban a git. Usa claves de Development para el trabajo local.
+</Callout>
+
+## Los suscriptores son por entorno
+
+Un suscriptor con `externalId: user_123` en Development es un **registro distinto** del mismo ID en Production. Sincroniza o migra suscriptores al promover integraciones.
+
+## Relacionado
+
+- [Autenticación](/docs/platform/getting-started/authentication) — qué clave va dónde
+- [Checklist de producción](/docs/platform/guides/production-checklist) — antes de salir a producción

@@ -1,0 +1,76 @@
+---
+title: API de topics
+description: Endpoints de dashboard para topics de notificación — agrupa flujos para matrices de preferencias.
+---
+
+Requiere JWT de dashboard + contexto de workspace.
+
+Los topics permiten a los suscriptores optar por entrar o salir de categorías (p. ej. marketing, novedades de producto) en varios flujos. La [Matriz de preferencias](/docs/sdk/react) de React renderiza topics automáticamente.
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/v1/topics` | Listar todos los topics |
+| POST | `/v1/topics` | Crear topic |
+| GET | `/v1/topics/:id` | Obtener topic |
+| PUT | `/v1/topics/:id` | Actualizar topic |
+| DELETE | `/v1/topics/:id` | Eliminar topic |
+| GET | `/v1/topics/:id/stats` | Estadísticas de suscripción |
+| PUT | `/v1/topics/assign/:workflowId` | Asignar flujos a un topic |
+
+Roles: crear/actualizar/eliminar requieren `OWNER`, `ADMIN` o `DEVELOPER`.
+
+## Crear topic
+
+```http
+POST /v1/topics
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "marketing",
+  "label": "Marketing & promotions",
+  "description": "Product news and offers",
+  "defaultChannels": { "EMAIL": true, "SMS": false, "PUSH": false }
+}
+```
+
+## Asignar flujos
+
+```http
+PUT /v1/topics/assign/:workflowId
+Content-Type: application/json
+```
+
+```json
+{
+  "topicIds": ["topic-uuid-1", "topic-uuid-2"]
+}
+```
+
+## Integración SDK
+
+Las apps del navegador obtienen topics vía:
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+Las preferencias de suscriptor usan claves como `topic:marketing`:
+
+```json
+{
+  "preferences": {
+    "topic:marketing": { "EMAIL": false, "PUSH": true }
+  }
+}
+```
+
+## Relacionado
+
+- [Función Topics](/docs/platform/features/topics)
+- [API SDK](/docs/api/sdk)
+- [SDK React](/docs/sdk/react)

@@ -1,0 +1,55 @@
+---
+title: Generación de contenido con IA
+description: Genera copy de notificaciones optimizado por canal desde un solo prompt usando tu propia clave de IA.
+---
+
+El editor de plantillas incluye **AI Assist** — describe qué debe decir la notificación y obtén copy optimizado para los límites de caracteres de cada canal.
+
+## Claves BYOP de IA
+
+Conecta tu propia clave en **Integrations**:
+
+- **OpenAI** (`openai_ai`) — usa `gpt-4o-mini`
+- **Anthropic** (`anthropic_ai`) — usa `claude-3-haiku`
+
+Nexus no cobra por tokens de IA — pagas directamente a tu proveedor.
+
+## API
+
+```http
+POST /v1/templates/ai-generate
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "prompt": "Order shipped notification with tracking link",
+  "tone": "friendly",
+  "locale": "en",
+  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+}
+```
+
+Devuelve contenido estructurado por canal con límites aplicados:
+
+| Canal | Límite |
+|-------|--------|
+| Email subject | 80 chars |
+| SMS body | 160 chars |
+| Push title / body | 50 / 120 chars |
+| WhatsApp body | 1024 chars |
+
+**Tones:** `professional`, `casual`, `urgent`, `friendly`
+
+## Flujo de trabajo
+
+1. Abre **Templates** en el dashboard
+2. Haz clic en el panel **AI Assist**
+3. Introduce el prompt y selecciona canales
+4. Previsualiza el copy generado por canal
+5. Acéptalo en el borrador de tu plantilla
+
+## Relacionado
+
+- [Plantillas i18n](/docs/platform/features/i18n) — genera por locale
+- [Guía del primer flujo](/docs/platform/guides/first-workflow)

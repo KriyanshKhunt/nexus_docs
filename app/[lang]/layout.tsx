@@ -1,6 +1,5 @@
-import { i18nProvider } from '@/lib/layout.shared';
+import { NexusRootProvider } from '@/components/nexus-root-provider';
 import { i18n } from '@/lib/i18n';
-import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { ReactNode } from 'react';
 
 export default async function LangLayout({
@@ -12,11 +11,7 @@ export default async function LangLayout({
 }) {
   const { lang } = await params;
 
-  return (
-    <RootProvider theme={{ enabled: true, defaultTheme: 'dark' }} i18n={i18nProvider(lang)}>
-      {children}
-    </RootProvider>
-  );
+  return <NexusRootProvider lang={lang}>{children}</NexusRootProvider>;
 }
 
 export function generateStaticParams() {

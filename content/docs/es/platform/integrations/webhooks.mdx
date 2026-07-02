@@ -1,0 +1,45 @@
+---
+title: Canal Webhook
+description: Envía payloads de notificación compilados a tus propios endpoints HTTP.
+---
+
+El canal **Webhook** hace POST de JSON estructurado a una URL que configures — ideal para microservicios internos, Zapier o automatización personalizada.
+
+## Configuración
+
+1. Añade **Custom Webhook** en Integraciones (`webhook_custom`)
+2. Define URL, método de autenticación y secreto de firma opcional
+3. Añade un nodo de canal **Webhook** a tu flujo
+
+## Payload saliente
+
+```json
+{
+  "event": "notification.delivered",
+  "workflow": { "id": "…", "name": "order.shipped" },
+  "subscriber": { "id": "…", "externalId": "user_42" },
+  "channel": "WEBHOOK",
+  "data": { "orderId": "ORD-9912" },
+  "compiled": { "title": "…", "body": "…" }
+}
+```
+
+## Autenticación
+
+| Método | Headers |
+|--------|---------|
+| None | — |
+| Bearer | `Authorization: Bearer …` |
+| Basic | `Authorization: Basic …` |
+| HMAC | `x-nexus-signature`, `x-nexus-timestamp` |
+
+Verifica HMAC en tu servidor usando el secreto de firma configurado.
+
+## Fiabilidad
+
+Las entregas fallidas de webhook se reintentan vía BullMQ. Las respuestas se almacenan en el audit log `responseMeta`.
+
+## Relacionado
+
+- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)
+- [Catálogo de proveedores](/docs/platform/integrations/providers)

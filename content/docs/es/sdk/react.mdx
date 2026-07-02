@@ -1,0 +1,120 @@
+---
+title: SDK React
+description: "@nexus-signal/react — campana de notificaciones, inbox y matriz de preferencias."
+---
+
+Componentes React listos para usar en notificaciones in-app y preferencias de suscriptor.
+
+## Instalación
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+</Tabs>
+
+## NexusProvider
+
+Envuelve tu app (o layout autenticado):
+
+```tsx
+import { NexusProvider } from '@nexus-signal/react';
+
+export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId={user.id}
+      hmacSignature={hmac}
+      backendUrl="https://api.nexussignal.dev"
+    >
+      {children}
+    </NexusProvider>
+  );
+}
+```
+
+| Prop | Descripción |
+|------|-------------|
+| `publicKey` | Clave pública del entorno (`pk_prd_…`) |
+| `subscriberId` | Mismo `externalId` usado en triggers |
+| `hmacSignature` | Desde el backend — consulta [Autenticación](/docs/platform/getting-started/authentication) |
+| `backendUrl` / `apiBaseUrl` | Origen de la API Nexus |
+
+## Campana de notificaciones
+
+```tsx
+import { NotificationCenterBell } from '@nexus-signal/react';
+
+<header>
+  <NotificationCenterBell position="bottom-end" variant="ghost" />
+</header>
+```
+
+- Actualizaciones en vivo vía WebSocket con badge de no leídos
+- Acciones de marcar como leído y archivar
+- Sincronización de lectura entre dispositivos
+
+## Inbox de notificaciones
+
+Feed de página completa con agrupación por fecha e infinite scroll:
+
+```tsx
+import { NotificationInbox } from '@nexus-signal/react';
+
+<NotificationInbox />
+```
+
+Usa `GET /v1/sdk/notifications` con paginación (`hasMore`, `loadMore`).
+
+## Matriz de preferencias
+
+```tsx
+import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
+
+<SubscriberPreferenceMatrix variant="borderless" groupByTopic />
+```
+
+Renderiza eventos de flujo o **topics** frente a checkboxes de canal. Los cambios persisten vía la API de preferencias del SDK.
+
+## Hook useNotifications
+
+```tsx
+import { useNotifications } from '@nexus-signal/react';
+
+const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
+  useNotifications();
+```
+
+| Campo | Tipo |
+|-------|------|
+| `status` | `'connected' \| 'disconnected'` |
+| `items` | Lista de notificaciones in-app |
+
+## Tematización
+
+Los componentes usan variables CSS (`--nexus-theme-*`) compatibles con Tailwind. Sobrescribe en tu CSS global para adaptarlos a tu marca.
+
+## Seguridad
+
+<Callout type="error">
+Genera `hmacSignature` en tu servidor para cada sesión. Nunca pongas `secretKey` en código del frontend.
+</Callout>
