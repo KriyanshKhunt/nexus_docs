@@ -1,0 +1,34 @@
+---
+title: Digest & Throttle
+description: Batch noisy alerts and rate-limit per subscriber to prevent notification fatigue.
+---
+
+## Digest node
+
+Collapses high-frequency events into **one summary notification** after a sliding window (default **30 minutes**).
+
+### Behavior
+
+1. Events hitting a Digest node are stored in a Redis list per subscriber/workflow/node
+2. Status set to `QUEUED_IN_DIGEST`
+3. When the window expires, worker compiles a summary template with bundled `triggerData.digest` items
+4. Single notification dispatched
+
+**Use case:** "You have 12 new comments" instead of 12 separate pushes.
+
+## Throttle node
+
+Rate-limits how many notifications pass through within a time window.
+
+| Setting | Example |
+|---------|---------|
+| `maxCount` | 3 |
+| `windowSeconds` | 60 |
+| `divertToDigest` | true — overflow goes to digest instead of dropping |
+
+**Use case:** Prevent alert storms during bulk imports or DDoS-like event spikes.
+
+## Related
+
+- [Workflows](/docs/platform/concepts/workflows)
+- [Delivery pipeline](/docs/platform/concepts/delivery-pipeline)

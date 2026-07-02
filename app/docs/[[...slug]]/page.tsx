@@ -2,8 +2,8 @@ import { source } from '@/lib/source';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/layouts/docs/page';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
+import { getMDXComponents } from '@/components/mdx';
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
   const params = await props.params;
@@ -18,7 +18,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
-        <MDX components={{ ...defaultMdxComponents, a: RelativeLink }} />
+        <MDX components={getMDXComponents({ a: RelativeLink })} />
       </DocsBody>
     </DocsPage>
   );
@@ -36,7 +36,7 @@ export async function generateMetadata(props: {
   if (!page) notFound();
 
   return {
-    title: page.data.title,
+    title: `${page.data.title} | Nexus Signal`,
     description: page.data.description,
   };
 }

@@ -1,0 +1,14 @@
+{
+  "title": "Platform",
+  "description": "Workflows, features, integrations, and guides",
+  "root": true,
+  "icon": "Layers",
+  "pages": [
+    "index",
+    "getting-started",
+    "concepts",
+    "features",
+    "integrations",
+    "guides"
+  ]
+}

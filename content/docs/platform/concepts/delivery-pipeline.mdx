@@ -1,0 +1,49 @@
+---
+title: Delivery Pipeline
+description: Step-by-step execution from trigger ingestion to provider dispatch and telemetry.
+---
+
+When you call `workflows.trigger`, this pipeline runs asynchronously.
+
+```mermaid
+sequenceDiagram
+  participant App as Your App
+  participant API as Express API
+  participant Q as BullMQ
+  participant W as Worker
+  participant P as Provider
+
+  App->>API: POST /v1/workflows/trigger
+  API->>API: Validate + quota check
+  API->>Q: Enqueue job
+  API-->>App: 202 Accepted
+  Q->>W: Pick up job
+  W->>W: Preference + presence gates
+  W->>W: Compile template
+  W->>P: Dispatch channel
+  P-->>W: Response metadata
+  W->>W: Update execution log
+```
+
+## Step summary
+
+| Step | What happens |
+|------|----------------|
+| **Ingestion** | Validate key, resolve subscribers, create log, enqueue |
+| **Worker pickup** | Load workflow, template, organization context |
+| **Gates** | Preferences, presence suppression, smart timing, delivery window |
+| **Compile** | Handlebars + locale resolution + click tracking URLs |
+| **Dispatch** | Weighted provider router → carrier adapter |
+| **Telemetry** | WebSocket (in-app), click tracking, carrier callbacks |
+
+## Lifecycle statuses
+
+`INGESTED` → `QUEUED` → `PROCESSING` → `DISPATCHED` → `DELIVERED` → `READ` / `OPENED` / `FAILED`
+
+Special: `SKIPPED_BY_PREFERENCE`, `QUEUED_IN_DIGEST`, `FAILED_PROVIDER_DOWN`
+
+<Callout type="warn">
+Scheduled triggers and smart-timing holds re-enter the queue with a delay — status may show `QUEUED` during the wait.
+</Callout>
+
+View the full timeline in **Audit Logs** drill-down.

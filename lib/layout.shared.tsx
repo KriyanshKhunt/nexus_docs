@@ -4,11 +4,16 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: (
-        <span className="flex items-center gap-2 font-semibold">
-          <span className="inline-flex size-6 items-center justify-center rounded-md bg-fd-primary text-[11px] font-bold text-fd-primary-foreground">
+        <span className="flex items-center gap-2.5 font-semibold tracking-tight">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-fd-primary text-xs font-bold text-fd-primary-foreground shadow-sm">
             N
           </span>
-          Nexus Signal
+          <span>
+            Nexus Signal
+            <span className="ml-2 hidden text-xs font-normal text-fd-muted-foreground sm:inline">
+              Docs
+            </span>
+          </span>
         </span>
       ),
       url: '/docs',
@@ -20,8 +25,8 @@ export function baseOptions(): BaseLayoutProps {
         external: true,
       },
       {
-        text: 'GitHub',
-        url: 'https://github.com/nexussignal',
+        text: 'Pricing',
+        url: 'https://nexussignal.dev/pricing',
         external: true,
       },
     ],

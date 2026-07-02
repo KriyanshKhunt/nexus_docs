@@ -1,0 +1,20 @@
+---
+title: Concepts
+description: Core ideas behind Nexus Signal — architecture, BYOP, workflows, and the delivery pipeline.
+---
+
+Before diving into features and APIs, these concepts explain **how Nexus Signal is designed** and why it behaves the way it does.
+
+<Cards>
+  <Card title="Architecture" href="/docs/platform/concepts/architecture" description="API, queue, workers, WebSocket gateway." />
+  <Card title="BYOP" href="/docs/platform/concepts/byop" description="Your keys, your bills, zero markup." />
+  <Card title="Workflows" href="/docs/platform/concepts/workflows" description="Canvas nodes and step execution." />
+  <Card title="Delivery pipeline" href="/docs/platform/concepts/delivery-pipeline" description="What happens after you trigger." />
+</Cards>
+
+## Core principles
+
+1. **Asynchronous by default** — triggers return in milliseconds; workers handle providers
+2. **BYOP** — your keys, your bills, your data
+3. **Multi-tenant isolation** — organizations, environments, and encrypted provider credentials
+4. **Observable delivery** — every step logged from ingestion to carrier response

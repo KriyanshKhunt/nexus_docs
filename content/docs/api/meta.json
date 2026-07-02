@@ -1,0 +1,7 @@
+{
+  "title": "API Reference",
+  "description": "REST endpoints for triggers, inbox, schedules, and analytics",
+  "root": true,
+  "icon": "Webhook",
+  "pages": ["index", "workflows", "sdk", "schedules", "analytics"]
+}

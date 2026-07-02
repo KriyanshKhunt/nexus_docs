@@ -1,0 +1,25 @@
+---
+title: Guides
+description: Step-by-step guides for common Nexus Signal integration tasks.
+---
+
+Practical walkthroughs beyond the quickstart.
+
+<Cards>
+  <Card title="First workflow" href="/docs/platform/guides/first-workflow" description="Build a multi-channel workflow from scratch." />
+  <Card title="Production checklist" href="/docs/platform/guides/production-checklist" description="Before you flip to Production keys." />
+</Cards>
+
+## Before production
+
+<Accordions type="single">
+  <Accordion title="Have I tested in Development?">
+    Use the Development environment and sandbox simulator before connecting Production provider keys.
+  </Accordion>
+  <Accordion title="Are provider credentials in Production only?">
+    Staging can mirror Production, but never reuse Production keys in local `.env` files committed to git.
+  </Accordion>
+  <Accordion title="Is HMAC generated server-side?">
+    React SDK sessions need a fresh HMAC from your backend — see [Authentication](/docs/platform/getting-started/authentication).
+  </Accordion>
+</Accordions>

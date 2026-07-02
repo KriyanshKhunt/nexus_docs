@@ -1,0 +1,46 @@
+---
+title: Messaging Channels
+description: Slack, Discord, and Microsoft Teams — org webhooks and per-subscriber routing.
+---
+
+Deliver notifications directly to team chat tools.
+
+## Org-level setup
+
+Configure incoming webhook URLs in **Integrations** for each platform. All subscribers share the org webhook unless overridden.
+
+## Per-subscriber routing
+
+Pass webhook URLs on trigger recipients for user-specific channels (e.g. personal Slack DM webhook):
+
+```ts
+recipients: [
+  {
+    externalId: 'user_1',
+    slackWebhookUrl: 'https://hooks.slack.com/services/T…/B…/…',
+    discordWebhookUrl: 'https://discord.com/api/webhooks/…',
+    teamsWebhookUrl: 'https://outlook.office.com/webhook/…',
+  },
+]
+```
+
+Subscriber URLs **override** org credentials at dispatch time. URLs persist on the subscriber profile for future triggers.
+
+## Payload formats
+
+| Channel | Format |
+|---------|--------|
+| Slack | `{ "text": "…" }` |
+| Discord | `{ "content": "…" }` |
+| Teams | Adaptive Card with body text |
+
+Templates support `slack`, `discord`, and `ms_teams` content fields with i18n variants.
+
+## Workflow canvas
+
+Add **Slack**, **Discord**, or **Teams** channel nodes to your workflow step tree.
+
+## Related
+
+- [Node SDK recipient fields](/docs/sdk/node)
+- [Integrations](/docs/platform/integrations)

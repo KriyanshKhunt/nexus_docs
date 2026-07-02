@@ -1,0 +1,50 @@
+---
+title: Workflows
+description: Visual workflow canvas — triggers, channels, delays, digests, failover, and more.
+---
+
+A **workflow** is a named automation (`order.shipped`, `user.signup`) backed by a **step tree** from the visual canvas.
+
+## Trigger
+
+Every workflow starts with a **Trigger** node defining the event namespace. Your SDK call uses `workflowName` matching this identifier.
+
+## Node types
+
+| Node | Purpose |
+|------|---------|
+| **Channel** | Send via Email, SMS, Push, In-App, WhatsApp, Slack, Discord, Teams, or Webhook |
+| **Delay** | Wait a fixed duration before the next step |
+| **Wait Until** | Wait until a timestamp from trigger payload (e.g. 24h before appointment) |
+| **Delivery Window** | Only deliver between hours in subscriber's local timezone |
+| **Digest** | Batch high-frequency events into one summary (default 30 min window) |
+| **Throttle** | Rate-limit alerts per subscriber; optional divert to digest |
+| **Failover** | Primary channel → wait for read → fallback channel |
+| **A/B Split** | Percentage traffic split with engagement tracking |
+| **Smart Timing** | Toggle on channel nodes — delay to subscriber's peak hour |
+
+## Channel node options
+
+On any **Channel** node you can enable:
+
+- **`suppressWhenOnline`** — skip external channels if user has active WebSocket (see [cost reduction](/docs/platform/features/cost-reduction))
+- **`smartTiming`** — AI send-time optimization (see [smart send-time](/docs/platform/features/smart-send-time))
+
+## Templates
+
+Each workflow has versioned **templates** (Draft → Production Active). Content supports Handlebars variables:
+
+```html
+<p>Hi {{ subscriber.externalId }}, your order {{ data.orderId }} shipped.</p>
+```
+
+Multi-locale templates use locale keys — see [i18n](/docs/platform/features/i18n).
+
+## Workflow ↔ Topic
+
+Assign a workflow to a [Topic](/docs/platform/features/topics) so subscribers manage preferences by category instead of individual event names.
+
+## Related
+
+- [First workflow guide](/docs/platform/guides/first-workflow)
+- [Delivery pipeline](/docs/platform/concepts/delivery-pipeline)

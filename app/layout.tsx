@@ -6,7 +6,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
-        <RootProvider>{children}</RootProvider>
+        <RootProvider theme={{ enabled: true, defaultTheme: 'dark' }}>
+          {children}
+        </RootProvider>
       </body>
     </html>
   );

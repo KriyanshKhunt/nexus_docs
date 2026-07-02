@@ -1,0 +1,39 @@
+---
+title: Integrations
+description: Connect your email, SMS, push, messaging, and AI providers to Nexus Signal.
+---
+
+Nexus Signal integrates with **your existing provider accounts**. Configure keys once in the dashboard **Integrations** hub.
+
+<Cards>
+  <Card title="Provider catalog" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend, and more." />
+  <Card title="Messaging channels" href="/docs/platform/integrations/messaging-channels" description="Slack, Discord, Teams per-subscriber webhooks." />
+  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Custom HTTP endpoints for any payload." />
+</Cards>
+
+## Integration layers
+
+| Layer | Examples |
+|-------|----------|
+| Email | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
+| SMS | Twilio, Vonage, Plivo, Sinch |
+| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
+| Push | Firebase FCM, Apple APNs |
+| Messaging | Slack, Discord, Microsoft Teams |
+| Webhook | Custom HTTP endpoints |
+| AI | OpenAI, Anthropic (content generation) |
+
+## Weight configuration
+
+When multiple providers exist for one layer, set traffic weights (must sum to 100):
+
+```http
+PUT /v1/integrations/weights/email
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Layers: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+
+<Callout type="info">
+See [BYOP](/docs/platform/concepts/byop) for why Nexus never marks up provider costs.
+</Callout>

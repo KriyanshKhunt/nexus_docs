@@ -1,0 +1,94 @@
+---
+title: Quickstart
+description: Send your first notification with Nexus Signal in minutes.
+---
+
+## 1. Create a workspace
+
+Sign in at the [dashboard](https://app.nexussignal.dev). You receive **three isolated environments**:
+
+| Environment | Key prefix | Use for |
+|-------------|------------|---------|
+| Development | `pk_dev_` / `sk_dev_` | Local testing + sandbox |
+| Staging | `pk_stg_` / `sk_stg` | QA integration |
+| Production | `pk_prd_` / `sk_prd_` | Live traffic |
+
+## 2. Create a workflow
+
+**Workflows** → create `user.signup` → add Email + In-App channel nodes → publish template to **Production**.
+
+## 3. Connect a provider
+
+**Integrations** → add SendGrid or Resend → paste API key (encrypted at rest).
+
+## 4. Install the Node SDK
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/node
+```
+
+  </Tab>
+</Tabs>
+
+## 5. Trigger from your server
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  baseUrl: 'https://api.nexussignal.dev',
+});
+
+const result = await nexus.workflows.trigger({
+  workflowName: 'user.signup',
+  recipients: [{ externalId: 'user_123', email: 'alex@acme.io' }],
+  data: { name: 'Alex' },
+});
+```
+
+<Callout type="success">
+A successful call returns **HTTP 202** with `{ accepted: true }`. Check **Audit Logs** or the Development **Sandbox** simulator.
+</Callout>
+
+## Next steps
+
+<Cards>
+  <Card title="Environments" href="/docs/platform/getting-started/environments" description="Dev, Staging, Production keys." />
+  <Card title="React SDK" href="/docs/sdk/react" description="Add the in-app bell." />
+  <Card title="First workflow" href="/docs/platform/guides/first-workflow" description="Multi-channel walkthrough." />
+</Cards>
+
+## FAQ
+
+<Accordions type="single">
+  <Accordion title="Do I need all 10 channels?">
+    No. Start with Email or In-App only. Add channels as you connect providers in Integrations.
+  </Accordion>
+  <Accordion title="Why 202 Accepted instead of 200?">
+    Nexus is async by design. The API enqueues work and returns immediately — delivery happens in background workers.
+  </Accordion>
+  <Accordion title="Will Development sends cost money?">
+    External channels use the **sandbox simulator** in Development — no real provider API calls. In-App uses live WebSocket.
+  </Accordion>
+  <Accordion title="Where do I get API keys?">
+    Dashboard → select environment → **Settings → API Keys**. Use `sk_dev_` locally, `sk_prd_` in production.
+  </Accordion>
+</Accordions>

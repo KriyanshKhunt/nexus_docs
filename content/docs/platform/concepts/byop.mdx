@@ -1,0 +1,46 @@
+---
+title: Bring Your Own Provider
+description: Use your own SendGrid, Twilio, and Resend keys — zero per-message markup from Nexus.
+---
+
+**BYOP (Bring Your Own Provider)** is the foundation of Nexus Signal. We orchestrate delivery; **you** own the carrier relationships and pay providers directly.
+
+## What Nexus does
+
+- Visual workflow builder and template engine
+- Smart routing, failover, and circuit breaking across **your** provider accounts
+- Subscriber preferences, topics, and inbox APIs
+- Analytics, audit logs, and cost tracking
+
+## What Nexus does not do
+
+- Resell SMS or email bandwidth
+- Mark up per-message fees
+- Lock you into a single carrier
+
+## Supported provider layers
+
+Configure one or more providers per channel in **Integrations**, then set **traffic weights** (e.g. 70% SendGrid, 30% Resend for email).
+
+See the full [provider catalog](/docs/platform/integrations/providers).
+
+## Encrypted credentials
+
+Provider API keys are stored encrypted in your organization's `providerKeys` vault. They are decrypted only at dispatch time inside workers.
+
+## AI keys are BYOP too
+
+AI content generation uses **your** OpenAI or Anthropic API key (`openai_ai`, `anthropic_ai` integrations). Nexus does not proxy AI calls through a shared key.
+
+## Why this matters
+
+| Traditional platforms | Nexus Signal |
+|----------------------|--------------|
+| Bundled SMS/email with markup | You pay Twilio/SendGrid directly |
+| Hard to switch providers | Weighted routing + failover across vendors |
+| Opaque delivery costs | [Cost analytics](/docs/platform/features/cost-analytics) per workflow |
+
+## Related
+
+- [Integrations](/docs/platform/integrations)
+- [Weighted routing](/docs/platform/features/cost-reduction#weighted-provider-routing)

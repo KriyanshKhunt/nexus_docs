@@ -5,22 +5,30 @@ description: Nexus Signal — BYOP notification orchestration for email, SMS, pu
 
 # Nexus Signal
 
-**Nexus Signal** is a developer-first notification orchestration platform. One API and visual workflow canvas route messages across **10 channels** while you keep **your own provider keys** — SendGrid, Twilio, Resend, FCM, and others. No per-message markup. No vendor lock-in.
+**Nexus Signal** is developer-first notification infrastructure. One API and a visual workflow canvas route messages across **10 channels** while you keep **your own provider keys** — no per-message markup, no lock-in.
 
-## Why teams choose Nexus
+<Cards>
+  <Card title="Quickstart" href="/docs/platform/getting-started/quickstart" description="Send your first notification in under 5 minutes." />
+  <Card title="Platform" href="/docs/platform/concepts/architecture" description="Architecture, BYOP, workflows, and the delivery pipeline." />
+  <Card title="Why Nexus" href="/docs/platform/features/cost-reduction" description="Presence suppression, smart send-time, and cost analytics." />
+  <Card title="Node SDK" href="/docs/sdk/node" description="Trigger workflows from your backend with @nexus-signal/node." />
+  <Card title="React SDK" href="/docs/sdk/react" description="In-app bell, inbox, and preference matrix components." />
+  <Card title="API Reference" href="/docs/api" description="REST endpoints for triggers, inbox, schedules, and analytics." />
+</Cards>
 
-| Capability | What it means for you |
-|------------|----------------------|
-| **Bring Your Own Provider (BYOP)** | You pay carriers directly; Nexus is the control plane only |
-| **Presence suppression** | Skip redundant push/SMS when the user is already online in-app — **lower spend** |
-| **AI smart send-time** | Deliver at each subscriber's peak engagement hour — **higher opens** |
-| **AI content generation** | One prompt → channel-length-aware copy for every channel |
-| **Cost analytics** | See spend per provider, channel, and workflow with budget alerts |
-| **Visual workflows** | Delay, digest, throttle, failover, A/B split, delivery windows — no custom cron |
+## What makes Nexus different
+
+| Capability | Benefit |
+|------------|---------|
+| **Presence suppression** | Skip redundant push/SMS when users are online — lower provider spend |
+| **AI smart send-time** | Deliver at each subscriber's peak engagement hour |
+| **BYOP** | Your SendGrid, Twilio, Resend keys — zero message markup |
+| **Cost analytics** | Spend per provider, channel, and workflow with budget alerts |
+| **Visual workflows** | Delay, digest, throttle, failover, A/B split, delivery windows |
 
 ## Ten channels, one trigger
 
-Email · SMS · Web Push · Mobile Push · In-App · WhatsApp · Slack · Discord · Microsoft Teams · Webhook
+Email · SMS · Web Push · Mobile Push · In-App · WhatsApp · Slack · Discord · Teams · Webhook
 
 ```ts
 await nexus.workflows.trigger({
@@ -30,22 +38,18 @@ await nexus.workflows.trigger({
 });
 ```
 
-The platform returns **202 Accepted** immediately. Delivery runs asynchronously through Redis + BullMQ workers.
+Returns **202 Accepted** immediately — delivery runs asynchronously via Redis + BullMQ.
 
-## What's in these docs
+## Choose a section
 
-- **[Getting Started](/docs/getting-started/quickstart)** — workspace, providers, first trigger
-- **[Features](/docs/features)** — smart timing, presence suppression, AI, cost analytics
-- **[SDKs](/docs/sdks)** — `@nexus-signal/node` and `@nexus-signal/react`
-- **[API Reference](/docs/api-reference)** — REST endpoints
-- **[Integrations](/docs/integrations)** — SendGrid, Twilio, Slack, and more
-- **[Guides](/docs/guides)** — first workflow and production checklist
+Use the **sidebar dropdown** (Platform · SDKs · API Reference) to switch context — same pattern as modern Fumadocs docs.
+
+<Callout type="info">
+New here? Start with [Quickstart](/docs/platform/getting-started/quickstart), then read [Architecture](/docs/platform/concepts/architecture).
+</Callout>
 
 ## Stack
 
-Nexus Signal is built with **Node.js**, **PostgreSQL**, **Redis**, and **React**. The ingestion API is non-blocking; heavy provider calls never block your request thread.
+Node.js · PostgreSQL · Redis · React — sub-10ms ingestion API, observable delivery pipeline.
 
-## Support
-
-- **Email:** support@nexussignal.dev
-- **Dashboard:** [app.nexussignal.dev](https://app.nexussignal.dev)
+**Support:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Dashboard](https://app.nexussignal.dev)

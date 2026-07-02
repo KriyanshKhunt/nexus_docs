@@ -1,0 +1,67 @@
+---
+title: Build Your First Workflow
+description: Create a multi-channel welcome workflow with template, trigger, and in-app bell.
+---
+
+This guide builds a **user.signup** welcome flow: email + in-app notification.
+
+## 1. Create the workflow
+
+Dashboard → **Workflows** → New workflow named `user.signup`.
+
+Add nodes:
+
+```
+Trigger → Channel (Email) → Channel (In-App)
+```
+
+Enable **Suppress when online** on the Email node if you want presence-aware delivery.
+
+## 2. Write templates
+
+Open **Templates** for this workflow.
+
+**Email (HTML):**
+```html
+<h1>Welcome, {{ data.name }}!</h1>
+<p>Thanks for joining. Your account ID is {{ subscriber.externalId }}.</p>
+```
+
+**In-App:**
+```json
+{ "title": "Welcome!", "body": "Hi {{ data.name }}, glad you're here." }
+```
+
+Promote template to **Production Active**.
+
+## 3. Create a test subscriber
+
+**Subscribers** → Add subscriber with your test `externalId` and email.
+
+## 4. Trigger from code
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.signup',
+  recipients: [{ externalId: 'test_user', email: 'you@example.com' }],
+  data: { name: 'Test User' },
+});
+```
+
+In Development, email appears in **Sandbox**. In-app requires the React SDK.
+
+## 5. Add in-app bell
+
+```tsx
+<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
+  <NotificationCenterBell />
+</NexusProvider>
+```
+
+Trigger again — bell badge updates in real time.
+
+## Next steps
+
+- Add [smart send-time](/docs/platform/features/smart-send-time) on email
+- Assign workflow to a [topic](/docs/platform/features/topics)
+- Add [delivery window](/docs/platform/features/delivery-windows) for marketing sends

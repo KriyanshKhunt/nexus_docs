@@ -1,0 +1,51 @@
+---
+title: Cost Analytics
+description: Track provider spend per channel, workflow, and provider with budget alerts.
+---
+
+Know exactly what notifications cost — something most notification platforms don't offer.
+
+## Setup
+
+1. **Integrations → Provider costs** — set cost per message per provider (e.g. SendGrid $0.001, Twilio $0.05)
+2. **Settings → Budget** — optional monthly `costBudgetUsd` cap
+
+## Dashboard
+
+**Overview → Monthly Spend** card shows:
+
+- Total spend this billing cycle
+- Breakdown by provider and channel
+- Breakdown by workflow
+- Budget used % and exceeded badge
+
+## API
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "totalCostUsd": 847.32,
+  "budgetUsd": 1000,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
+  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+}
+```
+
+## Budget alerts
+
+When spend exceeds `costBudgetUsd`, org owners receive an **email alert** once per billing cycle.
+
+## ROI correlation
+
+Combine cost data with conversion telemetry (`OPENED`, `CLICKED`) from audit logs to identify high-cost, low-engagement workflows.
+
+## Related
+
+- [Cost reduction](/docs/platform/features/cost-reduction)
+- [Analytics API](/docs/api/analytics)

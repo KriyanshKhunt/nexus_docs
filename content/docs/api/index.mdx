@@ -1,0 +1,54 @@
+---
+title: API Reference
+description: REST API overview for Nexus Signal — base URL, auth, and endpoint index.
+---
+
+**Base URL:** `https://api.nexussignal.dev/v1`
+
+<Cards>
+  <Card title="Workflows" href="/docs/api/workflows" description="POST /workflows/trigger — async delivery." />
+  <Card title="SDK" href="/docs/api/sdk" description="Inbox, preferences, topics for browser apps." />
+  <Card title="Schedules" href="/docs/api/schedules" description="Cron and one-shot scheduled triggers." />
+  <Card title="Analytics" href="/docs/api/analytics" description="Metrics, cost, and engagement data." />
+</Cards>
+
+## Authentication modes
+
+| Audience | Auth | Endpoints |
+|----------|------|-----------|
+| Server apps | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
+| Browser SDK | `x-nexus-public-key: pk_*` | `/sdk/*` |
+| Dashboard | JWT session cookie / Bearer | `/workflows/dashboard`, `/analytics`, etc. |
+
+## Response conventions
+
+- Triggers return **202 Accepted** (async processing)
+- Errors return `{ error: string, code?: string, details?: object }`
+- Rate limits apply per plan tier
+
+## Health & telemetry
+
+<Tabs items={['Health', 'Telemetry']}>
+  <Tab value="Health">
+
+```http
+GET /health
+GET /health/deep
+```
+
+  </Tab>
+  <Tab value="Telemetry">
+
+```http
+GET /v1/telemetry/click/:trackingId
+POST /v1/telemetry/callbacks/:provider
+```
+
+Click tracking redirects users and logs engagement. Carrier callbacks update delivery status.
+
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for SDK routes only.
+</Callout>
