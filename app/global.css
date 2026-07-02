@@ -70,7 +70,10 @@ a[data-card]:hover {
 }
 
 .hover\:bg-fd-accent:hover:not(#nd-sidebar button),
-#nd-sidebar a:hover:not([data-active="true"]),
+#nd-sidebar
+  a:hover:not([data-active="true"]):not([class*="brand"]):not(
+    [href$="/docs/platform"]
+  ):not([href$="/docs/platform/"]),
 [role="option"][aria-selected="true"],
 [data-search-item][aria-selected="true"],
 .nd-search-item[aria-selected="true"],
@@ -80,6 +83,11 @@ button[aria-expanded]:hover {
     var(--color-fd-accent) 80%,
     transparent
   ) !important;
+}
+
+button,
+[role="button"] {
+  cursor: pointer;
 }
 
 .prose a {

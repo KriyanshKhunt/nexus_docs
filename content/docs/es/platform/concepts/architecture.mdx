@@ -33,8 +33,7 @@ flowchart TB
   W --> DB
   W --> SG & TW & FCM
   W --> WS
-  WS --> UI
-  UI -->|HMAC| WS
+  WS <-->|WebSocket + HMAC| UI
 ```
 
 ## Componentes

@@ -34,6 +34,9 @@ export function Mermaid({ chart }: { chart: string }) {
           themeVariables: themeVars,
           securityLevel: "strict",
           fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
+          flowchart: {
+            subGraphTitleMargin: { top: 15, bottom: 10 },
+          },
         });
         return mermaid.render(`mermaid-${id}`, chart);
       })
@@ -81,14 +84,14 @@ export function Mermaid({ chart }: { chart: string }) {
           onClick={() => setIsOpen(false)}
         >
           <button
-            className="fixed right-4 top-4 z-[101] rounded-lg bg-fd-background/80 backdrop-blur-md p-2 border border-fd-border text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground shadow-lg transition-all"
+            className="fixed right-4 top-4 z-[101] rounded-lg bg-fd-card/85 backdrop-blur-md p-2 border border-fd-border text-fd-muted-foreground hover:bg-fd-muted hover:text-fd-foreground shadow-lg transition-all"
             onClick={() => setIsOpen(false)}
           >
             <X className="size-5" />
           </button>
 
           <div
-            className="relative w-full max-w-5xl max-h-[85vh] overflow-auto rounded-xl border border-fd-border bg-fd-background p-6 shadow-2xl transition-all [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/45 [&::-webkit-scrollbar-track]:bg-transparent"
+            className="relative w-full max-w-5xl max-h-[85vh] overflow-auto rounded-xl border border-fd-border bg-fd-card p-6 shadow-2xl transition-all [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/45 [&::-webkit-scrollbar-track]:bg-transparent"
             onClick={(e) => e.stopPropagation()}
           >
             <div
