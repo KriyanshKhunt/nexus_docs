@@ -35,7 +35,7 @@ yarn add @nexus-signal/react socket.io-client
 
 Envuelve tu app (o layout autenticado):
 
-```tsx
+```tsx title="app/layout.tsx"
 import { NexusProvider } from "@nexus-signal/react";
 
 export function AppShell({ user, hmac }: { user: User; hmac: string }) {
@@ -80,7 +80,7 @@ export function AppShell({ user, hmac }: { user: User; hmac: string }) {
 
 ## Campana de notificaciones
 
-```tsx
+```tsx title="components/header.tsx"
 import { NotificationCenterBell } from "@nexus-signal/react";
 
 <header>
@@ -96,7 +96,7 @@ import { NotificationCenterBell } from "@nexus-signal/react";
 
 Feed de página completa con agrupación por fecha e infinite scroll:
 
-```tsx
+```tsx title="pages/notifications.tsx"
 import { NotificationInbox } from "@nexus-signal/react";
 
 <NotificationInbox />;
@@ -106,7 +106,7 @@ Usa `GET /v1/sdk/notifications` con paginación (`hasMore`, `loadMore`).
 
 ## Matriz de preferencias
 
-```tsx
+```tsx title="pages/settings.tsx"
 import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
 
 <SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
@@ -116,7 +116,7 @@ Renderiza eventos de flujo o **topics** frente a checkboxes de canal. Los cambio
 
 ## Hook useNotifications
 
-```tsx
+```tsx title="components/notification-list.tsx"
 import { useNotifications } from "@nexus-signal/react";
 
 const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =

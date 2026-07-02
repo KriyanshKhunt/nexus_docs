@@ -6,9 +6,21 @@ description: Configura Nexus Signal y envía tu primera notificación.
 Bienvenido a Nexus Signal. Esta sección te guía desde cero hasta un trigger funcional en tres pasos: **workspace → proveedores → trigger con SDK**.
 
 <Cards>
-  <Card title="Inicio rápido" href="/docs/platform/getting-started/quickstart" description="Primer trigger en menos de 5 minutos." />
-  <Card title="Entornos" href="/docs/platform/getting-started/environments" description="Claves de Dev, Staging y Production." />
-  <Card title="Autenticación" href="/docs/platform/getting-started/authentication" description="Claves secretas, claves públicas, HMAC." />
+  <Card
+    title="Inicio rápido"
+    href="/docs/platform/getting-started/quickstart"
+    description="Primer trigger en menos de 5 minutos."
+  />
+  <Card
+    title="Entornos"
+    href="/docs/platform/getting-started/environments"
+    description="Claves de Dev, Staging y Production."
+  />
+  <Card
+    title="Autenticación"
+    href="/docs/platform/getting-started/authentication"
+    description="Claves secretas, claves públicas, HMAC."
+  />
 </Cards>
 
 ## Requisitos previos
@@ -28,7 +40,7 @@ sequenceDiagram
   App->>API: POST /workflows/trigger
   API-->>App: 202 Accepted
   API->>W: Enqueue job
-  W->>W: Workflow steps + providers
+  W->>W: Pasos de flujo<br/>+ proveedores
   W-->>App: In-app via WebSocket
 ```
 

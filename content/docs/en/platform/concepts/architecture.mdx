@@ -13,7 +13,7 @@ flowchart TB
   end
 
   subgraph Nexus
-    API["Express API<br/><small>202 in &lt;10ms</small>"]
+    API["Express API<br/><small>202 in &lt; 10ms</small>"]
     Q["Redis + BullMQ"]
     W["Worker cluster"]
     WS["Socket.IO"]
@@ -39,14 +39,14 @@ flowchart TB
 
 ## Components
 
-| Layer | Technology | Role |
-|-------|------------|------|
-| Ingestion API | Node.js + Express | Auth, validate, enqueue, return 202 |
-| Core database | PostgreSQL + Prisma | Orgs, workflows, subscribers, logs |
-| Queue | Redis + BullMQ | Async jobs, delays, digest, circuit breaker |
-| Workers | Node.js | Execute steps, compile templates, dispatch |
-| Realtime | Socket.IO | In-app, read sync, sandbox simulator |
-| Dashboard | React SPA | Canvas, templates, analytics |
+| Layer         | Technology          | Role                                        |
+| ------------- | ------------------- | ------------------------------------------- |
+| Ingestion API | Node.js + Express   | Auth, validate, enqueue, return 202         |
+| Core database | PostgreSQL + Prisma | Orgs, workflows, subscribers, logs          |
+| Queue         | Redis + BullMQ      | Async jobs, delays, digest, circuit breaker |
+| Workers       | Node.js             | Execute steps, compile templates, dispatch  |
+| Realtime      | Socket.IO           | In-app, read sync, sandbox simulator        |
+| Dashboard     | React SPA           | Canvas, templates, analytics                |
 
 ## Non-blocking ingestion
 
@@ -57,7 +57,8 @@ The API **never** calls carriers or compiles heavy templates during the HTTP req
 Resources are scoped to **organization** → **environment** (Development, Staging, Production). Each environment has isolated keys, subscribers, and workflows.
 
 <Callout type="idea">
-Development uses **sandbox mode** — external channels are simulated so you test without provider spend. See [Sandbox](/docs/platform/features/sandbox).
+  Development uses **sandbox mode** — external channels are simulated so you
+  test without provider spend. See [Sandbox](/docs/platform/features/sandbox).
 </Callout>
 
 ## Related

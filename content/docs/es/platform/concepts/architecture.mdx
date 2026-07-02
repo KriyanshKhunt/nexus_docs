@@ -13,7 +13,7 @@ flowchart TB
   end
 
   subgraph Nexus
-    API["Express API<br/><small>202 in &lt;10ms</small>"]
+    API["Express API<br/><small>202 in &lt; 10ms</small>"]
     Q["Redis + BullMQ"]
     W["Worker cluster"]
     WS["Socket.IO"]
@@ -39,14 +39,14 @@ flowchart TB
 
 ## Componentes
 
-| Capa | Tecnología | Rol |
-|------|------------|-----|
-| Ingestion API | Node.js + Express | Auth, validar, encolar, devolver 202 |
-| Core database | PostgreSQL + Prisma | Orgs, workflows, suscriptores, logs |
-| Queue | Redis + BullMQ | Jobs async, delays, digest, circuit breaker |
-| Workers | Node.js | Ejecutar pasos, compilar plantillas, despachar |
-| Realtime | Socket.IO | In-app, sync de lectura, simulador sandbox |
-| Dashboard | React SPA | Canvas, plantillas, analítica |
+| Capa          | Tecnología          | Rol                                            |
+| ------------- | ------------------- | ---------------------------------------------- |
+| Ingestion API | Node.js + Express   | Auth, validar, encolar, devolver 202           |
+| Core database | PostgreSQL + Prisma | Orgs, workflows, suscriptores, logs            |
+| Queue         | Redis + BullMQ      | Jobs async, delays, digest, circuit breaker    |
+| Workers       | Node.js             | Ejecutar pasos, compilar plantillas, despachar |
+| Realtime      | Socket.IO           | In-app, sync de lectura, simulador sandbox     |
+| Dashboard     | React SPA           | Canvas, plantillas, analítica                  |
 
 ## Ingestión no bloqueante
 
@@ -57,7 +57,9 @@ La API **nunca** llama a carriers ni compila plantillas pesadas durante la petic
 Los recursos tienen alcance **organización** → **entorno** (Development, Staging, Production). Cada entorno tiene claves, suscriptores y workflows aislados.
 
 <Callout type="idea">
-Development usa **modo sandbox** — los canales externos se simulan para que pruebes sin gasto en proveedores. Consulta [Sandbox](/docs/platform/features/sandbox).
+  Development usa **modo sandbox** — los canales externos se simulan para que
+  pruebes sin gasto en proveedores. Consulta
+  [Sandbox](/docs/platform/features/sandbox).
 </Callout>
 
 ## Relacionado

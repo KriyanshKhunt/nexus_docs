@@ -33,7 +33,7 @@ yarn add @nexus-signal/node
 
 ## Initialize
 
-```ts
+```ts title="nexus.ts"
 import { NexusClient } from "@nexus-signal/node";
 
 const nexus = new NexusClient({
@@ -72,7 +72,7 @@ const nexus = new NexusClient({
 
 ## Trigger a workflow
 
-```ts
+```ts title="trigger.ts"
 const result = await nexus.workflows.trigger({
   workflowName: "billing.invoice_overdue",
   recipients: [
@@ -147,14 +147,14 @@ if (!result.ok) {
 
 ## HMAC signatures
 
-```ts
+```ts title="auth.ts"
 const hmac = nexus.auth.generateHmacSignature("cust_8824");
 // Pass to @nexus-signal/react NexusProvider — never expose secretKey in browser
 ```
 
 Also exported standalone (requires passing the `secretKey` explicitly):
 
-```ts
+```ts title="standalone-auth.ts"
 import { generateHmacSignature } from '@nexus-signal/node';
 
 const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
@@ -162,7 +162,7 @@ const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
 
 ## Schedules
 
-```ts
+```ts title="schedule.ts"
 await nexus.schedules.create({
   name: "Monday digest",
   workflowId: "workflow-uuid",
@@ -183,7 +183,7 @@ await nexus.schedules.delete(id);
 - **Retry buffer** — failed requests queued in memory (max 500)
 - **`flushRetries()`** — replay buffered triggers when platform is healthy
 
-```ts
+```ts title="resilience.ts"
 const nexus = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!,
   events: {
