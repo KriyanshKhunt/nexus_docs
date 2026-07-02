@@ -1,0 +1,76 @@
+---
+title: Topics API
+description: Dashboard endpoints for notification topics — group workflows for preference matrices.
+---
+
+Requires dashboard JWT + workspace context.
+
+Topics let subscribers opt in or out of categories (e.g. marketing, product updates) across multiple workflows. The React [Preference matrix](/docs/sdk/react) renders topics automatically.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/v1/topics` | List all topics |
+| POST | `/v1/topics` | Create topic |
+| GET | `/v1/topics/:id` | Get topic |
+| PUT | `/v1/topics/:id` | Update topic |
+| DELETE | `/v1/topics/:id` | Delete topic |
+| GET | `/v1/topics/:id/stats` | Subscription stats |
+| PUT | `/v1/topics/assign/:workflowId` | Assign workflows to a topic |
+
+Roles: create/update/delete require `OWNER`, `ADMIN`, or `DEVELOPER`.
+
+## Create topic
+
+```http
+POST /v1/topics
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "marketing",
+  "label": "Marketing & promotions",
+  "description": "Product news and offers",
+  "defaultChannels": { "EMAIL": true, "SMS": false, "PUSH": false }
+}
+```
+
+## Assign workflows
+
+```http
+PUT /v1/topics/assign/:workflowId
+Content-Type: application/json
+```
+
+```json
+{
+  "topicIds": ["topic-uuid-1", "topic-uuid-2"]
+}
+```
+
+## SDK integration
+
+Browser apps fetch topics via:
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+Subscriber preferences use keys like `topic:marketing`:
+
+```json
+{
+  "preferences": {
+    "topic:marketing": { "EMAIL": false, "PUSH": true }
+  }
+}
+```
+
+## Related
+
+- [Topics feature](/docs/platform/features/topics)
+- [SDK API](/docs/api/sdk)
+- [React SDK](/docs/sdk/react)

@@ -1,28 +1,32 @@
 'use client';
 
-import { docsTabs } from '@/lib/docs-tabs';
+import { docsTabs, docsTabsEs } from '@/lib/docs-tabs';
+import { localizeHref, stripLocalePrefix } from '@/lib/i18n-path';
 import { cn } from '@/lib/cn';
 import Link from 'fumadocs-core/link';
 import { usePathname } from 'fumadocs-core/framework';
+import { useI18n } from 'fumadocs-ui/contexts/i18n';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from 'fumadocs-ui/components/ui/popover';
 import { useMemo, useState } from 'react';
 
 function isTabActive(tabUrl: string, pathname: string) {
-  if (tabUrl === '/docs') return pathname === '/docs';
-  return pathname === tabUrl || pathname.startsWith(`${tabUrl}/`);
+  const normalized = stripLocalePrefix(pathname);
+  return normalized === tabUrl || normalized.startsWith(`${tabUrl}/`);
 }
 
 export function DocsTabSwitcher() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { locale = 'en' } = useI18n();
+  const tabs = locale === 'es' ? docsTabsEs : docsTabs;
 
   const selected = useMemo(
-    () => docsTabs.findLast((tab) => isTabActive(tab.url, pathname)),
-    [pathname],
+    () => tabs.findLast((tab) => isTabActive(tab.url, pathname)),
+    [pathname, tabs],
   );
 
-  const current = selected ?? docsTabs[0];
+  const current = selected ?? tabs[0];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -46,12 +50,13 @@ export function DocsTabSwitcher() {
         align="start"
         className="flex w-(--radix-popover-trigger-width) flex-col gap-0.5 p-1"
       >
-        {docsTabs.map((tab) => {
+        {tabs.map((tab) => {
           const active = isTabActive(tab.url, pathname);
+          const href = localizeHref(tab.url, locale);
           return (
             <Link
               key={tab.url}
-              href={tab.url}
+              href={href}
               onClick={() => setOpen(false)}
               className={cn(
                 'flex items-center gap-2 rounded-md p-2 transition-colors',

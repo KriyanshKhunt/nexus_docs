@@ -9,7 +9,14 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3001](http://localhost:3001) — docs live at `/docs`.
+Open [http://localhost:3001](http://localhost:3001).
+
+| Locale | Docs entry |
+|--------|------------|
+| English (default) | `/docs/platform` |
+| Español | `/es/docs/platform` |
+
+Use the language switcher in the docs navbar to change locale.
 
 ## Build
 
@@ -21,10 +28,15 @@ npm start
 ## Structure
 
 ```
-content/docs/     MDX documentation pages
-app/              Next.js App Router + Fumadocs layouts
+content/docs/
+  $/              Shared meta.json (sidebar structure)
+  en/             English MDX pages
+  es/             Spanish MDX pages (fallback to en when missing)
+app/[lang]/       Next.js App Router + Fumadocs layouts
+lib/i18n.ts       Locale config (en, es)
 lib/source.ts     Content loader
 source.config.ts  Fumadocs MDX config
+middleware.ts     Locale routing + /docs → /docs/platform redirect
 ```
 
 ## Deploy

@@ -1,14 +1,20 @@
 ---
 title: API Reference
-description: REST API overview for Nexus Signal — base URL, auth, and endpoint index.
+description: REST API for Nexus Signal — triggers, inbox, schedules, subscribers, analytics, and topics.
 ---
 
+# Nexus Signal API
+
 **Base URL:** `https://api.nexussignal.dev/v1`
+
+Programmatic access to triggers, in-app inbox, schedules, subscriber management, and analytics. All ingestion endpoints return **202 Accepted** — delivery is asynchronous.
 
 <Cards>
   <Card title="Workflows" href="/docs/api/workflows" description="POST /workflows/trigger — async delivery." />
   <Card title="SDK" href="/docs/api/sdk" description="Inbox, preferences, topics for browser apps." />
   <Card title="Schedules" href="/docs/api/schedules" description="Cron and one-shot scheduled triggers." />
+  <Card title="Subscribers" href="/docs/api/subscribers" description="Create, update, and export subscribers." />
+  <Card title="Topics" href="/docs/api/topics" description="Topic groups for preference matrices." />
   <Card title="Analytics" href="/docs/api/analytics" description="Metrics, cost, and engagement data." />
 </Cards>
 
@@ -18,7 +24,7 @@ description: REST API overview for Nexus Signal — base URL, auth, and endpoint
 |----------|------|-----------|
 | Server apps | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
 | Browser SDK | `x-nexus-public-key: pk_*` | `/sdk/*` |
-| Dashboard | JWT session cookie / Bearer | `/workflows/dashboard`, `/analytics`, etc. |
+| Dashboard | JWT session cookie / Bearer | `/workflows/dashboard`, `/analytics`, `/subscribers`, etc. |
 
 ## Response conventions
 
@@ -52,3 +58,13 @@ Click tracking redirects users and logs engagement. Carrier callbacks update del
 <Callout type="warn">
 Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for SDK routes only.
 </Callout>
+
+<Callout type="info">
+Prefer typed integration? See [Node SDK](/docs/sdk/node) and [React SDK](/docs/sdk/react).
+</Callout>
+
+## Stack
+
+Node.js · PostgreSQL · Redis · BullMQ — sub-10ms ingestion, observable delivery pipeline.
+
+**Support:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Dashboard](https://app.nexussignal.dev)

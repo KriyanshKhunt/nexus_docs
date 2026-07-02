@@ -1,4 +1,4 @@
-import { BookOpen, Code, Layers, Webhook } from 'lucide-react';
+import { Code, Layers, Webhook } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export type DocsTab = {
@@ -8,7 +8,7 @@ export type DocsTab = {
   icon: ReactNode;
 };
 
-function tabIcon(Icon: typeof BookOpen) {
+function tabIcon(Icon: typeof Layers) {
   return (
     <div className="size-full [&_svg]:size-full">
       <Icon />
@@ -17,12 +17,6 @@ function tabIcon(Icon: typeof BookOpen) {
 }
 
 export const docsTabs: DocsTab[] = [
-  {
-    title: 'Introduction',
-    description: 'Overview, quick links, and stack',
-    url: '/docs',
-    icon: tabIcon(BookOpen),
-  },
   {
     title: 'Platform',
     description: 'Workflows, features, integrations, guides',
@@ -38,6 +32,27 @@ export const docsTabs: DocsTab[] = [
   {
     title: 'API Reference',
     description: 'REST endpoints and auth',
+    url: '/docs/api',
+    icon: tabIcon(Webhook),
+  },
+];
+
+export const docsTabsEs: DocsTab[] = [
+  {
+    title: 'Plataforma',
+    description: 'Flujos, funciones, integraciones y guías',
+    url: '/docs/platform',
+    icon: tabIcon(Layers),
+  },
+  {
+    title: 'SDKs',
+    description: 'Paquetes Node.js y React',
+    url: '/docs/sdk',
+    icon: tabIcon(Code),
+  },
+  {
+    title: 'Referencia API',
+    description: 'Endpoints REST y autenticación',
     url: '/docs/api',
     icon: tabIcon(Webhook),
   },

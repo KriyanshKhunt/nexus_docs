@@ -1,11 +1,16 @@
 ---
 title: SDKs
-description: Official Nexus Signal SDKs for Node.js servers and React client applications.
+description: Official Nexus Signal SDKs — Node.js for server triggers and React for in-app UI.
 ---
+
+# Nexus Signal SDKs
+
+Official packages for triggering workflows from your backend and rendering in-app notifications in the browser.
 
 <Cards>
   <Card title="Node.js SDK" href="/docs/sdk/node" description="Triggers, schedules, HMAC — server-side only." />
   <Card title="React SDK" href="/docs/sdk/react" description="Bell, inbox, preferences — browser UI." />
+  <Card title="API Reference" href="/docs/api" description="REST endpoints if you prefer raw HTTP." />
 </Cards>
 
 ## Integration flow
@@ -19,10 +24,27 @@ flowchart LR
   W --> P[Your providers]
 ```
 
-1. Backend triggers workflows with the **secret key**
+1. Backend triggers workflows with the **secret key** (`sk_*`)
 2. Backend generates **HMAC** for the logged-in user
 3. Frontend wraps the app in `NexusProvider` with **public key + HMAC**
 4. In-app notifications stream to `NotificationCenterBell`
+
+## Quick trigger example
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  baseUrl: 'https://api.nexussignal.dev',
+});
+
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42', email: 'alex@acme.io' }],
+  data: { trackingNumber: '1Z999AA10123456784' },
+});
+```
 
 ## Requirements
 
@@ -62,4 +84,8 @@ yarn add @nexus-signal/react socket.io-client
 
 <Callout type="info">
 REST-only integration? Skip the React SDK and use [API Reference](/docs/api) with your HTTP client.
+</Callout>
+
+<Callout type="warn">
+Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for SDK routes only.
 </Callout>

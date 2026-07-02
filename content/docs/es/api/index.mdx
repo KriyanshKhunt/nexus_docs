@@ -1,0 +1,70 @@
+---
+title: Referencia API
+description: API REST de Nexus Signal — triggers, inbox, schedules, suscriptores, analítica y topics.
+---
+
+# API de Nexus Signal
+
+**URL base:** `https://api.nexussignal.dev/v1`
+
+Acceso programático a triggers, inbox in-app, schedules, gestión de suscriptores y analítica. Los endpoints de ingestión devuelven **202 Accepted** — la entrega es asíncrona.
+
+<Cards>
+  <Card title="Flujos" href="/docs/api/workflows" description="POST /workflows/trigger — entrega async." />
+  <Card title="SDK" href="/docs/api/sdk" description="Inbox, preferencias y topics para apps browser." />
+  <Card title="Schedules" href="/docs/api/schedules" description="Triggers programados cron o one-shot." />
+  <Card title="Suscriptores" href="/docs/api/subscribers" description="Crear, actualizar y exportar suscriptores." />
+  <Card title="Topics" href="/docs/api/topics" description="Grupos para matrices de preferencias." />
+  <Card title="Analítica" href="/docs/api/analytics" description="Métricas, costos y engagement." />
+</Cards>
+
+## Modos de autenticación
+
+| Audiencia | Auth | Endpoints |
+|-----------|------|-----------|
+| Apps servidor | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
+| SDK browser | `x-nexus-public-key: pk_*` | `/sdk/*` |
+| Dashboard | JWT session / Bearer | `/workflows/dashboard`, `/analytics`, `/subscribers`, etc. |
+
+## Convenciones de respuesta
+
+- Los triggers devuelven **202 Accepted** (procesamiento async)
+- Errores: `{ error: string, code?: string, details?: object }`
+- Rate limits según plan
+
+## Salud y telemetría
+
+<Tabs items={['Salud', 'Telemetría']}>
+  <Tab value="Salud">
+
+```http
+GET /health
+GET /health/deep
+```
+
+  </Tab>
+  <Tab value="Telemetría">
+
+```http
+GET /v1/telemetry/click/:trackingId
+POST /v1/telemetry/callbacks/:provider
+```
+
+El click tracking redirige y registra engagement. Los callbacks de carriers actualizan el estado de entrega.
+
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+Nunca expongas claves `sk_*` en código del navegador. Usa claves `pk_*` solo en rutas SDK.
+</Callout>
+
+<Callout type="info">
+¿Integración tipada? Ver [SDK Node](/docs/sdk/node) y [SDK React](/docs/sdk/react).
+</Callout>
+
+## Stack
+
+Node.js · PostgreSQL · Redis · BullMQ — ingestión en menos de 10 ms, pipeline observable.
+
+**Soporte:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Dashboard](https://app.nexussignal.dev)

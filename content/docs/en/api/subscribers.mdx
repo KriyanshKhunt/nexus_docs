@@ -1,0 +1,99 @@
+---
+title: Subscribers API
+description: Dashboard endpoints to manage subscribers — create, update, export, and GDPR purge.
+---
+
+Requires dashboard JWT + workspace context.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/v1/subscribers` | List subscribers (paginated, searchable) |
+| POST | `/v1/subscribers` | Create subscriber |
+| GET | `/v1/subscribers/:id` | Get subscriber by ID |
+| PUT | `/v1/subscribers/:id` | Update subscriber |
+| DELETE | `/v1/subscribers/:id` | GDPR purge — delete subscriber and delivery history |
+| GET | `/v1/subscribers/:id/export` | Export subscriber data (GDPR) |
+| GET | `/v1/subscribers/:id/engagement` | Engagement model — smart send-time data |
+
+Roles: create/update/delete require `OWNER`, `ADMIN`, or `DEVELOPER`.
+
+## List subscribers
+
+```http
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "subscribers": [
+    {
+      "id": "uuid",
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "locale": "en",
+      "timezone": "America/Los_Angeles",
+      "globalUnsubscribed": false,
+      "deliveryCount": 128
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "environment": "PRODUCTION"
+}
+```
+
+## Create subscriber
+
+```http
+POST /v1/subscribers
+Content-Type: application/json
+```
+
+```json
+{
+  "externalId": "user_42",
+  "email": "alex@acme.io",
+  "phoneNumber": "+15551234567",
+  "timezone": "America/Los_Angeles",
+  "locale": "en",
+  "preferences": {
+    "order.shipped": { "EMAIL": true, "SMS": false }
+  }
+}
+```
+
+## Update subscriber
+
+```http
+PUT /v1/subscribers/:id
+```
+
+Update `email`, `phoneNumber`, `timezone`, `locale`, `preferences`, or `globalUnsubscribed`.
+
+## GDPR export & purge
+
+```http
+GET /v1/subscribers/:id/export
+DELETE /v1/subscribers/:id
+```
+
+Export returns a JSON bundle of subscriber profile and delivery history. Purge permanently deletes the subscriber, clears Redis presence state, and writes an audit log entry.
+
+## Engagement data
+
+```http
+GET /v1/subscribers/:id/engagement
+```
+
+Returns per-channel engagement scores used by [Smart send-time](/docs/platform/features/smart-send-time).
+
+## Related
+
+- [SDK API](/docs/api/sdk) — browser inbox and preferences
+- [Multi-language templates](/docs/platform/features/i18n) — `locale` field
+- [Node SDK](/docs/sdk/node) — trigger with `locale` override

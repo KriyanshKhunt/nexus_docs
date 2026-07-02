@@ -1,19 +1,21 @@
 ---
-title: Introduction
-description: Nexus Signal — BYOP notification orchestration for email, SMS, push, in-app, WhatsApp, Slack, and more.
+title: Platform Overview
+description: Nexus Signal platform — BYOP notification orchestration across 10 channels with visual workflows.
 ---
 
-# Nexus Signal
+# Nexus Signal Platform
 
 **Nexus Signal** is developer-first notification infrastructure. One API and a visual workflow canvas route messages across **10 channels** while you keep **your own provider keys** — no per-message markup, no lock-in.
 
+Everything about running Nexus as your notification control plane — from first workflow to production.
+
 <Cards>
   <Card title="Quickstart" href="/docs/platform/getting-started/quickstart" description="Send your first notification in under 5 minutes." />
-  <Card title="Platform" href="/docs/platform/concepts/architecture" description="Architecture, BYOP, workflows, and the delivery pipeline." />
-  <Card title="Why Nexus" href="/docs/platform/features/cost-reduction" description="Presence suppression, smart send-time, and cost analytics." />
-  <Card title="Node SDK" href="/docs/sdk/node" description="Trigger workflows from your backend with @nexus-signal/node." />
-  <Card title="React SDK" href="/docs/sdk/react" description="In-app bell, inbox, and preference matrix components." />
-  <Card title="API Reference" href="/docs/api" description="REST endpoints for triggers, inbox, schedules, and analytics." />
+  <Card title="Getting Started" href="/docs/platform/getting-started" description="Workspace, environments, and authentication." />
+  <Card title="Concepts" href="/docs/platform/concepts" description="Architecture, BYOP, workflows, pipeline." />
+  <Card title="Features" href="/docs/platform/features" description="Smart timing, presence, AI, cost tools." />
+  <Card title="Integrations" href="/docs/platform/integrations" description="SendGrid, Twilio, Slack, webhooks." />
+  <Card title="Guides" href="/docs/platform/guides/first-workflow" description="First workflow and production checklist." />
 </Cards>
 
 ## What makes Nexus different
@@ -40,9 +42,27 @@ await nexus.workflows.trigger({
 
 Returns **202 Accepted** immediately — delivery runs asynchronously via Redis + BullMQ.
 
-## Choose a section
+## Core flow
 
-Use the **sidebar dropdown** (Platform · SDKs · API Reference) to switch context — same pattern as modern Fumadocs docs.
+```mermaid
+flowchart LR
+  A[Your App] -->|POST trigger| B[Express API]
+  B -->|202 Accepted| C[BullMQ]
+  C --> D[Worker]
+  D --> E{User online?}
+  E -->|Yes| F[In-App WebSocket]
+  E -->|No| G[Email / SMS / Push]
+```
+
+## When to read what
+
+| You want to… | Read |
+|--------------|------|
+| Send first notification | [Quickstart](/docs/platform/getting-started/quickstart) |
+| Understand async pipeline | [Delivery pipeline](/docs/platform/concepts/delivery-pipeline) |
+| Reduce provider spend | [Cost reduction](/docs/platform/features/cost-reduction) |
+| Improve open rates | [Smart send-time](/docs/platform/features/smart-send-time) |
+| Go live safely | [Production checklist](/docs/platform/guides/production-checklist) |
 
 <Callout type="info">
 New here? Start with [Quickstart](/docs/platform/getting-started/quickstart), then read [Architecture](/docs/platform/concepts/architecture).
@@ -51,5 +71,3 @@ New here? Start with [Quickstart](/docs/platform/getting-started/quickstart), th
 ## Stack
 
 Node.js · PostgreSQL · Redis · React — sub-10ms ingestion API, observable delivery pipeline.
-
-**Support:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Dashboard](https://app.nexussignal.dev)
