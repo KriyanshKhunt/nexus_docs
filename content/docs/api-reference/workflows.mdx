@@ -1,0 +1,70 @@
+---
+title: Workflows API
+description: POST /v1/workflows/trigger — ingest workflow events from your backend.
+---
+
+## Trigger workflow
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+Idempotency-Key: optional-unique-key
+```
+
+### Request body
+
+```json
+{
+  "workflowName": "order.shipped",
+  "recipients": [
+    {
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "timezone": "America/Los_Angeles",
+      "locale": "en"
+    }
+  ],
+  "data": {
+    "orderId": "ORD-9912",
+    "trackingUrl": "https://carrier.com/track/9912"
+  }
+}
+```
+
+### Response — 202 Accepted
+
+```json
+{
+  "accepted": true,
+  "workflow": "order.shipped",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "logId": "uuid",
+      "subscriberId": "uuid",
+      "status": "queued"
+    }
+  ],
+  "billing": { "quotaStatus": "ok" }
+}
+```
+
+### Error codes
+
+| Status | Meaning |
+|--------|---------|
+| 400 | Validation failed |
+| 401 | Invalid or missing secret key |
+| 404 | Workflow not found |
+| 409 | Workflow disabled |
+| 402/429 | Quota exceeded or rate limited |
+
+## Dashboard workflow CRUD
+
+Authenticated dashboard routes under `/v1/workflows/dashboard` for create, update, delete, test trigger, and A/B stats.
+
+## Node SDK
+
+Prefer [`@nexus-signal/node`](/docs/sdks/node) for typed triggers, retries, and circuit breaking.

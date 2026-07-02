@@ -1,0 +1,47 @@
+---
+title: Scheduled Triggers
+description: Cron and one-time scheduled notifications without building your own job runner.
+---
+
+Schedule workflow fires from the dashboard or Node SDK — no external cron required.
+
+## Types
+
+| Type | Field | Example |
+|------|-------|---------|
+| **Recurring** | `cronExpression` | `0 9 * * 1` (Mondays 9 AM) |
+| **One-time** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+
+Both support a `timezone` (default UTC) and static `recipients` + `data` payload.
+
+## Dashboard
+
+**Schedules** page — create, pause, edit, delete. View `nextFireAt` and `lastFiredAt`.
+
+## Node SDK
+
+```ts
+await nexus.schedules.create({
+  name: 'Weekly digest',
+  workflowId: 'wf_uuid',
+  cronExpression: '0 9 * * 1',
+  timezone: 'America/New_York',
+  recipients: [{ externalId: 'user_1' }],
+  data: { week: '2026-W27' },
+});
+```
+
+```ts
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## Execution
+
+A worker cron evaluates due schedules every **60 seconds** (max 100 active schedules per environment).
+
+## Related
+
+- [API Reference — Schedules](/docs/api-reference/schedules)
+- [Node SDK](/docs/sdks/node)

@@ -1,0 +1,40 @@
+---
+title: Integrations
+description: Connect your email, SMS, push, messaging, and AI providers to Nexus Signal.
+---
+
+Nexus Signal integrates with **your existing provider accounts**. Configure keys once in the dashboard **Integrations** hub.
+
+## Integration layers
+
+| Layer | Examples |
+|-------|----------|
+| Email | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
+| SMS | Twilio, Vonage, Plivo, Sinch |
+| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
+| Push | Firebase FCM, Apple APNs |
+| Messaging | Slack, Discord, Microsoft Teams |
+| Webhook | Custom HTTP endpoints |
+| AI | OpenAI, Anthropic (content generation) |
+
+## Weight configuration
+
+When multiple providers exist for one layer, set traffic weights (must sum to 100):
+
+```http
+PUT /v1/integrations/weights/email
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Layers: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+
+## Test connections
+
+Use **Test connection** in the dashboard to validate credentials before going live.
+
+## Related
+
+- [Provider catalog](/docs/integrations/providers)
+- [Messaging channels](/docs/integrations/messaging-channels)
+- [Webhooks](/docs/integrations/webhooks)
+- [BYOP concept](/docs/concepts/byop)

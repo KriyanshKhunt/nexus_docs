@@ -1,0 +1,53 @@
+---
+title: Architecture
+description: How Nexus Signal is built — Express API, PostgreSQL, Redis, BullMQ, and WebSockets.
+---
+
+## High-level diagram
+
+```
+┌─────────────┐     POST /v1/workflows/trigger      ┌──────────────┐
+│  Your app   │ ──────────────────────────────────► │ Express API  │
+│ (Node SDK)  │ ◄──────────── 202 Accepted ─────────│  (<10ms)     │
+└─────────────┘                                     └──────┬───────┘
+                                                           │
+                     ┌─────────────────────────────────────┼─────────────────────┐
+                     ▼                                     ▼                     ▼
+              ┌────────────┐                      ┌────────────┐         ┌────────────┐
+              │ PostgreSQL │                      │   Redis    │         │  Socket.IO │
+              │  (ledger)  │                      │  BullMQ    │         │ (realtime) │
+              └────────────┘                      └─────┬──────┘         └────────────┘
+                                                        │
+                                                        ▼
+                                               ┌────────────────┐
+                                               │ Worker cluster │
+                                               │ (step executor)│
+                                               └────────┬───────┘
+                                                        │
+                        ┌───────────────────────────────┼───────────────────────────────┐
+                        ▼               ▼               ▼               ▼               ▼
+                   SendGrid          Twilio            FCM          In-app WS        Slack…
+```
+
+## Components
+
+| Layer | Technology | Role |
+|-------|------------|------|
+| **Ingestion API** | Node.js + Express | Auth, validate, enqueue, return 202 |
+| **Core database** | PostgreSQL + Prisma | Orgs, workflows, subscribers, execution logs |
+| **Queue** | Redis + BullMQ | Async jobs, delays, digest buckets, circuit breaker state |
+| **Workers** | Node.js processes | Execute workflow steps, compile templates, dispatch |
+| **Realtime** | Socket.IO | In-app notifications, read sync, sandbox simulator |
+| **Dashboard** | React SPA | Workflow canvas, templates, analytics, integrations |
+
+## Non-blocking ingestion
+
+The API **never** calls SendGrid, Twilio, or compiles heavy templates during the HTTP request. It writes an `INGESTED` log row, pushes a lightweight job to Redis, and responds immediately.
+
+## Worker isolation
+
+Workers run in separate processes from the API. If a worker crashes mid-job, BullMQ retries with the preserved payload.
+
+## Multi-tenancy
+
+Every resource is scoped to an **organization** and **environment**. Provider keys and weight configs live on the organization; workflows and subscribers belong to an environment.

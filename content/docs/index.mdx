@@ -1,0 +1,51 @@
+---
+title: Introduction
+description: Nexus Signal — BYOP notification orchestration for email, SMS, push, in-app, WhatsApp, Slack, and more.
+---
+
+# Nexus Signal
+
+**Nexus Signal** is a developer-first notification orchestration platform. One API and visual workflow canvas route messages across **10 channels** while you keep **your own provider keys** — SendGrid, Twilio, Resend, FCM, and others. No per-message markup. No vendor lock-in.
+
+## Why teams choose Nexus
+
+| Capability | What it means for you |
+|------------|----------------------|
+| **Bring Your Own Provider (BYOP)** | You pay carriers directly; Nexus is the control plane only |
+| **Presence suppression** | Skip redundant push/SMS when the user is already online in-app — **lower spend** |
+| **AI smart send-time** | Deliver at each subscriber's peak engagement hour — **higher opens** |
+| **AI content generation** | One prompt → channel-length-aware copy for every channel |
+| **Cost analytics** | See spend per provider, channel, and workflow with budget alerts |
+| **Visual workflows** | Delay, digest, throttle, failover, A/B split, delivery windows — no custom cron |
+
+## Ten channels, one trigger
+
+Email · SMS · Web Push · Mobile Push · In-App · WhatsApp · Slack · Discord · Microsoft Teams · Webhook
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42', email: 'alex@acme.io' }],
+  data: { trackingNumber: '1Z999AA10123456784' },
+});
+```
+
+The platform returns **202 Accepted** immediately. Delivery runs asynchronously through Redis + BullMQ workers.
+
+## What's in these docs
+
+- **[Getting Started](/docs/getting-started/quickstart)** — workspace, providers, first trigger
+- **[Features](/docs/features)** — smart timing, presence suppression, AI, cost analytics
+- **[SDKs](/docs/sdks)** — `@nexus-signal/node` and `@nexus-signal/react`
+- **[API Reference](/docs/api-reference)** — REST endpoints
+- **[Integrations](/docs/integrations)** — SendGrid, Twilio, Slack, and more
+- **[Guides](/docs/guides)** — first workflow and production checklist
+
+## Stack
+
+Nexus Signal is built with **Node.js**, **PostgreSQL**, **Redis**, and **React**. The ingestion API is non-blocking; heavy provider calls never block your request thread.
+
+## Support
+
+- **Email:** support@nexussignal.dev
+- **Dashboard:** [app.nexussignal.dev](https://app.nexussignal.dev)

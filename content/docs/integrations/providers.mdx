@@ -1,0 +1,65 @@
+---
+title: Provider Catalog
+description: Full list of supported BYOP providers per channel layer.
+---
+
+## Email
+
+| ID | Provider |
+|----|----------|
+| `sendgrid` | SendGrid |
+| `resend` | Resend |
+| `amazon_ses` | Amazon SES |
+| `postmark` | Postmark |
+| `mailgun` | Mailgun |
+
+## SMS
+
+| ID | Provider |
+|----|----------|
+| `twilio` | Twilio |
+| `vonage` | Vonage |
+| `plivo` | Plivo |
+| `sinch` | Sinch |
+
+## WhatsApp
+
+| ID | Provider |
+|----|----------|
+| `meta_whatsapp` | Meta Cloud Business API |
+| `twilio_whatsapp` | Twilio WhatsApp Gateway |
+| `infobip_whatsapp` | Infobip |
+
+## Push
+
+| ID | Provider |
+|----|----------|
+| `fcm` | Firebase Cloud Messaging |
+| `apns` | Apple Push Notification Service |
+
+## Messaging
+
+| ID | Provider |
+|----|----------|
+| `slack` | Slack Incoming Webhook |
+| `discord` | Discord Webhook |
+| `ms_teams` | Microsoft Teams Incoming Webhook |
+
+## Webhook
+
+| ID | Provider |
+|----|----------|
+| `webhook_custom` | Custom HTTP endpoint |
+
+## AI (content generation)
+
+| ID | Provider |
+|----|----------|
+| `openai_ai` | OpenAI |
+| `anthropic_ai` | Anthropic |
+
+## Configuration
+
+Each provider accepts credentials via the Integrations modal (API keys, webhook URLs, sender IDs). Keys are encrypted at rest.
+
+Set per-message cost for [cost analytics](/docs/features/cost-analytics) in **Settings → Provider costs**.

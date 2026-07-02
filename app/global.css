@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+:root {
+  --nexus-accent: oklch(0.55 0.18 264);
+}
+
+.dark {
+  --nexus-accent: oklch(0.68 0.16 264);
+}

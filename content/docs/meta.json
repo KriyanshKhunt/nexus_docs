@@ -1,0 +1,20 @@
+{
+  "title": "Nexus Signal",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "getting-started",
+    "---Concepts---",
+    "concepts",
+    "---Features---",
+    "features",
+    "---SDKs---",
+    "sdks",
+    "---API Reference---",
+    "api-reference",
+    "---Integrations---",
+    "integrations",
+    "---Guides---",
+    "guides"
+  ]
+}

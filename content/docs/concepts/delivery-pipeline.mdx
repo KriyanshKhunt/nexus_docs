@@ -1,0 +1,64 @@
+---
+title: Delivery Pipeline
+description: Step-by-step execution from trigger ingestion to provider dispatch and telemetry.
+---
+
+When you call `workflows.trigger`, this pipeline runs asynchronously.
+
+## 1. Ingestion (API)
+
+- Validate secret key and payload schema
+- Check billing quota and plan limits
+- Resolve subscribers by `externalId` or `subscriberId`
+- Optionally update subscriber `timezone`, `locale`, or channel webhooks from recipient payload
+- Create `ExecutionLog` rows with status `INGESTED` → `QUEUED`
+- Enqueue BullMQ jobs
+- Return **202 Accepted**
+
+## 2. Worker pickup
+
+- Load workflow, subscriber, organization, and active production template
+- Set status `PROCESSING`
+- Walk the step tree from trigger → next nodes
+
+## 3. Step execution
+
+Each node type runs dedicated logic:
+
+| Step | Behavior |
+|------|----------|
+| Preference gate | Skip channel if subscriber opted out → `SKIPPED_BY_PREFERENCE` |
+| Presence check | Skip push/SMS/WhatsApp if online (when configured) |
+| Smart timing | Delay job to optimal local hour |
+| Delivery window | Hold until subscriber's allowed hours |
+| Digest / Throttle | Queue or rate-limit in Redis |
+| Failover | Schedule read-ack watch, send fallback on timeout |
+| Channel | Compile template → dispatch to provider |
+
+## 4. Template compilation
+
+Handlebars compiles the active template with:
+
+- `data.*` — trigger payload
+- `subscriber.*` — profile fields
+- Locale resolution — subscriber locale → template variant → `en` fallback
+
+Links in email/SMS are rewritten through telemetry click tracking.
+
+## 5. Provider dispatch
+
+- **Weighted router** picks provider (e.g. SendGrid vs Resend)
+- **Circuit breaker** skips failing providers → `FAILED_PROVIDER_DOWN`
+- Adapter sends to carrier API; response stored in `responseMeta`
+
+## 6. Realtime & telemetry
+
+- **In-app** → WebSocket push to connected clients
+- **Clicks** → `GET /v1/telemetry/click/:id` logs `OPENED`/`CLICKED`, redirects user
+- **Carrier webhooks** → `POST /v1/telemetry/callbacks/:provider` updates delivery status
+
+## Lifecycle statuses
+
+`INGESTED` → `QUEUED` → `PROCESSING` → `DISPATCHED` → `DELIVERED` → `READ` / `OPENED` / `FAILED` / `SKIPPED_BY_PREFERENCE` / `QUEUED_IN_DIGEST`
+
+View the full timeline in **Audit Logs** drill-down.

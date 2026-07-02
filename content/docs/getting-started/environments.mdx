@@ -1,0 +1,39 @@
+---
+title: Environments
+description: Development, Staging, and Production — isolated keys, data, and behavior.
+---
+
+Every Nexus workspace includes **three environments**. Each is a fully isolated scope for workflows, subscribers, templates, schedules, and topics.
+
+## Environment matrix
+
+| | Development | Staging | Production |
+|---|-------------|---------|------------|
+| **Public key** | `pk_dev_*` | `pk_stg_*` | `pk_prd_*` |
+| **Secret key** | `sk_dev_*` | `sk_stg_*` | `sk_prd_*` |
+| **Sandbox mode** | Yes — simulated delivery | No | No |
+| **Chaos mode** | Optional — test failover | No | No |
+| **Real providers** | Only if you disable sandbox path | Yes | Yes |
+
+## Sandbox (Development only)
+
+In **Development**, outbound channels (except in-app) route through the **virtual sandbox** instead of real carrier APIs. Payloads stream over WebSocket to the dashboard simulator — test complex workflows **without spending provider credits**.
+
+See [Sandbox mode](/docs/features/sandbox) for details.
+
+## Switching environments
+
+Use the environment dropdown in the dashboard top bar. All API calls must use the matching secret key for that environment.
+
+<Callout type="warn">
+Never use Production keys in local `.env` files committed to git. Use Development keys for local work.
+</Callout>
+
+## Subscribers are per-environment
+
+A subscriber with `externalId: user_123` in Development is a **different record** from the same ID in Production. Sync or migrate subscribers when promoting integrations.
+
+## Related
+
+- [Authentication](/docs/getting-started/authentication) — which key goes where
+- [Production checklist](/docs/guides/production-checklist) — before you go live

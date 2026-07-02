@@ -1,0 +1,100 @@
+---
+title: React SDK
+description: "@nexus-signal/react — notification bell, inbox, and preference matrix."
+---
+
+Drop-in React components for in-app notifications and subscriber preferences.
+
+## Install
+
+```bash
+npm install @nexus-signal/react socket.io-client
+```
+
+## NexusProvider
+
+Wrap your app (or authenticated layout):
+
+```tsx
+import { NexusProvider } from '@nexus-signal/react';
+
+export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId={user.id}
+      hmacSignature={hmac}
+      backendUrl="https://api.nexussignal.dev"
+    >
+      {children}
+    </NexusProvider>
+  );
+}
+```
+
+| Prop | Description |
+|------|-------------|
+| `publicKey` | Environment public key (`pk_prd_…`) |
+| `subscriberId` | Same `externalId` used in triggers |
+| `hmacSignature` | From backend — see [Authentication](/docs/getting-started/authentication) |
+| `backendUrl` / `apiBaseUrl` | Nexus API origin |
+
+## Notification bell
+
+```tsx
+import { NotificationCenterBell } from '@nexus-signal/react';
+
+<header>
+  <NotificationCenterBell position="bottom-end" variant="ghost" />
+</header>
+```
+
+- Live WebSocket updates with unread badge
+- Mark as read, archive actions
+- Cross-device read sync
+
+## Notification inbox
+
+Full-page feed with date grouping and infinite scroll:
+
+```tsx
+import { NotificationInbox } from '@nexus-signal/react';
+
+<NotificationInbox />
+```
+
+Uses `GET /v1/sdk/notifications` with pagination (`hasMore`, `loadMore`).
+
+## Preference matrix
+
+```tsx
+import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
+
+<SubscriberPreferenceMatrix variant="borderless" groupByTopic />
+```
+
+Renders workflow events or **topics** against channel checkboxes. Changes persist via SDK preferences API.
+
+## useNotifications hook
+
+```tsx
+import { useNotifications } from '@nexus-signal/react';
+
+const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
+  useNotifications();
+```
+
+| Field | Type |
+|-------|------|
+| `status` | `'connected' \| 'disconnected'` |
+| `items` | In-app notification list |
+
+## Theming
+
+Components use CSS variables (`--nexus-theme-*`) compatible with Tailwind. Override in your global CSS to match your brand.
+
+## Security
+
+<Callout type="error">
+Generate `hmacSignature` on your server for every session. Never put `secretKey` in frontend code.
+</Callout>

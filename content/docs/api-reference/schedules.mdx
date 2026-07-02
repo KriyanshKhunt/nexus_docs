@@ -1,0 +1,51 @@
+---
+title: Schedules API
+description: Create and manage scheduled workflow triggers via dashboard or SDK.
+---
+
+## SDK routes (secret key)
+
+```http
+Authorization: Bearer sk_prd_…
+```
+
+| Method | Path | Action |
+|--------|------|--------|
+| GET | `/v1/schedules/sdk` | List schedules |
+| POST | `/v1/schedules/sdk` | Create schedule |
+| PATCH | `/v1/schedules/sdk/:id` | Update schedule |
+| DELETE | `/v1/schedules/sdk/:id` | Delete schedule |
+
+### Create body
+
+```json
+{
+  "name": "Weekly report",
+  "workflowId": "uuid",
+  "cronExpression": "0 9 * * 1",
+  "timezone": "America/Chicago",
+  "recipients": [{ "externalId": "user_1" }],
+  "data": { "reportType": "weekly" },
+  "active": true
+}
+```
+
+One-time schedule — use `scheduledAt` instead of `cronExpression`:
+
+```json
+{
+  "scheduledAt": "2026-07-15T10:00:00.000Z"
+}
+```
+
+## Dashboard routes
+
+JWT-authenticated CRUD at `/v1/schedules` with execution history.
+
+## Node SDK
+
+```ts
+await nexus.schedules.create({ … });
+```
+
+See [Node SDK](/docs/sdks/node) and [Schedules feature](/docs/features/schedules).

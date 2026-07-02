@@ -1,0 +1,4 @@
+{
+  "title": "Integrations",
+  "pages": ["index", "providers", "messaging-channels", "webhooks"]
+}
