@@ -5,7 +5,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <span className="flex items-center gap-2.5 font-semibold tracking-tight">
-          <span className="inline-flex size-7 items-center justify-center rounded-lg bg-fd-primary text-xs font-bold text-fd-primary-foreground shadow-sm">
+          <span className="inline-flex size-7 items-center justify-center rounded-lg border border-fd-border bg-fd-muted text-xs font-bold text-fd-foreground">
             N
           </span>
           <span>

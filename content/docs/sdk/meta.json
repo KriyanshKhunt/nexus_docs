@@ -2,6 +2,6 @@
   "title": "SDKs",
   "description": "Node.js server SDK and React UI components",
   "root": true,
-  "icon": "Code2",
+  "icon": "Code",
   "pages": ["index", "node", "react"]
 }
