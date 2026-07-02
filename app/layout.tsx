@@ -25,11 +25,12 @@ export default async function RootLayout({
     cookieStore.get("FD_LOCALE")?.value ?? i18nConfig.defaultLanguage;
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} flex min-h-screen flex-col`}
-        suppressHydrationWarning
-      >
+    <html
+      lang={locale}
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

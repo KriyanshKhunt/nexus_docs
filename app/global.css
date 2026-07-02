@@ -9,37 +9,39 @@
 }
 
 :root {
-  --color-fd-background: hsl(0, 0%, 100%);
-  --color-fd-foreground: hsl(0, 0%, 9%);
-  --color-fd-muted: hsl(0, 0%, 96%);
-  --color-fd-muted-foreground: hsl(0, 0%, 45%);
-  --color-fd-border: hsl(0, 0%, 90%);
-  --color-fd-card: hsl(0, 0%, 98%);
-  --color-fd-card-foreground: hsl(0, 0%, 9%);
-  --color-fd-secondary: hsl(0, 0%, 96%);
-  --color-fd-secondary-foreground: hsl(0, 0%, 9%);
+  --color-fd-background: #ffffff;
+  --color-fd-foreground: #171717;
+  --color-fd-muted: #f5f5f5;
+  --color-fd-muted-foreground: #737373;
+  --color-fd-border: #e6e6e6;
+  --color-fd-card: #fafafa;
+  --color-fd-card-foreground: #171717;
+  --color-fd-secondary: #f5f5f5;
+  --color-fd-secondary-foreground: #171717;
   --color-fd-primary: #297bff;
-  --color-fd-primary-foreground: hsl(0, 0%, 98%);
-  --color-fd-ring: hsl(0, 0%, 70%);
+  --color-fd-primary-foreground: #fafafa;
+  --color-fd-ring: #b3b3b3;
   --color-fd-accent: #d1d1d180;
-  --color-fd-accent-foreground: hsl(0, 0%, 9%);
+  --color-fd-accent-foreground: #171717;
+  --color-fd-popover: #fafafa;
 }
 
 .dark {
-  --color-fd-background: hsl(0, 0%, 6%);
-  --color-fd-foreground: hsl(0, 0%, 96%);
-  --color-fd-muted: hsl(0, 0%, 12%);
-  --color-fd-muted-foreground: hsl(0, 0%, 62%);
-  --color-fd-border: hsl(0, 0%, 16%);
-  --color-fd-card: hsl(0, 0%, 8%);
-  --color-fd-card-foreground: hsl(0, 0%, 96%);
-  --color-fd-secondary: hsl(0, 0%, 11%);
-  --color-fd-secondary-foreground: hsl(0, 0%, 96%);
+  --color-fd-background: #0f0f0f;
+  --color-fd-foreground: #f5f5f5;
+  --color-fd-muted: #1f1f1f;
+  --color-fd-muted-foreground: #9e9e9e;
+  --color-fd-border: #292929;
+  --color-fd-card: #141414;
+  --color-fd-card-foreground: #f5f5f5;
+  --color-fd-secondary: #1c1c1c;
+  --color-fd-secondary-foreground: #f5f5f5;
   --color-fd-primary: #a9ceff;
-  --color-fd-primary-foreground: hsl(0, 0%, 6%);
-  --color-fd-ring: hsl(0, 0%, 40%);
+  --color-fd-primary-foreground: #0f0f0f;
+  --color-fd-ring: #666666;
   --color-fd-accent: #6868684d;
-  --color-fd-accent-foreground: hsl(0, 0%, 96%);
+  --color-fd-accent-foreground: #f5f5f5;
+  --color-fd-popover: #141414;
 }
 
 a[data-card]:hover {
@@ -47,7 +49,7 @@ a[data-card]:hover {
     in oklab,
     var(--color-fd-accent) 80%,
     transparent
-  ) !important;
+  );
 }
 
 .dark a[data-card]:hover {
@@ -59,13 +61,13 @@ a[data-card]:hover {
     in oklab,
     var(--color-fd-primary) 10%,
     transparent
-  ) !important;
-  color: var(--color-fd-primary) !important;
+  );
+  color: var(--color-fd-primary);
 }
 
 #nd-toc a[data-active="true"] {
-  background: transparent !important;
-  color: var(--color-fd-primary) !important;
+  background: transparent;
+  color: var(--color-fd-primary);
   font-weight: 500;
 }
 
@@ -82,7 +84,7 @@ button[aria-expanded]:hover {
     in oklab,
     var(--color-fd-accent) 80%,
     transparent
-  ) !important;
+  );
 }
 
 button,
