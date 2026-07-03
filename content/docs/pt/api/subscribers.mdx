@@ -1,0 +1,99 @@
+---
+title: API de Inscritos
+description: Endpoints do painel para gerenciar inscritos — criar, atualizar, exportar e remoção de dados sob a lei Geral de Proteção de Dados (GDPR).
+---
+
+Requer JWT do painel + contexto do espaço de trabalho.
+
+## Endpoints
+
+| Método | Caminho | Descrição |
+|--------|------|-------------|
+| GET | `/v1/subscribers` | Listar inscritos (paginado, pesquisável) |
+| POST | `/v1/subscribers` | Criar inscrito |
+| GET | `/v1/subscribers/:id` | Obter inscrito por ID |
+| PUT | `/v1/subscribers/:id` | Atualizar inscrito |
+| DELETE | `/v1/subscribers/:id` | Remoção de dados sob a GDPR — exclui inscrito e histórico de entrega |
+| GET | `/v1/subscribers/:id/export` | Exportar dados do inscrito (GDPR) |
+| GET | `/v1/subscribers/:id/engagement` | Modelo de engajamento — dados de horário de envio inteligente |
+
+Funções: criar/atualizar/excluir requerem `OWNER`, `ADMIN` ou `DEVELOPER`.
+
+## Listar inscritos
+
+```http
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "subscribers": [
+    {
+      "id": "uuid",
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "locale": "pt",
+      "timezone": "America/Los_Angeles",
+      "globalUnsubscribed": false,
+      "deliveryCount": 128
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "environment": "PRODUCTION"
+}
+```
+
+## Criar inscrito
+
+```http
+POST /v1/subscribers
+Content-Type: application/json
+```
+
+```json
+{
+  "externalId": "user_42",
+  "email": "alex@acme.io",
+  "phoneNumber": "+15551234567",
+  "timezone": "America/Los_Angeles",
+  "locale": "pt",
+  "preferences": {
+    "order.shipped": { "EMAIL": true, "SMS": false }
+  }
+}
+```
+
+## Atualizar inscrito
+
+```http
+PUT /v1/subscribers/:id
+```
+
+Atualize `email`, `phoneNumber`, `timezone`, `locale`, `preferences` ou `globalUnsubscribed`.
+
+## Exportação e remoção (GDPR)
+
+```http
+GET /v1/subscribers/:id/export
+DELETE /v1/subscribers/:id
+```
+
+A exportação retorna um pacote JSON do perfil do inscrito e histórico de entrega. A purga exclui permanentemente o inscrito, limpa o estado de presença do Redis e grava uma entrada de registro de auditoria.
+
+## Dados de engajamento
+
+```http
+GET /v1/subscribers/:id/engagement
+```
+
+Retorna pontuações de engajamento por canal usadas pelo [Smart send-time](/docs/platform/features/smart-send-time).
+
+## Relacionado
+
+- [API do SDK](/docs/api/sdk) — inbox e preferências do navegador
+- [Modelos multilíngues](/docs/platform/features/i18n) — campo `locale`
+- [Node SDK](/docs/sdk/node) — acionamento com substituição de `locale`

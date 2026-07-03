@@ -1,0 +1,47 @@
+---
+title: Primeiros Passos
+description: Configure o Nexus Signal e envie sua primeira notificação.
+---
+
+Bem-vindo ao Nexus Signal. Esta seção guiará você do zero até um gatilho funcional em três etapas: **espaço de trabalho → provedores → acionamento do SDK**.
+
+<Cards>
+  <Card
+    title="Início Rápido"
+    href="/docs/platform/getting-started/quickstart"
+    description="Primeiro acionamento em menos de 5 minutos."
+  />
+  <Card
+    title="Ambientes"
+    href="/docs/platform/getting-started/environments"
+    description="Chaves de Dev, Staging e Produção."
+  />
+  <Card
+    title="Autenticação"
+    href="/docs/platform/getting-started/authentication"
+    description="Chaves secretas, chaves públicas e HMAC."
+  />
+</Cards>
+
+## Pré-requisitos
+
+- Uma conta no Nexus Signal ([cadastre-se gratuitamente](https://app.nexussignal.dev))
+- Node.js 18+ para o SDK de servidor
+- Pelo menos uma conta de provedor ativa (SendGrid, Resend, Twilio, etc.)
+
+## Como a entrega funciona
+
+```mermaid
+sequenceDiagram
+  participant App as Seu App
+  participant API as API do Nexus
+  participant Worker as Worker
+  
+  App->>API: POST /workflows/trigger
+  API-->>App: 202 Accepted
+  API->>Worker: Enfileirar tarefa
+  Worker->>Worker: Etapas do fluxo<br/>+ provedores
+  Worker-->>App: In-app via WebSocket
+```
+
+Cada entrega é registrada com estados de ciclo de vida completos para depuração e análise.

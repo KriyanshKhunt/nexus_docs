@@ -1,0 +1,209 @@
+---
+title: Node.js SDK
+description: "@nexus-signal/node — acionadores de fluxo de trabalho, agendamentos e assinaturas HMAC."
+---
+
+SDK no lado do servidor para acionar fluxos de trabalho a partir de suas rotas de API, workers ou scripts.
+
+## Instalação
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/node
+```
+
+  </Tab>
+</Tabs>
+
+## Inicialização
+
+```ts title="nexus.ts"
+import { NexusClient } from "@nexus-signal/node";
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
+  baseUrl: "https://api.nexussignal.dev",
+  timeout: 5000,
+});
+```
+
+### Opções do cliente
+
+<TypeTable
+  type={{
+    secretKey: {
+      type: "string",
+      description:
+        "Sua chave secreta do ambiente (ex: sk_dev_..., sk_prd_...). Começa com sk_ e deve ter pelo menos 20 caracteres (obrigatório).",
+    },
+    baseUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description: "A origem do endpoint da API da plataforma Nexus.",
+    },
+    timeout: {
+      type: "number",
+      default: "15000",
+      description: "Limite de tempo limite da solicitação em milissegundos.",
+    },
+    events: {
+      type: "object",
+      description:
+        "Callbacks opcionais para auditoria de eventos de resiliência (onCircuitOpen, onCircuitClose, onBufferOverflow).",
+    },
+  }}
+/>
+
+## Acionar um fluxo de trabalho
+
+```ts title="trigger.ts"
+const result = await nexus.workflows.trigger({
+  workflowName: "billing.invoice_overdue",
+  recipients: [
+    {
+      externalId: "cust_8824",
+      email: "billing@enterprise.com",
+      phoneNumber: "+15550198234",
+      timezone: "America/New_York",
+      locale: "pt",
+      slackWebhookUrl: "https://hooks.slack.com/services/…",
+    },
+  ],
+  data: {
+    invoiceId: "INV-2026-0049",
+    amountDue: "R$ 1.250,00",
+  },
+});
+
+if (!result.ok) {
+  console.warn(result.error, result.queued ? "(armazenado em buffer para nova tentativa)" : "");
+}
+```
+
+### Campos do destinatário (Recipient)
+
+<TypeTable
+  type={{
+    externalId: {
+      type: "string",
+      description: "Seu ID de usuário (obrigatório, a menos que subscriberId seja especificado).",
+    },
+    subscriberId: {
+      type: "string (UUID)",
+      description: "O ID interno exclusivo do inscrito no Nexus.",
+    },
+    email: {
+      type: "string",
+      description: "Endereço de e-mail do destinatário para o canal de e-mail.",
+    },
+    phoneNumber: {
+      type: "string",
+      description:
+        "Número de telefone do destinatário (formato E.164) para canais de SMS e WhatsApp.",
+    },
+    timezone: {
+      type: "string",
+      description:
+        "Fuso horário do destinatário (formato IANA) para agendar ou atrasar notificações com base nas horas locais.",
+    },
+    locale: {
+      type: "string",
+      description:
+        "Substituição de localidade do usuário por acionamento (formato BCP 47) para renderização de localização.",
+    },
+    slackWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook personalizada do Slack para direcionar payloads de mensagens diretamente para o canal de um inscrito.",
+    },
+    discordWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook personalizada do Discord para direcionar payloads de mensagens diretamente para o canal de um inscrito.",
+    },
+    teamsWebhookUrl: {
+      type: "string",
+      description:
+        "URL de webhook personalizada do Microsoft Teams para direcionar payloads de mensagens diretamente para o canal de um inscrito.",
+    },
+  }}
+/>
+
+## Assinaturas HMAC
+
+```ts title="auth.ts"
+const hmac = nexus.auth.generateHmacSignature("cust_8824");
+// Passe para o @nexus-signal/react NexusProvider — nunca exponha a secretKey no navegador
+```
+
+Também exportado como standalone (requer passar a `secretKey` explicitamente):
+
+```ts title="standalone-auth.ts"
+import { generateHmacSignature } from '@nexus-signal/node';
+
+const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
+```
+
+## Agendamentos
+
+```ts title="schedule.ts"
+await nexus.schedules.create({
+  name: "Monday digest",
+  workflowId: "workflow-uuid",
+  cronExpression: "0 9 * * 1",
+  timezone: "UTC",
+  recipients: [{ externalId: "user_1" }],
+  data: {},
+});
+
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## Resiliência
+
+- **Disjuntor (Circuit breaker)** — abre após 5 falhas, auto-recupera após 60s
+- **Buffer de nova tentativa** — solicitações com falha são enfileiradas na memória (máx. 500)
+- **`flushRetries()`** — reproduz acionadores armazenados em buffer quando a plataforma estiver saudável
+
+```ts title="resilience.ts"
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  events: {
+    onCircuitOpen: () => console.warn("Disjuntor do Nexus aberto"),
+    onCircuitClose: () => nexus.workflows.flushRetries(),
+    onBufferOverflow: (p) => console.error("Descartado:", p.workflowName),
+  },
+});
+```
+
+## Formato de resposta
+
+```ts
+type NexusResult<T> = {
+  ok: boolean;
+  status: number;
+  data?: T;
+  error?: string;
+  queued?: boolean; // true se armazenado localmente em buffer
+};
+```
+
+Gatilhos bem-sucedidos retornam **HTTP 202** com `{ accepted: true, results: [...] }`.

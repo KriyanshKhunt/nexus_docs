@@ -1,0 +1,70 @@
+---
+title: API de Fluxos de Trabalho
+description: POST /v1/workflows/trigger — ingere eventos de fluxo de trabalho do seu backend.
+---
+
+## Acionar fluxo de trabalho
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+Idempotency-Key: chave-exclusiva-opcional
+```
+
+### Corpo da requisição (Request body)
+
+```json
+{
+  "workflowName": "order.shipped",
+  "recipients": [
+    {
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "timezone": "America/Los_Angeles",
+      "locale": "pt"
+    }
+  ],
+  "data": {
+    "orderId": "ORD-9912",
+    "trackingUrl": "https://carrier.com/track/9912"
+  }
+}
+```
+
+### Resposta — 202 Accepted
+
+```json
+{
+  "accepted": true,
+  "workflow": "order.shipped",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "logId": "uuid",
+      "subscriberId": "uuid",
+      "status": "queued"
+    }
+  ],
+  "billing": { "quotaStatus": "ok" }
+}
+```
+
+### Códigos de erro
+
+| Status | Significado |
+|--------|---------|
+| 400 | Falha na validação |
+| 401 | Chave secreta inválida ou ausente |
+| 404 | Fluxo de trabalho não encontrado |
+| 409 | Fluxo de trabalho desativado |
+| 402/429 | Cota excedida ou limite de taxa atingido |
+
+## CRUD de fluxos do painel
+
+Rotas autenticadas do painel sob `/v1/workflows/dashboard` para criação, atualização, exclusão, gatilho de teste e estatísticas de A/B.
+
+## SDK para Node
+
+Prefira [`@nexus-signal/node`](/docs/sdk/node) para gatilhos tipados, tentativas automáticas e disjuntor de resiliência.

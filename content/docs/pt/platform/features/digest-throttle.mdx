@@ -1,0 +1,34 @@
+---
+title: Digest e Throttle
+description: Agrupe alertas barulhentos e limite a taxa de envio por inscrito para evitar a fadiga de notificações.
+---
+
+## Nó de Compilação (Digest)
+
+Agrupa eventos de alta frequência em **uma única notificação de resumo** após uma janela de tempo deslizante (padrão de **30 minutos**).
+
+### Comportamento
+
+1. Eventos que atingem um nó Digest são armazenados em uma lista do Redis por inscrito/fluxo/nó.
+2. O status é definido como `QUEUED_IN_DIGEST`.
+3. Quando a janela expira, o worker compila um modelo de resumo com itens empacotados em `triggerData.digest`.
+4. Uma única notificação final é despachada.
+
+**Caso de uso:** "Você tem 12 novos comentários" em vez de 12 notificações push separadas.
+
+## Nó de Controle de Taxa (Throttle)
+
+Limita o número de notificações que podem passar por ele dentro de uma determinada janela de tempo.
+
+| Configuração | Exemplo |
+|---------|---------|
+| `maxCount` (Máximo) | 3 |
+| `windowSeconds` (Janela em segundos) | 60 |
+| `divertToDigest` | true — envia o excedente para um digest em vez de descartar |
+
+**Caso de uso:** Evitar tempestades de alertas durante importações em lote ou picos inesperados de eventos.
+
+## Relacionado
+
+- [Fluxos de Trabalho](/docs/platform/concepts/workflows)
+- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)

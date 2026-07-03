@@ -1,0 +1,185 @@
+---
+title: React SDK
+description: "@nexus-signal/react — sino de notificação, inbox e matriz de preferências."
+---
+
+Componentes React prontos para uso em notificações in-app e preferências de inscritos.
+
+## Instalação
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+</Tabs>
+
+## NexusProvider
+
+Envolva seu aplicativo (ou layout autenticado):
+
+```tsx title="app/layout.tsx"
+import { NexusProvider } from "@nexus-signal/react";
+
+export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId={user.id}
+      hmacSignature={hmac}
+      backendUrl="https://api.nexussignal.dev"
+    >
+      {children}
+    </NexusProvider>
+  );
+}
+```
+
+<TypeTable
+  type={{
+    publicKey: {
+      type: "string",
+      description:
+        "Chave pública do ambiente (começa com pk_dev_, pk_prd_, etc.). Obrigatório.",
+    },
+    subscriberId: {
+      type: "string",
+      description:
+        "O mesmo externalId exclusivo do inscrito usado nos acionadores de fluxo de trabalho. Obrigatório.",
+    },
+    hmacSignature: {
+      type: "string",
+      description:
+        "A assinatura HMAC gerada no seu backend para segurança. Obrigatório.",
+    },
+    backendUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description:
+        "A URL base da API da plataforma Nexus (também pode ser mapeada através da propriedade apiBaseUrl).",
+    },
+  }}
+/>
+
+## Sino de notificação
+
+```tsx title="components/header.tsx"
+import { NotificationCenterBell } from "@nexus-signal/react";
+
+<header>
+  <NotificationCenterBell position="bottom-end" variant="ghost" />
+</header>;
+```
+
+- Atualizações em tempo real por WebSockets com selo de não lidas
+- Ações para marcar como lida e arquivar
+- Sincronização de leitura entre múltiplos dispositivos
+
+## Inbox de notificações
+
+Feed de página inteira com agrupamento por datas e rolagem infinita:
+
+```tsx title="pages/notifications.tsx"
+import { NotificationInbox } from "@nexus-signal/react";
+
+<NotificationInbox />;
+```
+
+Utiliza `GET /v1/sdk/notifications` com paginação (`hasMore`, `loadMore`).
+
+## Matriz de preferências
+
+```tsx title="pages/settings.tsx"
+import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
+
+<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
+```
+
+Renderiza eventos de fluxo de trabalho ou **tópicos** com caixas de seleção de canais. As alterações persistem através da API de preferências do SDK.
+
+## Hook useNotifications
+
+```tsx title="components/notification-list.tsx"
+import { useNotifications } from "@nexus-signal/react";
+
+const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
+  useNotifications();
+```
+
+<TypeTable
+  type={{
+    items: {
+      type: "InAppNotification[]",
+      description: "Array contendo os objetos de notificação in-app carregados atualmente.",
+    },
+    unread: {
+      type: "number",
+      description: "Contador de notificações não lidas e não arquivadas.",
+    },
+    status: {
+      type: "'connected' | 'disconnected'",
+      description: "Status de conexão do WebSocket em tempo real.",
+    },
+    hasMore: {
+      type: "boolean",
+      description:
+        "Indica se há mais notificações históricas a serem carregadas.",
+    },
+    loadingMore: {
+      type: "boolean",
+      description:
+        "Flag indicando se uma solicitação de busca de página está em andamento.",
+    },
+    loadMore: {
+      type: "() => Promise<void>",
+      description:
+        "Busca a próxima página de notificações e as anexa ao feed de itens.",
+    },
+    markRead: {
+      type: "(logId: string) => Promise<void>",
+      description: "Marca uma notificação específica como lida.",
+    },
+    markAllRead: {
+      type: "() => Promise<void>",
+      description: "Marca todas as notificações atuais como lidas.",
+    },
+    archive: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "Arquiva uma notificação específica, marcando-a como lida e removendo-a da lista de não lidas ativas.",
+    },
+    remove: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "Exclui uma notificação inteiramente do banco de dados e do feed.",
+    },
+  }}
+/>
+
+## Temas
+
+Os componentes usam variáveis CSS (`--nexus-theme-*`) compatíveis com Tailwind. Sobrescreva no seu CSS global para combinar com a sua marca.
+
+## Segurança
+
+<Callout type="error">
+  Gere o `hmacSignature` no seu servidor para cada sessão. Nunca coloque a
+  `secretKey` no código do frontend.
+</Callout>

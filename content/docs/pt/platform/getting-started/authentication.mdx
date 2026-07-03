@@ -1,0 +1,65 @@
+---
+title: Autenticação
+description: Chaves secretas, chaves públicas e assinaturas HMAC para integração segura do Nexus Signal.
+---
+
+O Nexus Signal utiliza **chaves de API com escopo de ambiente**. Diferentes credenciais se aplicam aos gatilhos de servidor vs. componentes de SDK voltados ao navegador.
+
+## Tipos de chaves
+
+| Chave | Prefixo | Usada por | Exposição |
+|-----|--------|---------|----------|
+| **Chave secreta** | `sk_*` | SDK do servidor, acionadores de fluxo, SDK de agendamentos | **Apenas no servidor — nunca no navegador** |
+| **Chave pública** | `pk_*` | SDK do React, API de inbox, conexão WebSocket | Segura para incorporar no frontend |
+
+As chaves secretas são enviadas como `Authorization: Bearer sk_prd_…` nas solicitações de acionamento.
+
+As chaves públicas são enviadas como `x-nexus-public-key` nas rotas do SDK.
+
+## Autenticação de gatilho de fluxo
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_sua_chave_secreta
+Content-Type: application/json
+```
+
+A API valida a chave, resolve o ambiente e a organização, e então retorna **202 Accepted** enquanto o worker processa a entrega de forma assíncrona.
+
+## HMAC para tempo real (in-app)
+
+Conexões WebSocket no navegador não podem utilizar chaves secretas. Em vez disso:
+
+1. **Seu backend** gera uma assinatura HMAC usando a chave secreta e o ID do inscrito.
+2. **Seu frontend** passa a assinatura para o `NexusProvider`.
+
+```ts
+// Servidor — @nexus-signal/node
+const hmac = nexus.auth.generateHmacSignature('user_123');
+
+// Cliente — @nexus-signal/react
+<NexusProvider
+  publicKey="pk_prd_…"
+  subscriberId="user_123"
+  hmacSignature={hmac}
+  backendUrl="https://api.nexussignal.dev"
+/>
+```
+
+A plataforma verifica a validade da assinatura usando: `HMAC-SHA256(secretKey, subscriberExternalId)`.
+
+<Callout type="error">
+Regere o HMAC a cada carregamento de página ou sessão — trate-o como um token de sessão de curta duração derivado da autenticação do seu backend.
+</Callout>
+
+## Autenticação do painel
+
+O painel da web usa sessões JWT (e-mail/senha, link mágico, GitHub ou Google OAuth) com MFA opcional. Os membros da equipe recebem acesso baseado em funções (RBAC): Proprietário, Administrador, Desenvolvedor ou Profissional de Marketing.
+
+## Rotação de chaves
+
+Rotacione chaves secretas em **Settings (Configurações) → API Keys**. As chaves antigas podem ser desativadas sem tempo de inatividade se você rotacionar a chave do servidor e a geração do HMAC em conjunto.
+
+## Relacionado
+
+- [Ambientes](/docs/platform/getting-started/environments) — controle e escopo de chaves

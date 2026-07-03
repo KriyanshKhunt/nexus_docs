@@ -1,0 +1,39 @@
+---
+title: Integrações
+description: Conecte seus provedores de e-mail, SMS, push, mensagens e IA ao Nexus Signal.
+---
+
+O Nexus Signal integra-se com **suas contas de provedores existentes**. Configure as chaves uma única vez na central de **Integrations (Integrações)** do painel de controle.
+
+<Cards>
+  <Card title="Catálogo de provedores" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend e muito mais." />
+  <Card title="Canais de mensagens" href="/docs/platform/integrations/messaging-channels" description="Webhooks por inscrito do Slack, Discord e Teams." />
+  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Endpoints HTTP personalizados para qualquer payload." />
+</Cards>
+
+## Camadas de integração
+
+| Camada | Exemplos |
+|-------|----------|
+| E-mail | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
+| SMS | Twilio, Vonage, Plivo, Sinch |
+| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
+| Push | Firebase FCM, Apple APNs |
+| Mensageria | Slack, Discord, Microsoft Teams |
+| Webhook | Endpoints HTTP personalizados |
+| IA | OpenAI, Anthropic (geração de conteúdo) |
+
+## Configuração de pesos
+
+Quando existem múltiplos provedores para uma mesma camada, defina os pesos de tráfego (a soma dos pesos deve totalizar 100):
+
+```http
+PUT /v1/integrations/weights/email
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Camadas disponíveis: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+
+<Callout type="info">
+Consulte [BYOP](/docs/platform/concepts/byop) para entender por que o Nexus nunca cobra taxas adicionais sobre os custos dos provedores.
+</Callout>

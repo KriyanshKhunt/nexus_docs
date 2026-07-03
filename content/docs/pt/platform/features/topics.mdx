@@ -1,0 +1,43 @@
+---
+title: Tópicos
+description: Assinaturas de notificações baseadas em categorias — Marketing, Segurança, Atualizações de Produtos.
+---
+
+Os **Tópicos** permitem que os usuários ativem/desativem **categorias** em vez de gerenciar nomes de eventos de fluxos de trabalho individuais.
+
+## Modelo
+
+| Campo | Descrição |
+|-------|-------------|
+| `name` | Chave de máquina (ex: `marketing`) |
+| `displayName` | Nome de exibição na interface (UI) |
+| `defaultStatus` | `OPTED_IN` (Ativado), `OPTED_OUT` (Desativado) ou `REQUIRED` (Obrigatório) |
+| `sortOrder` | Ordem de exibição na matriz de preferências |
+
+Máximo de **50 tópicos** por ambiente.
+
+## Atribuir fluxos de trabalho
+
+Vincule um fluxo de trabalho a um tópico através do `topicId`. A avaliação de preferências verifica as chaves no formato `topic:{name}` no perfil do inscrito.
+
+## Painel (Dashboard)
+
+Gerencie tópicos em **Settings (Configurações) → Topics**. Atribua fluxos de trabalho a partir do menu suspenso do editor de fluxos.
+
+## SDK
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+Também incluído em `GET /v1/sdk/notification-events` para a matriz de preferências.
+
+## SDK para React
+
+O componente `<SubscriberPreferenceMatrix groupByTopic />` renderiza tópicos como linhas com caixas de seleção de canais.
+
+## Relacionado
+
+- [React SDK](/docs/sdk/react)
+- [API do SDK](/docs/api/sdk)

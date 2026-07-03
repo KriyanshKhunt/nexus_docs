@@ -1,0 +1,51 @@
+---
+title: Análise de Custos
+description: Acompanhe os gastos com provedores por canal, fluxo de trabalho e provedor com alertas de orçamento.
+---
+
+Saiba exatamente quanto custam suas notificações — algo que a maioria das plataformas de notificação não oferece.
+
+## Configuração
+
+1. **Integrations (Integrações) → Provider costs (Custos do provedor)** — defina o custo por mensagem para cada provedor (ex: SendGrid $0,001, Twilio $0,05).
+2. **Settings (Configurações) → Budget (Orçamento)** — defina um teto mensal opcional `costBudgetUsd`.
+
+## Painel (Dashboard)
+
+O card de **Overview (Visão Geral) → Monthly Spend (Gasto Mensal)** mostra:
+
+- Gasto total no ciclo de faturamento atual
+- Detalhamento por provedor e por canal
+- Detalhamento por fluxo de trabalho
+- Porcentagem utilizada do orçamento (%) e selo de orçamento excedido
+
+## API
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "totalCostUsd": 847.32,
+  "budgetUsd": 1000,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
+  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+}
+```
+
+## Alertas de orçamento
+
+Quando o gasto excede `costBudgetUsd`, os proprietários da organização recebem um **alerta por e-mail** uma vez por ciclo de faturamento.
+
+## Correlação de ROI
+
+Combine dados de custo com telemetria de conversão (`OPENED`, `CLICKED`) dos logs de auditoria para identificar fluxos de trabalho de alto custo e baixo engajamento.
+
+## Relacionado
+
+- [Redução de custos](/docs/platform/features/cost-reduction)
+- [API de Análises](/docs/api/analytics)

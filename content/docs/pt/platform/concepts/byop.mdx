@@ -1,0 +1,46 @@
+---
+title: Traga Seu Próprio Provedor (BYOP)
+description: Use suas próprias chaves do SendGrid, Twilio e Resend — taxa zero por mensagem da Nexus.
+---
+
+**BYOP (Bring Your Own Provider)** é a base do Nexus Signal. Nós orquestramos a entrega; **você** gerencia o relacionamento com as operadoras de envio e as paga diretamente.
+
+## O que o Nexus faz
+
+- Construtor visual de fluxos e motor de modelos (templates)
+- Roteamento inteligente, failover e disjuntores em **suas** contas de provedores
+- Preferências de inscritos, tópicos e APIs de inbox
+- Análises, logs de auditoria e controle de custos
+
+## O que o Nexus não faz
+
+- Revende largura de banda de e-mail ou SMS
+- Adiciona taxas ou sobretaxas por mensagem
+- Bloqueia você em uma única operadora (vendor lock-in)
+
+## Camadas de provedores suportadas
+
+Configure um ou mais provedores por canal em **Integrations (Integrações)**, e defina **pesos de tráfego** (ex: 70% SendGrid, 30% Resend para e-mail).
+
+Veja o [catálogo de provedores](/docs/platform/integrations/providers) completo.
+
+## Credenciais criptografadas
+
+As chaves de API dos provedores são armazenadas criptografadas no cofre `providerKeys` da sua organização. Elas são descriptografadas apenas no momento do envio dentro dos workers.
+
+## Chaves de IA também são BYOP
+
+A geração de conteúdo por IA usa **sua** própria chave de API da OpenAI ou Anthropic (integrações `openai_ai` e `anthropic_ai`). O Nexus não realiza chamadas de IA intermediadas por uma chave compartilhada.
+
+## Por que isso importa
+
+| Plataformas Tradicionais | Nexus Signal |
+|----------------------|--------------|
+| E-mail/SMS embutido com sobretaxa | Você paga à Twilio/SendGrid diretamente |
+| Difícil de alternar provedores | Roteamento ponderado + failover entre fornecedores |
+| Custos de entrega opacos | [Análise de custos](/docs/platform/features/cost-analytics) por fluxo de trabalho |
+
+## Relacionado
+
+- [Integrações](/docs/platform/integrations)
+- [Roteamento ponderado](/docs/platform/features/cost-reduction#weighted-provider-routing)

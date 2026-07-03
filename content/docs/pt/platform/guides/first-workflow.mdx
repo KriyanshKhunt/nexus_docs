@@ -1,0 +1,67 @@
+---
+title: Construa Seu Primeiro Fluxo
+description: Crie um fluxo de boas-vindas multicanal com modelo, gatilho e o sino de notificações in-app.
+---
+
+Este guia constrói um fluxo de boas-vindas do tipo **user.signup**: e-mail + notificação in-app.
+
+## 1. Crie o fluxo de trabalho
+
+Acesse o Painel → **Workflows** → Novo fluxo de trabalho com o nome `user.signup`.
+
+Adicione os nós:
+
+```
+Trigger (Gatilho) → Canal (E-mail) → Canal (In-App)
+```
+
+Ative **Suppress when online** (Supressão ao estar online) no nó de E-mail se desejar uma entrega ciente de presença.
+
+## 2. Escreva os modelos (Templates)
+
+Abra a aba **Templates** neste fluxo de trabalho.
+
+**E-mail (HTML):**
+```html
+<h1>Bem-vindo, {{ data.name }}!</h1>
+<p>Obrigado por se cadastrar. O ID da sua conta é {{ subscriber.externalId }}.</p>
+```
+
+**In-App:**
+```json
+{ "title": "Bem-vindo!", "body": "Olá {{ data.name }}, que bom que você está aqui." }
+```
+
+Promova o modelo para **Production Active** (Ativo em Produção).
+
+## 3. Crie um inscrito de teste
+
+Acesse **Subscribers (Inscritos)** → Adicionar inscrito com seu `externalId` de teste e seu e-mail.
+
+## 4. Acione a partir do código
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.signup',
+  recipients: [{ externalId: 'test_user', email: 'seu_email@exemplo.com' }],
+  data: { name: 'Usuário Teste' },
+});
+```
+
+Em Desenvolvimento, o e-mail aparece no **Sandbox**. O canal In-app requer a instalação e uso do SDK do React.
+
+## 5. Adicione o sino in-app
+
+```tsx
+<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
+  <NotificationCenterBell />
+</NexusProvider>
+```
+
+Acione o gatilho novamente — o balão de notificações do sino será atualizado em tempo real.
+
+## Próximos passos
+
+- Adicione [horário de envio inteligente](/docs/platform/features/smart-send-time) no e-mail
+- Vincule o fluxo a um [tópico](/docs/platform/features/topics)
+- Adicione uma [janela de entrega](/docs/platform/features/delivery-windows) para envios de marketing

@@ -1,0 +1,39 @@
+---
+title: Ambientes
+description: Desenvolvimento, Homologação e Produção — chaves, dados e comportamentos isolados.
+---
+
+Cada espaço de trabalho do Nexus inclui **três ambientes**. Cada um é um escopo totalmente isolado para fluxos de trabalho, inscritos, modelos, agendamentos e tópicos.
+
+## Matriz de ambientes
+
+| | Desenvolvimento | Homologação | Produção |
+|---|-------------|---------|------------|
+| **Chave pública** | `pk_dev_*` | `pk_stg_*` | `pk_prd_*` |
+| **Chave secreta** | `sk_dev_*` | `sk_stg_*` | `sk_prd_*` |
+| **Modo Sandbox** | Sim — entrega simulada | Não | Não |
+| **Modo Caos** | Opcional — testar failover | Não | Não |
+| **Provedores Reais** | Apenas se desativar o sandbox | Sim | Sim |
+
+## Sandbox (Apenas em Desenvolvimento)
+
+Em **Desenvolvimento**, os canais de saída (exceto in-app) são direcionados através de um **sandbox virtual** em vez de APIs de operadoras reais. Os payloads são transmitidos via WebSocket para o simulador do painel — teste fluxos de trabalho complexos **sem consumir créditos de provedores**.
+
+Consulte [Modo Sandbox](/docs/platform/features/sandbox) para mais detalhes.
+
+## Alternando ambientes
+
+Use o menu suspenso de ambientes na barra superior do painel. Todas as chamadas de API devem usar a chave secreta correspondente a esse ambiente.
+
+<Callout type="warn">
+Nunca use chaves de Produção em arquivos locais `.env` confirmados no git. Use chaves de Desenvolvimento para o trabalho local.
+</Callout>
+
+## Inscritos são isolados por ambiente
+
+Um inscrito com `externalId: user_123` em Desenvolvimento é um **registro diferente** do mesmo ID em Produção. Sincronize ou migre inscritos ao promover integrações.
+
+## Relacionado
+
+- [Autenticação](/docs/platform/getting-started/authentication) — qual chave usar em cada local
+- [Lista de verificação de produção](/docs/platform/guides/production-checklist) — antes de entrar no ar

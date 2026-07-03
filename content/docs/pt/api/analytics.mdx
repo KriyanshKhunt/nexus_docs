@@ -1,0 +1,49 @@
+---
+title: API de Análises (Analytics)
+description: Estatísticas do painel — visão geral, tráfego, latência, integridade do pipeline e custos.
+---
+
+Requer JWT do painel + contexto do espaço de trabalho.
+
+## Endpoints
+
+| Método | Caminho | Descrição |
+|--------|------|-------------|
+| GET | `/v1/analytics/overview` | Cards de resumo — triggers, taxa de sucesso, ROI |
+| GET | `/v1/analytics/overview/traffic` | Série temporal de tráfego do canal |
+| GET | `/v1/analytics/overview/latency` | Latência entre ingestão e entrega |
+| GET | `/v1/analytics/overview/pipeline` | Fluxo de saúde do pipeline |
+| GET | `/v1/analytics/overview/heatmap` | Mapa de calor de erros por provedor |
+| GET | `/v1/analytics/overview/cost` | Detalhamento dos custos por provedor |
+
+### Parâmetros de busca (Query parameters)
+
+```
+?environment=PRODUCTION&timeframe=24h
+```
+
+`environment`: `DEVELOPMENT` | `STAGING` | `PRODUCTION`
+
+### Resposta de custos (trecho)
+
+```json
+{
+  "totalCostUsd": 423.18,
+  "budgetUsd": 500,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [
+    { "providerId": "twilio", "label": "Twilio", "count": 8200, "costUsd": 410 }
+  ],
+  "byWorkflow": [
+    { "workflowName": "auth.otp", "costUsd": 180.5 }
+  ]
+}
+```
+
+Configure os custos unitários do provedor via `PUT /v1/settings/provider-costs`.
+
+## Relacionado
+
+- [Análise de custos](/docs/platform/features/cost-analytics)
+- [Logs de auditoria](/docs/platform/concepts/delivery-pipeline) — detalhes de entrega

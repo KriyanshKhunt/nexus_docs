@@ -39,6 +39,19 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.api': 'API',
     'home.apiDesc': 'Referencia REST',
   },
+  pt: {
+    'home.badge': 'Documentação para desenvolvedores',
+    'home.title': 'Documentação do Nexus Signal',
+    'home.subtitle':
+      'Orquestração de notificações BYOP — fluxos de trabalho, SDKs, APIs e cada recurso que reduz custos e aumenta o engajamento.',
+    'home.openDocs': 'Abrir documentação',
+    'home.quickstart': 'Início rápido',
+    'home.platform': 'Plataforma',
+    'home.platformDesc': 'Fluxos e recursos',
+    'home.sdks': 'SDKs',
+    'home.api': 'API',
+    'home.apiDesc': 'Referência REST',
+  },
 };
 
 export function t(locale: string, key: CopyKey): string {

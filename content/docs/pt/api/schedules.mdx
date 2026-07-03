@@ -1,0 +1,51 @@
+---
+title: API de Agendamentos
+description: Crie e gerencie acionadores de fluxo de trabalho agendados através do painel ou SDK.
+---
+
+## Rotas do SDK (chave secreta)
+
+```http
+Authorization: Bearer sk_prd_…
+```
+
+| Método | Caminho | Ação |
+|--------|------|--------|
+| GET | `/v1/schedules/sdk` | Listar agendamentos |
+| POST | `/v1/schedules/sdk` | Criar agendamento |
+| PATCH | `/v1/schedules/sdk/:id` | Atualizar agendamento |
+| DELETE | `/v1/schedules/sdk/:id` | Excluir agendamento |
+
+### Corpo de criação (Create body)
+
+```json
+{
+  "name": "Relatório semanal",
+  "workflowId": "uuid",
+  "cronExpression": "0 9 * * 1",
+  "timezone": "America/Chicago",
+  "recipients": [{ "externalId": "user_1" }],
+  "data": { "reportType": "weekly" },
+  "active": true
+}
+```
+
+Agendamento avulso (único) — use `scheduledAt` em vez de `cronExpression`:
+
+```json
+{
+  "scheduledAt": "2026-07-15T10:00:00.000Z"
+}
+```
+
+## Rotas do painel
+
+CRUD autenticado por JWT em `/v1/schedules` com histórico de execuções.
+
+## SDK para Node
+
+```ts
+await nexus.schedules.create({ … });
+```
+
+Consulte o [Node SDK](/docs/sdk/node) e o recurso de [Agendamentos](/docs/platform/features/schedules).

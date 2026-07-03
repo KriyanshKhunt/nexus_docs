@@ -1,0 +1,57 @@
+---
+title: Lista de Verificação de Produção
+description: Verifique sua integração do Nexus Signal antes de alternar para as chaves de Produção.
+---
+
+Use esta lista de verificação antes de direcionar o tráfego real para a Produção.
+
+## Chaves e ambientes
+
+- [ ] Chave secreta de Produção (`sk_prd_`) armazenada no gerenciador de segredos — nunca no git.
+- [ ] Ambiente de Homologação testado com `sk_stg_` e chaves reais de provedores.
+- [ ] Chave pública (`pk_prd_`) configurada apenas nas variáveis de ambiente do frontend.
+
+## Provedores
+
+- [ ] Todos os provedores necessários conectados e aprovados no teste de conexão.
+- [ ] Divisão de pesos configurada se utilizar múltiplos provedores por canal.
+- [ ] Custos unitários dos provedores definidos para a [análise de custos](/docs/platform/features/cost-analytics).
+- [ ] Orçamento mensal opcional configurado e e-mail de alerta verificado.
+
+## Fluxos de trabalho
+
+- [ ] Modelos de templates promovidos para **Production Active** (e não em Rascunho/Draft).
+- [ ] Fluxos de trabalho marcados como **ativos**.
+- [ ] Caminhos de failover testados através do modo caos de Desenvolvimento.
+- [ ] Janelas de entrega definidas para envios de marketing voltados a usuários finais.
+- [ ] Tópicos atribuídos e matriz de preferências testada.
+
+## Integração de SDK
+
+- [ ] Assinatura HMAC gerada no lado do servidor por sessão.
+- [ ] Tratamento de disjuntor / tentativas do SDK do Node implementado.
+- [ ] O `externalId` do inscrito corresponde aos IDs de usuário do seu sistema de autenticação.
+
+## Conformidade e operações
+
+- [ ] Processo de remoção sob a GDPR documentado (API de exclusão de inscrito).
+- [ ] Funções de equipe atribuídas (Owner, Developer, Marketer).
+- [ ] Autenticação de dois fatores (MFA) ativada para contas de administrador.
+- [ ] Plano definido para monitoramento e tempo de retenção dos logs de auditoria.
+
+## Faturamento
+
+- [ ] Nível do plano corresponde ao volume esperado.
+- [ ] Preferência de teto de gastos configurada.
+- [ ] Acesso ao portal de faturamento da Stripe liberado para os administradores.
+
+## Entrada no ar (Go live)
+
+1. Altere o ambiente do painel para **Production** (Produção).
+2. Implante seu backend com a chave secreta `sk_prd_`.
+3. Envie um acionamento de teste canário para a equipe interna.
+4. Monitore os **Logs de Auditoria** e a **Visão Geral** na primeira hora.
+
+<Callout type="warn">
+O sandbox de Desenvolvimento **não** funciona em Produção. Cada acionamento enviará mensagens por meio dos provedores reais e incorrerá em custos.
+</Callout>

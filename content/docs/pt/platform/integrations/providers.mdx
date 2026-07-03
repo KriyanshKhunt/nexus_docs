@@ -1,0 +1,65 @@
+---
+title: Catálogo de Provedores
+description: Lista completa de provedores BYOP suportados por camada de canal.
+---
+
+## E-mail
+
+| ID | Provedor |
+|----|----------|
+| `sendgrid` | SendGrid |
+| `resend` | Resend |
+| `amazon_ses` | Amazon SES |
+| `postmark` | Postmark |
+| `mailgun` | Mailgun |
+
+## SMS
+
+| ID | Provedor |
+|----|----------|
+| `twilio` | Twilio |
+| `vonage` | Vonage |
+| `plivo` | Plivo |
+| `sinch` | Sinch |
+
+## WhatsApp
+
+| ID | Provedor |
+|----|----------|
+| `meta_whatsapp` | Meta Cloud Business API |
+| `twilio_whatsapp` | Twilio WhatsApp Gateway |
+| `infobip_whatsapp` | Infobip |
+
+## Push
+
+| ID | Provedor |
+|----|----------|
+| `fcm` | Firebase Cloud Messaging |
+| `apns` | Apple Push Notification Service |
+
+## Mensageria
+
+| ID | Provedor |
+|----|----------|
+| `slack` | Slack Incoming Webhook |
+| `discord` | Discord Webhook |
+| `ms_teams` | Microsoft Teams Incoming Webhook |
+
+## Webhook
+
+| ID | Provedor |
+|----|----------|
+| `webhook_custom` | Endpoint HTTP personalizado |
+
+## IA (geração de conteúdo)
+
+| ID | Provedor |
+|----|----------|
+| `openai_ai` | OpenAI |
+| `anthropic_ai` | Anthropic |
+
+## Configuração
+
+Cada provedor aceita credenciais através do modal de Integrações (chaves de API, URLs de webhook, IDs de remetente). As chaves são criptografadas em repouso.
+
+Defina o custo por mensagem para a [análise de custos](/docs/platform/features/cost-analytics) em **Settings (Configurações) → Provider costs (Custos do provedor)**.

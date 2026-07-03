@@ -2,7 +2,7 @@ import { defineI18n } from 'fumadocs-core/i18n';
 
 export const i18nConfig = {
   defaultLanguage: 'en' as const,
-  languages: ['en', 'es'] as ['en', 'es'],
+  languages: ['en', 'es', 'pt'] as ['en', 'es', 'pt'],
   parser: 'dir' as const,
   hideLocale: 'default-locale' as const,
   fallbackLanguage: 'en' as const,

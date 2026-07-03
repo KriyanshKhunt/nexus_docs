@@ -1,0 +1,43 @@
+---
+title: Janelas de Entrega
+description: Entrega de notificações com base no fuso horário local do inscrito.
+---
+
+Os nós de **Janela de Entrega** garantem que as notificações nunca cheguem em horários inadequados (ex: permitido apenas das 9:00 às 21:00 no fuso horário do usuário).
+
+## Configuração na tela (Canvas)
+
+Adicione um nó de **Janela de Entrega** definindo:
+
+- `windowStart` — `"09:00"`
+- `windowEnd` — `"21:00"`
+- `urgent` — ignora a janela para alertas críticos (opcional)
+
+## Fuso horário do inscrito
+
+Defina no perfil do inscrito ou passe a cada acionamento (trigger):
+
+```ts
+recipients: [{ externalId: 'user_1', timezone: 'Europe/London' }]
+```
+
+Utiliza identificadores de fuso horário IANA. Caso não seja definido, o fuso padrão adotado é o UTC.
+
+## Comportamento
+
+| Situação | Ação |
+|-----------|--------|
+| Dentro da janela | Continua o envio imediatamente |
+| Fora da janela | Retém na fila; a tarefa agendada do BullMQ resume no início da próxima janela |
+| `urgent: true` | Entrega imediatamente, independentemente do horário |
+
+## Casos de uso
+
+- E-mails de marketing — apenas em horário comercial
+- Notificações push — evite horários de sono
+- SMS — conformidade com horários de silêncio regulamentares
+
+## Relacionado
+
+- [Horário de envio inteligente](/docs/platform/features/smart-send-time) — otimiza *qual* é a melhor hora; a janela de entrega define as horas *permitidas*
+- [API de Inscritos](/docs/api/sdk)

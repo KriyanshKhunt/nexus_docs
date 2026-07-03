@@ -1,0 +1,50 @@
+---
+title: Fluxos de Trabalho (Workflows)
+description: Canvas visual de fluxo de trabalho — gatilhos, canais, atrasos, digests, failover e muito mais.
+---
+
+Um **fluxo de trabalho (workflow)** é uma automação nomeada (`order.shipped`, `user.signup`) estruturada por uma **árvore de etapas (step tree)** construída no canvas visual.
+
+## Gatilho (Trigger)
+
+Cada fluxo de trabalho começa com um nó de **Gatilho** que define o namespace do evento. Sua chamada de SDK utiliza o `workflowName` que corresponde a este identificador.
+
+## Tipos de nós
+
+| Nó | Finalidade |
+|------|---------|
+| **Canal (Channel)** | Envia via E-mail, SMS, Push, In-App, WhatsApp, Slack, Discord, Teams ou Webhook |
+| **Atraso (Delay)** | Aguarda uma duração fixa antes da próxima etapa |
+| **Aguardar Até (Wait Until)** | Aguarda até um timestamp vindo do payload do gatilho (ex: 24h antes do agendamento) |
+| **Janela de Entrega** | Entrega apenas entre determinadas horas no fuso horário local do inscrito |
+| **Compilação (Digest)** | Agrupa eventos de alta frequência em um único resumo (padrão de janela de 30 min) |
+| **Controle de Taxa (Throttle)** | Limita a taxa de alertas por inscrito; desvio opcional para compilação (digest) |
+| **Controle de Falhas (Failover)** | Canal primário → aguarda leitura → canal de fallback secundário |
+| **Divisão A/B (A/B Split)** | Divisão percentual de tráfego com rastreamento de engajamento |
+| **Horário Inteligente** | Configuração nos nós de canal — atrasa o envio para a hora de pico do inscrito |
+
+## Opções do nó de canal
+
+Em qualquer nó de **Canal**, você pode habilitar:
+
+- **`suppressWhenOnline`** — pula canais externos se o usuário tiver uma conexão WebSocket ativa (consulte [redução de custos](/docs/platform/features/cost-reduction))
+- **`smartTiming`** — otimização de horário de envio com IA (consulte [horário de envio inteligente](/docs/platform/features/smart-send-time))
+
+## Modelos (Templates)
+
+Cada fluxo de trabalho possui **modelos** versionados (Rascunho → Ativo em Produção). O conteúdo suporta variáveis do Handlebars:
+
+```html
+<p>Olá {{ subscriber.externalId }}, seu pedido {{ data.orderId }} foi enviado.</p>
+```
+
+Modelos multilíngues usam chaves de localidade — consulte [i18n](/docs/platform/features/i18n).
+
+## Fluxo de Trabalho ↔ Tópico
+
+Atribua um fluxo de trabalho a um [Tópico](/docs/platform/features/topics) para que os inscritos gerenciem suas preferências por categoria, em vez de nomes de eventos individuais.
+
+## Relacionado
+
+- [Guia do primeiro fluxo de trabalho](/docs/platform/guides/first-workflow)
+- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)

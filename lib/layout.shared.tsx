@@ -12,6 +12,10 @@ export const { provider: i18nProvider } = defineI18nUI(i18n, {
     displayName: 'Español',
     search: 'Buscar en la documentación…',
   },
+  pt: {
+    displayName: 'Português',
+    search: 'Buscar na documentação…',
+  },
 });
 
 export function baseOptions(locale: string): BaseLayoutProps {

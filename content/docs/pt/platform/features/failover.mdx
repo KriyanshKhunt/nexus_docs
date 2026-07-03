@@ -1,0 +1,37 @@
+---
+title: Failover (Controle de Falhas)
+description: Fallback automático de canal quando a entrega primária falha ou não é lida.
+---
+
+O nó de **Failover** garante que alertas críticos cheguem aos usuários mesmo se o canal primário falhar.
+
+## Configuração
+
+| Campo | Descrição |
+|-------|-------------|
+| `primaryChannel` | Primeira tentativa (ex: `MOBILE_PUSH`) |
+| `fallbackChannel` | Canal reserva de backup (ex: `SMS`) |
+| `timeoutSeconds` | Tempo de espera pela confirmação de leitura antes do fallback (10–3600, padrão: 120) |
+
+## Fluxo de execução
+
+1. Despacha no canal primário → status `DISPATCHED`.
+2. Inicia um monitoramento de contagem regressiva no Redis aguardando o evento de leitura.
+3. Se o usuário abrir a notificação (via WebSocket ou evento de leitura do SDK) → processo concluído.
+4. Se o tempo limite expirar sem leitura → despacha no canal reserva de fallback.
+5. Ocorre fallback imediato se o envio primário falhar ou se o disjuntor de resiliência (circuit breaker) estiver aberto.
+
+## Exemplo
+
+> Envia uma notificação push. Se não for lida em até 120 segundos, envia um SMS.
+
+Perfeito para senhas de uso único (OTP), alertas de segurança e lembretes de compromissos.
+
+## Testes com Modo Caos (Chaos mode)
+
+Habilite o **Chaos Mode** nas integrações de Desenvolvimento para simular falhas de provedores e assistir o failover em execução em tempo real nos logs de auditoria.
+
+## Relacionado
+
+- [Redução de custos — disjuntor (circuit breaker)](/docs/platform/features/cost-reduction)
+- [Sandbox](/docs/platform/features/sandbox)

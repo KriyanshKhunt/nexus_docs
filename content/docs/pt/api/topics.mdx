@@ -1,0 +1,76 @@
+---
+title: API de Tópicos
+description: Endpoints do painel para tópicos de notificação — agrupe fluxos de trabalho para matrizes de preferências.
+---
+
+Requer JWT do painel + contexto do espaço de trabalho.
+
+Os tópicos permitem que os inscritos ativem ou desativem categorias (ex: marketing, atualizações de produtos) em múltiplos fluxos de trabalho. A [Matriz de preferências](/docs/sdk/react) do React renderiza os tópicos automaticamente.
+
+## Endpoints
+
+| Método | Caminho | Descrição |
+|--------|------|-------------|
+| GET | `/v1/topics` | Listar todos os tópicos |
+| POST | `/v1/topics` | Criar tópico |
+| GET | `/v1/topics/:id` | Obter tópico |
+| PUT | `/v1/topics/:id` | Atualizar tópico |
+| DELETE | `/v1/topics/:id` | Excluir tópico |
+| GET | `/v1/topics/:id/stats` | Estatísticas de assinatura |
+| PUT | `/v1/topics/assign/:workflowId` | Atribuir fluxos de trabalho a um tópico |
+
+Funções: criar/atualizar/excluir requerem `OWNER`, `ADMIN` ou `DEVELOPER`.
+
+## Criar tópico
+
+```http
+POST /v1/topics
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "marketing",
+  "label": "Marketing & promoções",
+  "description": "Novidades sobre produtos e ofertas",
+  "defaultChannels": { "EMAIL": true, "SMS": false, "PUSH": false }
+}
+```
+
+## Atribuir fluxos de trabalho
+
+```http
+PUT /v1/topics/assign/:workflowId
+Content-Type: application/json
+```
+
+```json
+{
+  "topicIds": ["topic-uuid-1", "topic-uuid-2"]
+}
+```
+
+## Integração do SDK
+
+Os aplicativos de navegador buscam tópicos via:
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+As preferências do inscrito usam chaves como `topic:marketing`:
+
+```json
+{
+  "preferences": {
+    "topic:marketing": { "EMAIL": false, "PUSH": true }
+  }
+}
+```
+
+## Relacionado
+
+- [Recurso de Tópicos](/docs/platform/features/topics)
+- [API do SDK](/docs/api/sdk)
+- [React SDK](/docs/sdk/react)

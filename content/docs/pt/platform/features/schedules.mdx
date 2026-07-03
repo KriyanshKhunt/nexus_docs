@@ -1,0 +1,47 @@
+---
+title: Gatilhos Agendados
+description: Agendamentos cron e notificações avulsas sem precisar construir seu próprio executor de tarefas.
+---
+
+Agende disparos de fluxos de trabalho a partir do painel ou do SDK do Node — sem necessidade de serviços externos de cron.
+
+## Tipos de agendamento
+
+| Tipo | Campo | Exemplo |
+|------|-------|---------|
+| **Recorrente** | `cronExpression` | `0 9 * * 1` (Segundas às 9h) |
+| **Avulso (Único)** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+
+Ambos suportam um `timezone` (fuso horário padrão: UTC) e destinatários estáticos (`recipients`) + dados de payload (`data`).
+
+## Painel (Dashboard)
+
+Página **Schedules (Agendamentos)** — crie, pause, edite e exclua. Visualize `nextFireAt` (próximo disparo) e `lastFiredAt` (último disparo).
+
+## SDK para Node
+
+```ts
+await nexus.schedules.create({
+  name: 'Weekly digest',
+  workflowId: 'wf_uuid',
+  cronExpression: '0 9 * * 1',
+  timezone: 'America/New_York',
+  recipients: [{ externalId: 'user_1' }],
+  data: { week: '2026-W27' },
+});
+```
+
+```ts
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## Execução
+
+Um cron worker do sistema avalia os agendamentos vencidos a cada **60 segundos** (máximo de 100 agendamentos ativos por ambiente).
+
+## Relacionado
+
+- [Referência da API — Agendamentos](/docs/api/schedules)
+- [Node SDK](/docs/sdk/node)

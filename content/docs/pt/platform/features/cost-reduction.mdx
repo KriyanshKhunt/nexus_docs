@@ -1,0 +1,63 @@
+---
+title: Redução de Custos
+description: Supressão de presença, testes em sandbox e roteamento ponderado para reduzir gastos com provedores.
+---
+
+O Nexus Signal inclui vários recursos projetados para **reduzir gastos desnecessários com provedores** sem sacrificar a entregabilidade.
+
+## Supressão por presença
+
+Quando um inscrito tem uma conexão **WebSocket ativa** (eles estão usando seu aplicativo neste exato momento), o Nexus pode ignorar canais externos caros e entregar **apenas in-app**.
+
+### Comportamento padrão
+
+Nos nós de canal, estes canais são suprimidos quando o usuário está online:
+
+- Web Push
+- Mobile Push
+- SMS
+- WhatsApp
+
+O canal **In-app** sempre entrega via WebSocket. Ative `suppressWhenOnline` no nó de canal para controlar isso explicitamente.
+
+### Como funciona
+
+1. O SDK do React mantém uma conexão WebSocket ativa com batimentos cardíacos (heartbeat).
+2. O Redis rastreia a chave `presence:sub:{subscriberId}` (TTL de 45s).
+3. O worker verifica a presença antes de despachar canais externos.
+4. Entregas ignoradas registram o status `SKIPPED_BY_PREFERENCE` com a etapa `PRESENCE_SUPPRESSION` no log de ciclo de vida.
+
+**Resultado:** Chega de enviar um SMS redundante de $0,05 se o usuário já está com o seu aplicativo aberto na tela.
+
+## Modo Sandbox (Desenvolvimento)
+
+No ambiente de **Desenvolvimento**, as chamadas a provedores de saída são substituídas por um **simulador virtual**. Você vê visualizações de push, SMS e e-mail no painel sem custos de API.
+
+Consulte [Modo Sandbox](/docs/platform/features/sandbox).
+
+## Roteamento ponderado de provedores
+
+Execute várias contas de provedores por canal e divida o tráfego por porcentagem:
+
+```json
+{ "sendgrid": 70, "resend": 30 }
+```
+
+Configure em **Integrations (Integrações) → Weight sliders (Controle de pesos)**. O worker sorteia de 1 a 100 e escolhe um provedor — útil para migrações graduais e distribuição de carga.
+
+## Failover por disjuntor (Circuit breaker)
+
+Quando um provedor falha repetidamente (5 erros em 60s), o disjuntor abre e o tráfego é direcionado para alternativas saudáveis ou ramificações de failover do fluxo de trabalho — evitando desperdício de tentativas em um endpoint fora do ar.
+
+## Impacto combinado
+
+As equipes costumam reduzir os gastos através de:
+
+1. Supressão de push/SMS redundantes para usuários ativos.
+2. Testes em sandbox antes dos envios de produção.
+3. Roteamento automático para fora de provedores com falhas.
+
+## Relacionado
+
+- [Horário de envio inteligente](/docs/platform/features/smart-send-time) — gaste melhor, não apenas menos
+- [Análise de custos](/docs/platform/features/cost-analytics) — meça o que você economiza

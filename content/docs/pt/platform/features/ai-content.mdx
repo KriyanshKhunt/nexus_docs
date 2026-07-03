@@ -1,0 +1,55 @@
+---
+title: Geração de Conteúdo por IA
+description: Gere textos de notificação otimizados por canal a partir de um único prompt usando sua própria chave de IA.
+---
+
+O editor de modelos inclui o recurso **AI Assist** — descreva o que a notificação deve dizer e obtenha textos otimizados para os limites de caracteres de cada canal.
+
+## Chaves de IA no modelo BYOP
+
+Conecte sua própria chave de API em **Integrations (Integrações)**:
+
+- **OpenAI** (`openai_ai`) — utiliza `gpt-4o-mini`
+- **Anthropic** (`anthropic_ai`) — utiliza `claude-3-haiku`
+
+O Nexus não cobra por tokens de IA — você paga à sua provedora de IA diretamente.
+
+## API
+
+```http
+POST /v1/templates/ai-generate
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "prompt": "Notificação de pedido enviado com link de rastreamento",
+  "tone": "friendly",
+  "locale": "pt",
+  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+}
+```
+
+Retorna conteúdo estruturado por canal respeitando os limites obrigatórios:
+
+| Canal | Limite |
+|---------|-------|
+| E-mail (Assunto) | 80 caracteres |
+| SMS (Corpo) | 160 caracteres |
+| Push (Título / Corpo) | 50 / 120 caracteres |
+| WhatsApp (Corpo) | 1024 caracteres |
+
+**Tons disponíveis:** `professional` (profissional), `casual` (casual), `urgent` (urgente), `friendly` (amigável)
+
+## Fluxo de trabalho
+
+1. Abra **Templates (Modelos)** no painel de controle.
+2. Clique no painel **AI Assist**.
+3. Insira o prompt e selecione os canais desejados.
+4. Visualize os textos gerados por canal.
+5. Aceite e importe as alterações para o seu rascunho de modelo.
+
+## Relacionado
+
+- [Modelos multilíngues (i18n)](/docs/platform/features/i18n) — gere textos por localidade
+- [Guia do primeiro fluxo de trabalho](/docs/platform/guides/first-workflow)

@@ -3,12 +3,20 @@
 import { useEffect, useId, useState } from "react";
 import { Loader2, Maximize2, X } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useI18n } from "fumadocs-ui/contexts/i18n";
+
+const loadingTexts: Record<string, string> = {
+  en: "Loading diagram…",
+  es: "Cargando diagrama…",
+  pt: "Carregando diagrama…",
+};
 
 export function Mermaid({ chart }: { chart: string }) {
   const id = useId().replace(/:/g, "");
   const [svg, setSvg] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
   const { resolvedTheme } = useTheme();
+  const { locale = "en" } = useI18n();
 
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +68,7 @@ export function Mermaid({ chart }: { chart: string }) {
       <div className="my-6 flex h-40 w-full flex-col items-center justify-center gap-2.5 rounded-xl border border-fd-border bg-fd-card/50 text-fd-muted-foreground">
         <Loader2 className="size-5 animate-spin text-fd-primary" />
         <span className="text-xs font-medium tracking-tight">
-          Loading diagram…
+          {loadingTexts[locale] || loadingTexts.en}
         </span>
       </div>
     );

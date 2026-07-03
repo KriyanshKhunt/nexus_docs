@@ -1,0 +1,47 @@
+---
+title: Horário de Envio Inteligente (Smart Send-Time)
+description: Otimização de entrega baseada em IA — alcance cada usuário em sua hora de maior engajamento.
+---
+
+O **Smart send-time** aprende quando cada inscrito abre, lê ou clica em notificações e, em seguida, programa a entrega para a **hora local de pico** de interação desse usuário.
+
+## Habilitar em um nó de canal
+
+No canvas do fluxo de trabalho, ative **AI Send Time** em qualquer nó de canal (E-mail, SMS, Push, etc.).
+
+Excluídos automaticamente: canais In-App, Webhooks, gatilhos agendados e fluxos de trabalho que possuam um nó de Janela de Entrega.
+
+## Como o modelo funciona
+
+1. O Nexus rastreia os eventos `OPENED`, `READ` e `CLICKED` de cada inscrito (com análise retrospectiva de 60 dias).
+2. Constrói uma grade de pontuação de engajamento horário (dia da semana × hora) no **fuso horário local do inscrito**.
+3. Armazena as pontuações no Redis (atualizadas a cada 6 horas via cron).
+4. No momento do envio, o worker programa o atraso da entrega até o próximo horário ideal calculado.
+
+Se não houver dados suficientes, a hora padrão adotada é **10:00 da manhã no horário local**.
+
+## Visualização no painel (Dashboard)
+
+Abra o perfil de um inscrito no painel para visualizar o **mapa de calor de engajamento** — uma grade de 24×7 que mostra quando o usuário interage mais.
+
+## Exemplo
+
+| Inscrito | Fuso Horário | Hora de Pico | Comportamento |
+|------------|----------|-----------|----------|
+| Alex | `America/New_York` | Terça, 14h | Confirmação do pedido programada para terça-feira, 14h ET |
+| Yuki | `Asia/Tokyo` | 20h | E-mail de marketing aguarda até 20h JST |
+
+Passe o fuso horário no acionamento (trigger) para manter as pontuações de engajamento precisas:
+
+```ts
+recipients: [{ externalId: 'user_1', timezone: 'America/Chicago' }]
+```
+
+## Registro de ciclo de vida
+
+Envios atrasados gravam o status `SMART_TIMING_HOLD` no ciclo de vida de auditoria com os detalhes `optimalHour`, `delayMs` e `timezone`.
+
+## Relacionado
+
+- [Janelas de entrega](/docs/platform/features/delivery-windows) — limites rígidos de horário (o horário inteligente respeita a janela se ambos existirem)
+- [Redução de custos](/docs/platform/features/cost-reduction) — combine horário ideal + supressão para maximizar o retorno (ROI)

@@ -1,0 +1,47 @@
+---
+title: Modelos Multilíngues (i18n)
+description: Modelos cientes de localidade — um único fluxo de trabalho com conteúdo em todas as línguas.
+---
+
+Envie mensagens para usuários globais sem precisar duplicar seus fluxos de trabalho.
+
+## Estrutura do modelo (Template)
+
+Armazene variantes de localidade em `contentTemplates`:
+
+```json
+{
+  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
+  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" },
+  "pt": { "email_subject": "Seu pedido foi enviado", "sms_body": "Enviado!" }
+}
+```
+
+## Ordem de resolução de localidade
+
+1. Substituição de `_locale` por acionamento (no destinatário enviado no trigger).
+2. Campo `locale` definido no perfil do inscrito.
+3. Fallback padrão para `en` (Inglês).
+
+## Definir localidade no acionamento (Trigger)
+
+```ts
+recipients: [{ externalId: 'user_1', locale: 'pt' }]
+```
+
+## Localidades suportadas
+
+`en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `ko`, `zh`, `ar`, `hi`, `nl`, `pl` — validadas como tags BCP 47.
+
+## Editor de modelos
+
+Utilize as **abas de localidade** no estúdio de modelos do painel para adicionar/remover idiomas. O emulador de dispositivo pré-visualiza cada localidade.
+
+## Geração por IA
+
+A geração de conteúdo por IA aceita um parâmetro de `locale` para produzir textos traduzidos em uma única etapa.
+
+## Relacionado
+
+- [Fluxos de Trabalho](/docs/platform/concepts/workflows)
+- [Tópicos](/docs/platform/features/topics)

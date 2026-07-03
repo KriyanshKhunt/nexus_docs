@@ -1,0 +1,25 @@
+---
+title: Guias
+description: Guias passo a passo para tarefas de integração comuns no Nexus Signal.
+---
+
+Passos práticos e tutoriais além do início rápido.
+
+<Cards>
+  <Card title="Primeiro fluxo de trabalho" href="/docs/platform/guides/first-workflow" description="Construa um fluxo de trabalho multicanal do zero." />
+  <Card title="Lista de verificação de produção" href="/docs/platform/guides/production-checklist" description="O que fazer antes de alternar para as chaves de Produção." />
+</Cards>
+
+## Antes da produção
+
+<Accordions type="single">
+  <Accordion title="Já testei em Desenvolvimento?">
+    Use o ambiente de Desenvolvimento e o simulador sandbox antes de conectar suas chaves de provedores de Produção.
+  </Accordion>
+  <Accordion title="Minhas credenciais de provedor estão apenas em Produção?">
+    O ambiente de Homologação pode espelhar a Produção, mas nunca reutilize chaves de Produção em arquivos locais `.env` confirmados no git.
+  </Accordion>
+  <Accordion title="O HMAC é gerado no lado do servidor?">
+    As sessões do SDK do React precisam de um HMAC gerado dinamicamente a partir do seu backend — consulte [Autenticação](/docs/platform/getting-started/authentication).
+  </Accordion>
+</Accordions>
