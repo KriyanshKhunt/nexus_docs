@@ -1,6 +1,6 @@
 {
-  "title": "Referencia API",
-  "description": "Endpoints REST para triggers, inbox, schedules y analítica",
+  "title": "API リファレンス",
+  "description": "トリガー、受信箱、スケジュール、分析用の REST エンドポイント",
   "root": true,
   "icon": "Webhook",
   "pages": [

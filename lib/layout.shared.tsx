@@ -22,7 +22,15 @@ export const { provider: i18nProvider } = defineI18nUI(i18n, {
   },
 });
 
+const navLabels: Record<string, { dashboard: string; pricing: string }> = {
+  en: { dashboard: 'Dashboard', pricing: 'Pricing' },
+  es: { dashboard: 'Dashboard', pricing: 'Precios' },
+  pt: { dashboard: 'Dashboard', pricing: 'Preços' },
+  ja: { dashboard: 'ダッシュボード', pricing: '料金' },
+};
+
 export function baseOptions(locale: string): BaseLayoutProps {
+  const labels = navLabels[locale] ?? navLabels.en;
   return {
     i18n: i18nConfig,
     nav: {
@@ -43,12 +51,12 @@ export function baseOptions(locale: string): BaseLayoutProps {
     },
     links: [
       {
-        text: 'Dashboard',
+        text: labels.dashboard,
         url: 'https://app.nexussignal.dev',
         external: true,
       },
       {
-        text: 'Pricing',
+        text: labels.pricing,
         url: 'https://nexussignal.dev/pricing',
         external: true,
       },

@@ -1,6 +1,6 @@
 {
-  "title": "Referencia API",
-  "description": "Endpoints REST para triggers, inbox, schedules y analítica",
+  "title": "Referência da API",
+  "description": "Endpoints REST para triggers, inbox, schedules e análise",
   "root": true,
   "icon": "Webhook",
   "pages": [

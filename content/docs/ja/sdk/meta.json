@@ -1,6 +1,6 @@
 {
-  "title": "SDKs",
-  "description": "SDK Node.js y componentes React",
+  "title": "SDK",
+  "description": "Node.js と React パッケージ",
   "root": true,
   "icon": "Code",
   "pages": [
