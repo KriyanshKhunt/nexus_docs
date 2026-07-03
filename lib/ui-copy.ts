@@ -52,6 +52,19 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.api': 'API',
     'home.apiDesc': 'Referência REST',
   },
+  ja: {
+    'home.badge': '開発者向けドキュメント',
+    'home.title': 'Nexus Signal ドキュメント',
+    'home.subtitle':
+      'BYOP 通知オーケストレーション — ワークフロー、SDK、API、コスト削減とエンゲージメント向上を実現するすべての機能。',
+    'home.openDocs': 'ドキュメントを開く',
+    'home.quickstart': 'クイックスタート',
+    'home.platform': 'プラットフォーム',
+    'home.platformDesc': 'ワークフローと機能',
+    'home.sdks': 'SDK',
+    'home.api': 'API',
+    'home.apiDesc': 'REST リファレンス',
+  },
 };
 
 export function t(locale: string, key: CopyKey): string {

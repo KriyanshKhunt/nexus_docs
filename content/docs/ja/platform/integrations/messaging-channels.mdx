@@ -1,0 +1,46 @@
+---
+title: メッセージングチャンネル
+description: Slack、Discord、Microsoft Teams — 組織 Webhook とサブスクライバーごとのルーティング。
+---
+
+チームチャットツールに直接通知を配信します。
+
+## 組織レベルのセットアップ
+
+各プラットフォームの受信 Webhook URL を **Integrations（インテグレーション）** で設定します。オーバーライドされない限り、すべてのサブスクライバーが組織の Webhook を共有します。
+
+## サブスクライバーごとのルーティング
+
+ユーザー固有のチャンネル（例: 個人 Slack DM の Webhook）のために、トリガー受信者に Webhook URL を渡します:
+
+```ts
+recipients: [
+  {
+    externalId: 'user_1',
+    slackWebhookUrl: 'https://hooks.slack.com/services/T…/B…/…',
+    discordWebhookUrl: 'https://discord.com/api/webhooks/…',
+    teamsWebhookUrl: 'https://outlook.office.com/webhook/…',
+  },
+]
+```
+
+サブスクライバーの URL はディスパッチ時に組織の認証情報を**上書き**します。URL は将来のトリガーのためにサブスクライバープロファイルに永続化されます。
+
+## ペイロード形式
+
+| チャンネル | 形式 |
+|---------|--|
+| Slack | `{ "text": "…" }` |
+| Discord | `{ "content": "…" }` |
+| Teams | 本文テキスト付きの Adaptive Card |
+
+テンプレートは i18n バリアント付きの `slack`、`discord`、`ms_teams` コンテンツフィールドをサポートします。
+
+## ワークフローキャンバス
+
+ワークフローのステップツリーに **Slack**、**Discord**、または **Teams** チャンネルノードを追加します。
+
+## 関連
+
+- [Node SDK 受信者フィールド](/docs/sdk/node)
+- [インテグレーション](/docs/platform/integrations)

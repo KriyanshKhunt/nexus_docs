@@ -1,0 +1,46 @@
+---
+title: 自前プロバイダー（BYOP）
+description: あなた自身の SendGrid、Twilio、Resend キーを使用 — Nexus からのメッセージごとの手数料ゼロ。
+---
+
+**BYOP（Bring Your Own Provider / 自前プロバイダー）** は Nexus Signal の基盤です。私たちが配信をオーケストレートし、**あなた**がキャリアとの関係を所有してプロバイダーに直接支払います。
+
+## Nexus がすること
+
+- ビジュアルワークフロービルダーとテンプレートエンジン
+- **あなたの**プロバイダーアカウント間のスマートルーティング、フェイルオーバー、サーキットブレーカー
+- サブスクライバー設定、トピック、受信箱 API
+- 分析、監査ログ、コスト追跡
+
+## Nexus がしないこと
+
+- SMS やメール帯域幅の再販
+- メッセージごとの手数料の上乗せ
+- 単一のキャリアへのロックイン
+
+## サポートされるプロバイダーレイヤー
+
+**インテグレーション**でチャンネルごとに1つ以上のプロバイダーを設定し、**トラフィックウェイト**（例: メールで SendGrid 70%、Resend 30%）を設定します。
+
+[プロバイダーカタログ](/docs/platform/integrations/providers)全体をご覧ください。
+
+## 暗号化された認証情報
+
+プロバイダー API キーは組織の `providerKeys` ボールトに暗号化して保存されます。ワーカー内でのディスパッチ時のみ復号化されます。
+
+## AI キーも BYOP
+
+AI コンテンツ生成は**あなたの** OpenAI または Anthropic API キーを使用します（`openai_ai`、`anthropic_ai` インテグレーション）。Nexus は共有キーを通じた AI コールをプロキシしません。
+
+## これが重要な理由
+
+| 従来のプラットフォーム | Nexus Signal |
+|-------------------|-------------|
+| 手数料込みの SMS/メール | Twilio/SendGrid に直接支払い |
+| プロバイダー切り替えが困難 | ベンダー間の重み付きルーティング + フェイルオーバー |
+| 不透明な配信コスト | ワークフローごとの[コスト分析](/docs/platform/features/cost-analytics) |
+
+## 関連
+
+- [インテグレーション](/docs/platform/integrations)
+- [重み付きルーティング](/docs/platform/features/cost-reduction#weighted-provider-routing)

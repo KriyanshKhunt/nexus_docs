@@ -1,0 +1,51 @@
+---
+title: スケジュール API
+description: ダッシュボードまたは SDK でスケジュール済みワークフロートリガーを作成・管理します。
+---
+
+## SDK ルート（シークレットキー）
+
+```http
+Authorization: Bearer sk_prd_…
+```
+
+| メソッド | パス | アクション |
+|--------|------|---------|
+| GET | `/v1/schedules/sdk` | スケジュール一覧 |
+| POST | `/v1/schedules/sdk` | スケジュールを作成 |
+| PATCH | `/v1/schedules/sdk/:id` | スケジュールを更新 |
+| DELETE | `/v1/schedules/sdk/:id` | スケジュールを削除 |
+
+### 作成ボディ
+
+```json
+{
+  "name": "週次レポート",
+  "workflowId": "uuid",
+  "cronExpression": "0 9 * * 1",
+  "timezone": "Asia/Tokyo",
+  "recipients": [{ "externalId": "user_1" }],
+  "data": { "reportType": "weekly" },
+  "active": true
+}
+```
+
+単発スケジュール — `cronExpression` の代わりに `scheduledAt` を使用します:
+
+```json
+{
+  "scheduledAt": "2026-07-15T10:00:00.000Z"
+}
+```
+
+## ダッシュボードルート
+
+実行履歴付きの JWT 認証 CRUD が `/v1/schedules` で利用可能です。
+
+## Node SDK
+
+```ts
+await nexus.schedules.create({ … });
+```
+
+[Node SDK](/docs/sdk/node) と [スケジュール機能](/docs/platform/features/schedules) をご覧ください。

@@ -1,0 +1,39 @@
+---
+title: インテグレーション
+description: メール、SMS、プッシュ、メッセージング、AI プロバイダーを Nexus Signal に接続します。
+---
+
+Nexus Signal は**既存のプロバイダーアカウント**と統合します。ダッシュボードの **Integrations（インテグレーション）** ハブでキーを1度設定するだけです。
+
+<Cards>
+  <Card title="プロバイダーカタログ" href="/docs/platform/integrations/providers" description="SendGrid、Twilio、FCM、Resend など。" />
+  <Card title="メッセージングチャンネル" href="/docs/platform/integrations/messaging-channels" description="サブスクライバーごとの Slack、Discord、Teams の Webhook。" />
+  <Card title="Webhook" href="/docs/platform/integrations/webhooks" description="任意のペイロード用のカスタム HTTP エンドポイント。" />
+</Cards>
+
+## インテグレーションレイヤー
+
+| レイヤー | 例 |
+|--------|--|
+| メール | SendGrid、Resend、Amazon SES、Postmark、Mailgun |
+| SMS | Twilio、Vonage、Plivo、Sinch |
+| WhatsApp | Meta Cloud API、Twilio WhatsApp、Infobip |
+| プッシュ | Firebase FCM、Apple APNs |
+| メッセージング | Slack、Discord、Microsoft Teams |
+| Webhook | カスタム HTTP エンドポイント |
+| AI | OpenAI、Anthropic（コンテンツ生成） |
+
+## ウェイト設定
+
+1つのレイヤーに複数のプロバイダーが存在する場合、トラフィックウェイトを設定します（合計100になる必要があります）:
+
+```http
+PUT /v1/integrations/weights/email
+{ "sendgrid": 70, "resend": 30 }
+```
+
+レイヤー: `email`、`sms`、`whatsapp`、`push`、`webhook`、`slack`、`discord`、`ms_teams`
+
+<Callout type="info">
+Nexus がプロバイダーコストに手数料を上乗せしない理由は [BYOP](/docs/platform/concepts/byop) をご覧ください。
+</Callout>

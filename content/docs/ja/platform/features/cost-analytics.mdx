@@ -1,0 +1,51 @@
+---
+title: コスト分析
+description: チャンネル、ワークフロー、プロバイダーごとのプロバイダー費用を予算アラート付きで追跡。
+---
+
+通知の正確なコストを把握 — ほとんどの通知プラットフォームが提供しないもの。
+
+## セットアップ
+
+1. **インテグレーション → プロバイダーコスト** — プロバイダーごとのメッセージあたりコストを設定（例: SendGrid $0.001、Twilio $0.05）
+2. **設定 → 予算** — オプションの月次 `costBudgetUsd` 上限
+
+## ダッシュボード
+
+**概要 → 月次支出**カードに表示:
+
+- この請求サイクルの合計支出
+- プロバイダーとチャンネル別の内訳
+- ワークフロー別の内訳
+- 予算使用率 % と超過バッジ
+
+## API
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "totalCostUsd": 847.32,
+  "budgetUsd": 1000,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
+  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+}
+```
+
+## 予算アラート
+
+支出が `costBudgetUsd` を超えると、組織オーナーは請求サイクルに1回**メールアラート**を受け取ります。
+
+## ROI 相関
+
+コストデータを監査ログの変換テレメトリ（`OPENED`、`CLICKED`）と組み合わせて、高コスト・低エンゲージメントのワークフローを特定します。
+
+## 関連
+
+- [コスト削減](/docs/platform/features/cost-reduction)
+- [分析 API](/docs/api/analytics)

@@ -1,0 +1,209 @@
+---
+title: Node.js SDK
+description: "@nexus-signal/node — ワークフロートリガー、スケジュール、HMAC 署名。"
+---
+
+API ルート、ワーカー、スクリプトからワークフローをトリガーするサーバーサイド SDK。
+
+## インストール
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/node
+```
+
+  </Tab>
+</Tabs>
+
+## 初期化
+
+```ts title="nexus.ts"
+import { NexusClient } from "@nexus-signal/node";
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
+  baseUrl: "https://api.nexussignal.dev",
+  timeout: 5000,
+});
+```
+
+### クライアントオプション
+
+<TypeTable
+  type={{
+    secretKey: {
+      type: "string",
+      description:
+        "環境シークレットキー（例: sk_dev_..., sk_prd_...）。sk_ で始まり、20文字以上が必要（必須）。",
+    },
+    baseUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description: "Nexus プラットフォーム API エンドポイントのオリジン。",
+    },
+    timeout: {
+      type: "number",
+      default: "15000",
+      description: "リクエストタイムアウト制限（ミリ秒）。",
+    },
+    events: {
+      type: "object",
+      description:
+        "レジリエンスイベント監査用オプションコールバック（onCircuitOpen、onCircuitClose、onBufferOverflow）。",
+    },
+  }}
+/>
+
+## ワークフローのトリガー
+
+```ts title="trigger.ts"
+const result = await nexus.workflows.trigger({
+  workflowName: "billing.invoice_overdue",
+  recipients: [
+    {
+      externalId: "cust_8824",
+      email: "billing@enterprise.com",
+      phoneNumber: "+15550198234",
+      timezone: "Asia/Tokyo",
+      locale: "ja",
+      slackWebhookUrl: "https://hooks.slack.com/services/…",
+    },
+  ],
+  data: {
+    invoiceId: "INV-2026-0049",
+    amountDue: "¥125,000",
+  },
+});
+
+if (!result.ok) {
+  console.warn(result.error, result.queued ? "（リトライのためバッファ済み）" : "");
+}
+```
+
+### 受信者フィールド
+
+<TypeTable
+  type={{
+    externalId: {
+      type: "string",
+      description: "ユーザー ID（subscriberId が指定されていない場合は必須）。",
+    },
+    subscriberId: {
+      type: "string (UUID)",
+      description: "Nexus 内部のサブスクライバー固有 ID。",
+    },
+    email: {
+      type: "string",
+      description: "メールチャンネル用の受信者メールアドレス。",
+    },
+    phoneNumber: {
+      type: "string",
+      description:
+        "SMS および WhatsApp チャンネル用の受信者電話番号（E.164 形式）。",
+    },
+    timezone: {
+      type: "string",
+      description:
+        "ローカル時間に基づいて通知をスケジュール・遅延させる受信者のタイムゾーン（IANA 形式）。",
+    },
+    locale: {
+      type: "string",
+      description:
+        "ローカリゼーションレンダリング用のトリガーごとのユーザーロケールオーバーライド（BCP 47 形式）。",
+    },
+    slackWebhookUrl: {
+      type: "string",
+      description:
+        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Slack webhook URL。",
+    },
+    discordWebhookUrl: {
+      type: "string",
+      description:
+        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Discord webhook URL。",
+    },
+    teamsWebhookUrl: {
+      type: "string",
+      description:
+        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Microsoft Teams webhook URL。",
+    },
+  }}
+/>
+
+## HMAC 署名
+
+```ts title="auth.ts"
+const hmac = nexus.auth.generateHmacSignature("cust_8824");
+// @nexus-signal/react の NexusProvider に渡します — ブラウザに secretKey を公開しないでください
+```
+
+スタンドアロンとしてもエクスポートされています（`secretKey` を明示的に渡す必要があります）:
+
+```ts title="standalone-auth.ts"
+import { generateHmacSignature } from '@nexus-signal/node';
+
+const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
+```
+
+## スケジュール
+
+```ts title="schedule.ts"
+await nexus.schedules.create({
+  name: "月曜ダイジェスト",
+  workflowId: "workflow-uuid",
+  cronExpression: "0 9 * * 1",
+  timezone: "Asia/Tokyo",
+  recipients: [{ externalId: "user_1" }],
+  data: {},
+});
+
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## レジリエンス
+
+- **サーキットブレーカー** — 5回の失敗後に開放、60秒後に自動回復
+- **リトライバッファ** — 失敗したリクエストをメモリにキュー（最大500件）
+- **`flushRetries()`** — プラットフォームが正常なときにバッファされたトリガーを再送
+
+```ts title="resilience.ts"
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  events: {
+    onCircuitOpen: () => console.warn("Nexus サーキット開放"),
+    onCircuitClose: () => nexus.workflows.flushRetries(),
+    onBufferOverflow: (p) => console.error("ドロップ:", p.workflowName),
+  },
+});
+```
+
+## レスポンス形状
+
+```ts
+type NexusResult<T> = {
+  ok: boolean;
+  status: number;
+  data?: T;
+  error?: string;
+  queued?: boolean; // ローカルにバッファされた場合は true
+};
+```
+
+成功したトリガーは `{ accepted: true, results: [...] }` で **HTTP 202** を返します。

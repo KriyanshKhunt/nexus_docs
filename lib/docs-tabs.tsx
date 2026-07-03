@@ -25,6 +25,10 @@ const TAB_DEFS: TabDef[] = [
         title: 'Plataforma',
         description: 'Fluxos de trabalho, recursos, integrações, guias',
       },
+      ja: {
+        title: 'プラットフォーム',
+        description: 'ワークフロー、機能、インテグレーション、ガイド',
+      },
     },
   },
   {
@@ -34,6 +38,7 @@ const TAB_DEFS: TabDef[] = [
       en: { title: 'SDKs', description: 'Node.js and React packages' },
       es: { title: 'SDKs', description: 'Paquetes Node.js y React' },
       pt: { title: 'SDKs', description: 'Pacotes Node.js e React' },
+      ja: { title: 'SDK', description: 'Node.js と React パッケージ' },
     },
   },
   {
@@ -43,6 +48,7 @@ const TAB_DEFS: TabDef[] = [
       en: { title: 'API Reference', description: 'REST endpoints and auth' },
       es: { title: 'Referencia API', description: 'Endpoints REST y autenticación' },
       pt: { title: 'Referência da API', description: 'Endpoints REST e autenticação' },
+      ja: { title: 'API リファレンス', description: 'REST エンドポイントと認証' },
     },
   },
 ];

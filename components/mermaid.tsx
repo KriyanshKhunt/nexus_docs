@@ -9,6 +9,7 @@ const loadingTexts: Record<string, string> = {
   en: "Loading diagram…",
   es: "Cargando diagrama…",
   pt: "Carregando diagrama…",
+  ja: "ダイアグラムを読み込み中…",
 };
 
 export function Mermaid({ chart }: { chart: string }) {

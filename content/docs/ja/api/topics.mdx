@@ -1,0 +1,76 @@
+---
+title: トピック API
+description: 通知トピック用のダッシュボードエンドポイント — 設定マトリクス用にワークフローをグループ化します。
+---
+
+ダッシュボード JWT + ワークスペースコンテキストが必要です。
+
+トピックにより、サブスクライバーは複数のワークフローにまたがるカテゴリ（例: マーケティング、製品アップデート）のオプトイン・アウトができます。React の[設定マトリクス](/docs/sdk/react)はトピックを自動でレンダリングします。
+
+## エンドポイント
+
+| メソッド | パス | 説明 |
+|--------|------|-----|
+| GET | `/v1/topics` | 全トピック一覧 |
+| POST | `/v1/topics` | トピックを作成 |
+| GET | `/v1/topics/:id` | トピックを取得 |
+| PUT | `/v1/topics/:id` | トピックを更新 |
+| DELETE | `/v1/topics/:id` | トピックを削除 |
+| GET | `/v1/topics/:id/stats` | 購読統計 |
+| PUT | `/v1/topics/assign/:workflowId` | ワークフローをトピックに割り当て |
+
+ロール: 作成・更新・削除には `OWNER`、`ADMIN`、または `DEVELOPER` が必要です。
+
+## トピックの作成
+
+```http
+POST /v1/topics
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "marketing",
+  "label": "マーケティング & プロモーション",
+  "description": "製品ニュースとお得な情報",
+  "defaultChannels": { "EMAIL": true, "SMS": false, "PUSH": false }
+}
+```
+
+## ワークフローの割り当て
+
+```http
+PUT /v1/topics/assign/:workflowId
+Content-Type: application/json
+```
+
+```json
+{
+  "topicIds": ["topic-uuid-1", "topic-uuid-2"]
+}
+```
+
+## SDK 統合
+
+ブラウザアプリはトピックを以下で取得します:
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+サブスクライバーの設定には `topic:marketing` のようなキーを使用します:
+
+```json
+{
+  "preferences": {
+    "topic:marketing": { "EMAIL": false, "PUSH": true }
+  }
+}
+```
+
+## 関連
+
+- [トピック機能](/docs/platform/features/topics)
+- [SDK API](/docs/api/sdk)
+- [React SDK](/docs/sdk/react)

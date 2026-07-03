@@ -1,0 +1,55 @@
+---
+title: AI コンテンツ生成
+description: 自分の AI キーを使って1つのプロンプトからチャンネル最適化された通知コピーを生成。
+---
+
+テンプレートエディタには **AI アシスト**が含まれています — 通知の内容を説明すると、各チャンネルの文字制限に最適化されたコピーが生成されます。
+
+## BYOP AI キー
+
+**インテグレーション**で自分のキーを接続:
+
+- **OpenAI** (`openai_ai`) — `gpt-4o-mini` を使用
+- **Anthropic** (`anthropic_ai`) — `claude-3-haiku` を使用
+
+Nexus は AI トークンに課金しません — プロバイダーに直接支払います。
+
+## API
+
+```http
+POST /v1/templates/ai-generate
+Authorization: Bearer <dashboard JWT>
+```
+
+```json
+{
+  "prompt": "追跡リンク付きの注文発送通知",
+  "tone": "friendly",
+  "locale": "ja",
+  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+}
+```
+
+制限が適用されたチャンネルごとの構造化されたコンテンツを返します:
+
+| チャンネル | 制限 |
+|---------|-----|
+| メール件名 | 80文字 |
+| SMS 本文 | 160文字 |
+| プッシュタイトル / 本文 | 50 / 120文字 |
+| WhatsApp 本文 | 1024文字 |
+
+**トーン:** `professional`（プロフェッショナル）、`casual`（カジュアル）、`urgent`（緊急）、`friendly`（フレンドリー）
+
+## ワークフロー
+
+1. ダッシュボードで**テンプレート**を開く
+2. **AI アシスト**パネルをクリック
+3. プロンプトを入力してチャンネルを選択
+4. チャンネルごとに生成されたコピーをプレビュー
+5. テンプレートドラフトに取り込む
+
+## 関連
+
+- [i18n テンプレート](/docs/platform/features/i18n) — ロケールごとに生成
+- [最初のワークフローガイド](/docs/platform/guides/first-workflow)

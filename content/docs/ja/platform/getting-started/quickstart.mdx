@@ -1,0 +1,121 @@
+---
+title: クイックスタート
+description: Nexus Signal で数分以内に最初の通知を送信します。
+---
+
+<Steps>
+<Step>
+### ワークスペースを作成
+
+[ダッシュボード](https://app.nexussignal.dev)にサインインします。**3つの独立した環境**が用意されています:
+
+| 環境 | キープレフィックス | 用途 |
+| ---- | -------------- | ---- |
+| 開発 | `pk_dev_` / `sk_dev_` | ローカルテスト + サンドボックス |
+| ステージング | `pk_stg_` / `sk_stg` | QA 統合 |
+| 本番 | `pk_prd_` / `sk_prd_` | ライブトラフィック |
+
+</Step>
+
+<Step>
+### ワークフローを作成
+
+**Workflows（ワークフロー）** → `user.signup` を作成 → メール + アプリ内チャンネルノードを追加 → テンプレートを**本番**に公開。
+
+</Step>
+
+<Step>
+### プロバイダーを接続
+
+**Integrations（インテグレーション）** → SendGrid または Resend を追加 → API キーを貼り付け（保存時に暗号化）。
+
+</Step>
+
+<Step>
+### Node SDK をインストール
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/node
+```
+
+  </Tab>
+</Tabs>
+</Step>
+
+<Step>
+### サーバーからトリガー
+
+```ts title="trigger.ts"
+import { NexusClient } from "@nexus-signal/node";
+
+const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!,
+  baseUrl: "https://api.nexussignal.dev",
+});
+
+const result = await nexus.workflows.trigger({
+  workflowName: "user.signup",
+  recipients: [{ externalId: "user_123", email: "alex@acme.io" }],
+  data: { name: "Alex" },
+});
+```
+
+<Callout type="success">
+成功した呼び出しは `{ accepted: true }` とともに **HTTP 202** を返します。**監査ログ**または開発環境の**サンドボックス**シミュレーターで確認してください。
+</Callout>
+</Step>
+</Steps>
+
+## 次のステップ
+
+<Cards>
+  <Card
+    title="環境"
+    href="/docs/platform/getting-started/environments"
+    description="開発・ステージング・本番のキー。"
+  />
+  <Card
+    title="React SDK"
+    href="/docs/sdk/react"
+    description="アプリ内ベルを追加します。"
+  />
+  <Card
+    title="最初のワークフロー"
+    href="/docs/platform/guides/first-workflow"
+    description="マルチチャンネルのウォークスルー。"
+  />
+</Cards>
+
+## よくある質問
+
+<Accordions type="single">
+  <Accordion title="10チャンネルすべて必要ですか？">
+    いいえ。まずメールまたはアプリ内のみで始めてください。インテグレーションでプロバイダーを接続するにつれてチャンネルを追加できます。
+  </Accordion>
+  <Accordion title="なぜ 200 ではなく 202 Accepted なのですか？">
+    Nexus は設計上非同期です。API はジョブをエンキューして即座に返します — 配信はバックグラウンドワーカーで行われます。
+  </Accordion>
+  <Accordion title="開発環境の送信は費用がかかりますか？">
+    外部チャンネルは開発環境では**サンドボックスシミュレーター**を使用します — 実際のプロバイダー API は呼び出されません。アプリ内はライブ WebSocket を使用します。
+  </Accordion>
+  <Accordion title="API キーはどこで取得できますか？">
+    ダッシュボード → 環境を選択 → **設定 → API キー**。ローカルでは `sk_dev_`、本番では `sk_prd_` を使用してください。
+  </Accordion>
+</Accordions>

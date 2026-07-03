@@ -1,0 +1,70 @@
+---
+title: ワークフロー API
+description: POST /v1/workflows/trigger — バックエンドからワークフローイベントを取り込みます。
+---
+
+## ワークフローのトリガー
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+Idempotency-Key: optional-unique-key
+```
+
+### リクエストボディ
+
+```json
+{
+  "workflowName": "order.shipped",
+  "recipients": [
+    {
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "timezone": "America/Los_Angeles",
+      "locale": "ja"
+    }
+  ],
+  "data": {
+    "orderId": "ORD-9912",
+    "trackingUrl": "https://carrier.com/track/9912"
+  }
+}
+```
+
+### レスポンス — 202 Accepted
+
+```json
+{
+  "accepted": true,
+  "workflow": "order.shipped",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "logId": "uuid",
+      "subscriberId": "uuid",
+      "status": "queued"
+    }
+  ],
+  "billing": { "quotaStatus": "ok" }
+}
+```
+
+### エラーコード
+
+| ステータス | 意味 |
+|--------|----|
+| 400 | バリデーション失敗 |
+| 401 | 無効または不足しているシークレットキー |
+| 404 | ワークフローが見つかりません |
+| 409 | ワークフローが無効化されています |
+| 402/429 | クォータ超過またはレート制限 |
+
+## ダッシュボード ワークフロー CRUD
+
+`/v1/workflows/dashboard` 配下の認証済みダッシュボードルートで、作成・更新・削除・テストトリガー・A/B 統計が利用可能です。
+
+## Node SDK
+
+型付きトリガー、リトライ、サーキットブレーカーには [`@nexus-signal/node`](/docs/sdk/node) をお勧めします。

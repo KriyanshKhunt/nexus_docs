@@ -1,0 +1,43 @@
+---
+title: トピック
+description: カテゴリベースの通知サブスクリプション — マーケティング、セキュリティ、製品アップデート。
+---
+
+**トピック**により、ユーザーは個別のワークフローイベント名ではなく**カテゴリ**でオプトイン/アウトできます。
+
+## モデル
+
+| フィールド | 説明 |
+|---------|---|
+| `name` | マシンキー（例: `marketing`） |
+| `displayName` | UI ラベル |
+| `defaultStatus` | `OPTED_IN`、`OPTED_OUT`、または `REQUIRED` |
+| `sortOrder` | 設定マトリクスの順序 |
+
+環境ごとに最大**50トピック**。
+
+## ワークフローの割り当て
+
+`topicId` でワークフローをトピックにリンクします。設定評価はサブスクライバープロファイルの `topic:{name}` キーをチェックします。
+
+## ダッシュボード
+
+**設定 → トピック**でトピックを管理。ワークフローエディタのドロップダウンからワークフローを割り当て。
+
+## SDK
+
+```http
+GET /v1/sdk/topics
+x-nexus-public-key: pk_prd_…
+```
+
+設定マトリクスの `GET /v1/sdk/notification-events` にも含まれています。
+
+## React SDK
+
+`<SubscriberPreferenceMatrix groupByTopic />` はトピックをチャンネルチェックボックス付きの行としてレンダリングします。
+
+## 関連
+
+- [React SDK](/docs/sdk/react)
+- [SDK API](/docs/api/sdk)

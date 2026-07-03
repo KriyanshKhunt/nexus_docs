@@ -1,0 +1,47 @@
+---
+title: 多言語テンプレート
+description: ロケール対応テンプレート — 1つのワークフロー、あらゆる言語のコンテンツ。
+---
+
+ワークフローを複製せずにグローバルユーザーに届けます。
+
+## テンプレート構造
+
+`contentTemplates` にロケールバリアントを保存:
+
+```json
+{
+  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
+  "ja": { "email_subject": "ご注文が発送されました", "sms_body": "発送しました！" },
+  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" }
+}
+```
+
+## ロケール解決順序
+
+1. トリガーごとの `_locale` オーバーライド（トリガー時の受信者から）
+2. サブスクライバーの `locale` フィールド
+3. `en` へのフォールバック
+
+## トリガーでロケールを設定
+
+```ts
+recipients: [{ externalId: 'user_1', locale: 'ja' }]
+```
+
+## サポートされるロケール
+
+`en`、`es`、`fr`、`de`、`pt`、`it`、`ja`、`ko`、`zh`、`ar`、`hi`、`nl`、`pl` — BCP 47 タグとして検証済み。
+
+## テンプレートエディタ
+
+ダッシュボードのテンプレートスタジオで**ロケールタブ**を使用して言語を追加/削除します。デバイスエミュレーターが各ロケールをプレビューします。
+
+## AI 生成
+
+AI コンテンツ生成は `locale` パラメータを受け入れ、1ステップで翻訳されたコピーを生成します。
+
+## 関連
+
+- [ワークフロー](/docs/platform/concepts/workflows)
+- [トピック](/docs/platform/features/topics)

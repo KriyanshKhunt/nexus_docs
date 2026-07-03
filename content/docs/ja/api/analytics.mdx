@@ -1,0 +1,49 @@
+---
+title: 分析 API
+description: ダッシュボード分析 — 概要、トラフィック、レイテンシ、パイプライン健全性、コスト。
+---
+
+ダッシュボード JWT + ワークスペースコンテキストが必要です。
+
+## エンドポイント
+
+| メソッド | パス | 説明 |
+|--------|------|-----|
+| GET | `/v1/analytics/overview` | サマリーカード — トリガー数、成功率、ROI |
+| GET | `/v1/analytics/overview/traffic` | チャンネルトラフィック時系列 |
+| GET | `/v1/analytics/overview/latency` | 取り込みから配信までのレイテンシ |
+| GET | `/v1/analytics/overview/pipeline` | パイプライン健全性フロー |
+| GET | `/v1/analytics/overview/heatmap` | プロバイダー別エラーヒートマップ |
+| GET | `/v1/analytics/overview/cost` | プロバイダー支出の内訳 |
+
+### クエリパラメータ
+
+```
+?environment=PRODUCTION&timeframe=24h
+```
+
+`environment`: `DEVELOPMENT` | `STAGING` | `PRODUCTION`
+
+### コストレスポンス（抜粋）
+
+```json
+{
+  "totalCostUsd": 423.18,
+  "budgetUsd": 500,
+  "budgetUsedPercent": 85,
+  "budgetExceeded": false,
+  "byProvider": [
+    { "providerId": "twilio", "label": "Twilio", "count": 8200, "costUsd": 410 }
+  ],
+  "byWorkflow": [
+    { "workflowName": "auth.otp", "costUsd": 180.5 }
+  ]
+}
+```
+
+`PUT /v1/settings/provider-costs` でプロバイダーの単価コストを設定します。
+
+## 関連
+
+- [コスト分析機能](/docs/platform/features/cost-analytics)
+- [監査ログ](/docs/platform/concepts/delivery-pipeline) — 配信ごとの詳細

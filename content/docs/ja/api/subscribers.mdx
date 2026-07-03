@@ -1,0 +1,99 @@
+---
+title: サブスクライバー API
+description: サブスクライバー管理のダッシュボードエンドポイント — 作成・更新・エクスポート・GDPR 削除。
+---
+
+ダッシュボード JWT + ワークスペースコンテキストが必要です。
+
+## エンドポイント
+
+| メソッド | パス | 説明 |
+|--------|------|-----|
+| GET | `/v1/subscribers` | サブスクライバー一覧（ページネーション・検索対応） |
+| POST | `/v1/subscribers` | サブスクライバーを作成 |
+| GET | `/v1/subscribers/:id` | ID でサブスクライバーを取得 |
+| PUT | `/v1/subscribers/:id` | サブスクライバーを更新 |
+| DELETE | `/v1/subscribers/:id` | GDPR 削除 — サブスクライバーと配信履歴を削除 |
+| GET | `/v1/subscribers/:id/export` | サブスクライバーデータのエクスポート（GDPR） |
+| GET | `/v1/subscribers/:id/engagement` | エンゲージメントモデル — スマート送信時刻データ |
+
+ロール: 作成・更新・削除には `OWNER`、`ADMIN`、または `DEVELOPER` が必要です。
+
+## サブスクライバー一覧
+
+```http
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "subscribers": [
+    {
+      "id": "uuid",
+      "externalId": "user_42",
+      "email": "alex@acme.io",
+      "phoneNumber": "+15551234567",
+      "locale": "ja",
+      "timezone": "Asia/Tokyo",
+      "globalUnsubscribed": false,
+      "deliveryCount": 128
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 50,
+  "environment": "PRODUCTION"
+}
+```
+
+## サブスクライバーの作成
+
+```http
+POST /v1/subscribers
+Content-Type: application/json
+```
+
+```json
+{
+  "externalId": "user_42",
+  "email": "alex@acme.io",
+  "phoneNumber": "+15551234567",
+  "timezone": "Asia/Tokyo",
+  "locale": "ja",
+  "preferences": {
+    "order.shipped": { "EMAIL": true, "SMS": false }
+  }
+}
+```
+
+## サブスクライバーの更新
+
+```http
+PUT /v1/subscribers/:id
+```
+
+`email`、`phoneNumber`、`timezone`、`locale`、`preferences`、または `globalUnsubscribed` を更新します。
+
+## GDPR エクスポート & 削除
+
+```http
+GET /v1/subscribers/:id/export
+DELETE /v1/subscribers/:id
+```
+
+エクスポートはサブスクライバープロファイルと配信履歴の JSON バンドルを返します。削除はサブスクライバーを永続的に削除し、Redis プレゼンス状態をクリアして、監査ログにエントリを書き込みます。
+
+## エンゲージメントデータ
+
+```http
+GET /v1/subscribers/:id/engagement
+```
+
+[スマート送信時刻](/docs/platform/features/smart-send-time) で使用されるチャンネル別エンゲージメントスコアを返します。
+
+## 関連
+
+- [SDK API](/docs/api/sdk) — ブラウザ受信箱と設定
+- [多言語テンプレート](/docs/platform/features/i18n) — `locale` フィールド
+- [Node SDK](/docs/sdk/node) — `locale` オーバーライドでトリガー

@@ -1,0 +1,70 @@
+---
+title: API リファレンス
+description: Nexus Signal の REST API — トリガー、受信箱、スケジュール、サブスクライバー、分析、トピック。
+---
+
+# Nexus Signal API
+
+**ベース URL:** `https://api.nexussignal.dev/v1`
+
+トリガー、アプリ内受信箱、スケジュール、サブスクライバー管理、分析へのプログラムアクセスを提供します。すべての取り込みエンドポイントは **202 Accepted** を返します — 配信は非同期です。
+
+<Cards>
+  <Card title="ワークフロー" href="/docs/api/workflows" description="POST /workflows/trigger — 非同期配信。" />
+  <Card title="SDK" href="/docs/api/sdk" description="ブラウザアプリ向け受信箱・設定・トピック。" />
+  <Card title="スケジュール" href="/docs/api/schedules" description="Cron および単発スケジュールトリガー。" />
+  <Card title="サブスクライバー" href="/docs/api/subscribers" description="サブスクライバーの作成・更新・エクスポート。" />
+  <Card title="トピック" href="/docs/api/topics" description="設定マトリクス用トピックグループ。" />
+  <Card title="分析" href="/docs/api/analytics" description="メトリクス、コスト、エンゲージメントデータ。" />
+</Cards>
+
+## 認証モード
+
+| 対象 | 認証 | エンドポイント |
+|----------|------|-----------|
+| サーバーアプリ | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
+| ブラウザ SDK | `x-nexus-public-key: pk_*` | `/sdk/*` |
+| ダッシュボード | JWT セッションクッキー / Bearer | `/workflows/dashboard`, `/analytics`, `/subscribers` など |
+
+## レスポンス規約
+
+- トリガーは **202 Accepted** を返します（非同期処理）
+- エラーは `{ error: string, code?: string, details?: object }` を返します
+- レート制限はプランティアごとに適用されます
+
+## ヘルス & テレメトリ
+
+<Tabs items={['ヘルス', 'テレメトリ']}>
+  <Tab value="ヘルス">
+
+```http
+GET /health
+GET /health/deep
+```
+
+  </Tab>
+  <Tab value="テレメトリ">
+
+```http
+GET /v1/telemetry/click/:trackingId
+POST /v1/telemetry/callbacks/:provider
+```
+
+クリックトラッキングはユーザーをリダイレクトし、エンゲージメントを記録します。キャリアコールバックは配信ステータスを更新します。
+
+  </Tab>
+</Tabs>
+
+<Callout type="warn">
+ブラウザコードに `sk_*` シークレットキーを公開しないでください。SDK ルートには `pk_*` 公開キーのみを使用してください。
+</Callout>
+
+<Callout type="info">
+型付きの統合をお好みですか？[Node SDK](/docs/sdk/node) と [React SDK](/docs/sdk/react) をご覧ください。
+</Callout>
+
+## スタック
+
+Node.js · PostgreSQL · Redis · BullMQ — 10ms 未満の取り込み、観測可能な配信パイプライン。
+
+**サポート:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [ダッシュボード](https://app.nexussignal.dev)

@@ -16,6 +16,10 @@ export const { provider: i18nProvider } = defineI18nUI(i18n, {
     displayName: 'Português',
     search: 'Buscar na documentação…',
   },
+  ja: {
+    displayName: '日本語',
+    search: 'ドキュメントを検索…',
+  },
 });
 
 export function baseOptions(locale: string): BaseLayoutProps {

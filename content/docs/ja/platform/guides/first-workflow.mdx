@@ -1,0 +1,67 @@
+---
+title: 最初のワークフローを構築
+description: テンプレート、トリガー、アプリ内ベルを使ったマルチチャンネルのウェルカムワークフローを作成します。
+---
+
+このガイドでは **user.signup** ウェルカムフロー（メール + アプリ内通知）を構築します。
+
+## 1. ワークフローを作成
+
+ダッシュボード → **Workflows（ワークフロー）** → `user.signup` という名前の新しいワークフロー。
+
+ノードを追加:
+
+```
+Trigger（トリガー） → Channel（チャンネル）: Email（メール） → Channel（チャンネル）: In-App（アプリ内）
+```
+
+プレゼンス対応配信が必要な場合は、メールノードで **Suppress when online（オンライン時は抑制）** を有効にします。
+
+## 2. テンプレートを記述
+
+このワークフローの **Templates（テンプレート）** を開きます。
+
+**メール（HTML）:**
+```html
+<h1>ようこそ、{{ data.name }} 様！</h1>
+<p>ご登録いただきありがとうございます。アカウント ID は {{ subscriber.externalId }} です。</p>
+```
+
+**アプリ内:**
+```json
+{ "title": "ようこそ！", "body": "{{ data.name }} 様、お待ちしておりました。" }
+```
+
+テンプレートを **Production Active（本番アクティブ）** に昇格させます。
+
+## 3. テストサブスクライバーを作成
+
+**Subscribers（サブスクライバー）** → テスト用の `externalId` とメールアドレスでサブスクライバーを追加。
+
+## 4. コードからトリガー
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.signup',
+  recipients: [{ externalId: 'test_user', email: 'your@example.com' }],
+  data: { name: 'テストユーザー' },
+});
+```
+
+開発環境では、メールは **Sandbox（サンドボックス）** に表示されます。アプリ内には React SDK が必要です。
+
+## 5. アプリ内ベルを追加
+
+```tsx
+<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
+  <NotificationCenterBell />
+</NexusProvider>
+```
+
+もう一度トリガーしてください — ベルのバッジがリアルタイムで更新されます。
+
+## 次のステップ
+
+- メールに[スマート送信時刻](/docs/platform/features/smart-send-time)を追加
+- ワークフローを[トピック](/docs/platform/features/topics)に割り当て
+- マーケティング送信に[配信ウィンドウ](/docs/platform/features/delivery-windows)を追加

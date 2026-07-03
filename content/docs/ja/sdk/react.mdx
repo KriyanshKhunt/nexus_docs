@@ -1,0 +1,183 @@
+---
+title: React SDK
+description: "@nexus-signal/react — 通知ベル、受信箱、設定マトリクス。"
+---
+
+アプリ内通知とサブスクライバー設定のためのドロップイン React コンポーネント。
+
+## インストール
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">
+
+```bash
+npm install @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="pnpm">
+
+```bash
+pnpm add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+  <Tab value="yarn">
+
+```bash
+yarn add @nexus-signal/react socket.io-client
+```
+
+  </Tab>
+</Tabs>
+
+## NexusProvider
+
+アプリ（または認証済みレイアウト）をラップします:
+
+```tsx title="app/layout.tsx"
+import { NexusProvider } from "@nexus-signal/react";
+
+export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId={user.id}
+      hmacSignature={hmac}
+      backendUrl="https://api.nexussignal.dev"
+    >
+      {children}
+    </NexusProvider>
+  );
+}
+```
+
+<TypeTable
+  type={{
+    publicKey: {
+      type: "string",
+      description:
+        "環境公開キー（pk_dev_、pk_prd_ などで始まる）。必須。",
+    },
+    subscriberId: {
+      type: "string",
+      description:
+        "ワークフロートリガーで使用するのと同じ一意のサブスクライバー externalId。必須。",
+    },
+    hmacSignature: {
+      type: "string",
+      description:
+        "セキュリティのためバックエンドで生成された HMAC 署名。必須。",
+    },
+    backendUrl: {
+      type: "string",
+      default: "https://api.nexussignal.dev",
+      description:
+        "Nexus プラットフォーム API ベース URL のエンドポイントオリジン（apiBaseUrl プロパティでも設定可能）。",
+    },
+  }}
+/>
+
+## 通知ベル
+
+```tsx title="components/header.tsx"
+import { NotificationCenterBell } from "@nexus-signal/react";
+
+<header>
+  <NotificationCenterBell position="bottom-end" variant="ghost" />
+</header>;
+```
+
+- WebSocket によるリアルタイム更新と未読バッジ
+- 既読、アーカイブアクション
+- クロスデバイス既読同期
+
+## 通知受信箱
+
+日付グループと無限スクロールを備えたフルページフィード:
+
+```tsx title="pages/notifications.tsx"
+import { NotificationInbox } from "@nexus-signal/react";
+
+<NotificationInbox />;
+```
+
+ページネーション付きの `GET /v1/sdk/notifications`（`hasMore`、`loadMore`）を使用します。
+
+## 設定マトリクス
+
+```tsx title="pages/settings.tsx"
+import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
+
+<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
+```
+
+ワークフローイベントまたは**トピック**をチャンネルチェックボックスに対してレンダリングします。変更は SDK 設定 API を通じて永続化されます。
+
+## useNotifications フック
+
+```tsx title="components/notification-list.tsx"
+import { useNotifications } from "@nexus-signal/react";
+
+const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
+  useNotifications();
+```
+
+<TypeTable
+  type={{
+    items: {
+      type: "InAppNotification[]",
+      description: "現在取得済みのアプリ内通知オブジェクトの配列。",
+    },
+    unread: {
+      type: "number",
+      description: "未読かつアーカイブされていない通知のカウンター。",
+    },
+    status: {
+      type: "'connected' | 'disconnected'",
+      description: "現在のリアルタイム WebSocket 接続状態。",
+    },
+    hasMore: {
+      type: "boolean",
+      description: "ロード可能な過去の通知があるかどうかを示します。",
+    },
+    loadingMore: {
+      type: "boolean",
+      description:
+        "ページ取得リクエストが現在実行中かどうかを示すフラグ。",
+    },
+    loadMore: {
+      type: "() => Promise<void>",
+      description:
+        "次のページの通知を取得し、アイテムフィードに追加します。",
+    },
+    markRead: {
+      type: "(logId: string) => Promise<void>",
+      description: "特定の通知を既読にします。",
+    },
+    markAllRead: {
+      type: "() => Promise<void>",
+      description: "現在のすべての通知を既読にします。",
+    },
+    archive: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "特定の通知をアーカイブし、既読にしてアクティブな未読リストから削除します。",
+    },
+    remove: {
+      type: "(logId: string) => Promise<void>",
+      description:
+        "データベースとフィードから通知を完全に削除します。",
+    },
+  }}
+/>
+
+## テーマ設定
+
+コンポーネントは Tailwind と互換性のある CSS 変数（`--nexus-theme-*`）を使用します。ブランドに合わせてグローバル CSS でオーバーライドしてください。
+
+## セキュリティ
+
+<Callout type="error">
+  すべてのセッションでサーバー上で `hmacSignature` を生成してください。フロントエンドコードに `secretKey` を絶対に置かないでください。
+</Callout>

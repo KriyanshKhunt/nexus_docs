@@ -1,0 +1,25 @@
+---
+title: ガイド
+description: Nexus Signal の一般的な統合タスクのためのステップバイステップガイド。
+---
+
+クイックスタートを超えた実践的なウォークスルー。
+
+<Cards>
+  <Card title="最初のワークフロー" href="/docs/platform/guides/first-workflow" description="マルチチャンネルワークフローをゼロから構築。" />
+  <Card title="本番チェックリスト" href="/docs/platform/guides/production-checklist" description="本番キーに切り替える前に確認すること。" />
+</Cards>
+
+## 本番前に
+
+<Accordions type="single">
+  <Accordion title="開発環境でテストしましたか？">
+    本番プロバイダーキーを接続する前に、開発環境とサンドボックスシミュレーターを使用してください。
+  </Accordion>
+  <Accordion title="プロバイダーの認証情報は本番環境のみにありますか？">
+    ステージングは本番をミラーリングできますが、git にコミットされたローカルの `.env` ファイルに本番キーを再使用しないでください。
+  </Accordion>
+  <Accordion title="HMAC はサーバーサイドで生成されていますか？">
+    React SDK セッションはバックエンドから動的に生成された HMAC が必要です — [認証](/docs/platform/getting-started/authentication)をご覧ください。
+  </Accordion>
+</Accordions>

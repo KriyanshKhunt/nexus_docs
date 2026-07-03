@@ -1,0 +1,47 @@
+---
+title: スケジュールトリガー
+description: 独自のジョブランナーを構築せずに Cron と単発のスケジュール通知を設定。
+---
+
+ダッシュボードまたは Node SDK からワークフロー発火をスケジュール — 外部 Cron 不要。
+
+## タイプ
+
+| タイプ | フィールド | 例 |
+|------|---------|--|
+| **繰り返し** | `cronExpression` | `0 9 * * 1`（月曜午前9時） |
+| **単発** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+
+両方とも `timezone`（デフォルト UTC）と静的な `recipients` + `data` ペイロードをサポートします。
+
+## ダッシュボード
+
+**スケジュール**ページ — 作成、一時停止、編集、削除。`nextFireAt` と `lastFiredAt` を表示。
+
+## Node SDK
+
+```ts
+await nexus.schedules.create({
+  name: '週次ダイジェスト',
+  workflowId: 'wf_uuid',
+  cronExpression: '0 9 * * 1',
+  timezone: 'Asia/Tokyo',
+  recipients: [{ externalId: 'user_1' }],
+  data: { week: '2026-W27' },
+});
+```
+
+```ts
+await nexus.schedules.list({ page: 1, limit: 20 });
+await nexus.schedules.update(id, { active: false });
+await nexus.schedules.delete(id);
+```
+
+## 実行
+
+ワーカー Cron は**60秒**ごとに期限切れスケジュールを評価します（環境ごとに最大100アクティブスケジュール）。
+
+## 関連
+
+- [API リファレンス — スケジュール](/docs/api/schedules)
+- [Node SDK](/docs/sdk/node)

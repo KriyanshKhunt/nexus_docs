@@ -1,0 +1,20 @@
+---
+title: コンセプト
+description: Nexus Signal の基本概念 — アーキテクチャ、BYOP、ワークフロー、配信パイプライン。
+---
+
+機能や API に深入りする前に、これらのコンセプトが **Nexus Signal の設計方法**とその動作理由を説明します。
+
+<Cards>
+  <Card title="アーキテクチャ" href="/docs/platform/concepts/architecture" description="API、キュー、ワーカー、WebSocket ゲートウェイ。" />
+  <Card title="BYOP" href="/docs/platform/concepts/byop" description="あなたのキー、あなたの請求、手数料ゼロ。" />
+  <Card title="ワークフロー" href="/docs/platform/concepts/workflows" description="キャンバスノードとステップ実行。" />
+  <Card title="配信パイプライン" href="/docs/platform/concepts/delivery-pipeline" description="トリガー後に何が起こるか。" />
+</Cards>
+
+## 基本原則
+
+1. **デフォルトで非同期** — トリガーはミリ秒で返す；ワーカーがプロバイダーを処理
+2. **BYOP** — あなたのキー、あなたの請求、あなたのデータ
+3. **マルチテナント分離** — 組織、環境、暗号化されたプロバイダー認証情報
+4. **観測可能な配信** — 取り込みからキャリアレスポンスまでの全ステップをログ記録

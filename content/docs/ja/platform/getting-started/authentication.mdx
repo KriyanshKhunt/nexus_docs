@@ -1,0 +1,65 @@
+---
+title: 認証
+description: セキュアな Nexus Signal 統合のためのシークレットキー、公開キー、HMAC 署名。
+---
+
+Nexus Signal は**環境スコープの API キー**を使用します。サーバートリガーとブラウザ向け SDK コンポーネントには異なる資格情報が適用されます。
+
+## キーの種類
+
+| キー | プレフィックス | 使用者 | 公開範囲 |
+|-----|----------|-------|--------|
+| **シークレットキー** | `sk_*` | サーバー SDK、ワークフロートリガー、スケジュール SDK | **サーバーのみ — ブラウザでは絶対使用しない** |
+| **公開キー** | `pk_*` | React SDK、受信箱 API、WebSocket 接続 | フロントエンドへの埋め込みが安全 |
+
+シークレットキーはトリガーリクエストで `Authorization: Bearer sk_prd_…` として送信されます。
+
+公開キーは SDK ルートで `x-nexus-public-key` として送信されます。
+
+## ワークフロートリガー認証
+
+```http
+POST /v1/workflows/trigger
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+```
+
+API はキーを検証し、環境と組織を解決してから、ワーカーが非同期で配信を処理する間に **202 Accepted** を返します。
+
+## リアルタイム（アプリ内）用 HMAC
+
+ブラウザの WebSocket 接続はシークレットキーを使用できません。代わりに:
+
+1. **バックエンド**がシークレットキーとサブスクライバー ID で HMAC 署名を生成
+2. **フロントエンド**が署名を `NexusProvider` に渡す
+
+```ts
+// サーバー — @nexus-signal/node
+const hmac = nexus.auth.generateHmacSignature('user_123');
+
+// クライアント — @nexus-signal/react
+<NexusProvider
+  publicKey="pk_prd_…"
+  subscriberId="user_123"
+  hmacSignature={hmac}
+  backendUrl="https://api.nexussignal.dev"
+/>
+```
+
+プラットフォームは `HMAC-SHA256(secretKey, subscriberExternalId)` を検証します。
+
+<Callout type="error">
+ページロードまたはセッションごとに HMAC を再生成してください — バックエンド認証から派生した短命のセッショントークンとして扱ってください。
+</Callout>
+
+## ダッシュボード認証
+
+Web ダッシュボードはオプションの MFA 付きの JWT セッション（メール/パスワード、マジックリンク、GitHub、または Google OAuth）を使用します。チームメンバーはロールベースのアクセスを取得します: オーナー、管理者、開発者、またはマーケター。
+
+## キーのローテーション
+
+**設定 → API キー**からシークレットキーをロールします。サーバーと HMAC 生成を同時にローテーションすれば、ダウンタイムなしで古いキーを廃止できます。
+
+## 関連
+
+- [認証](/docs/platform/getting-started/authentication) — どのキーをどこで使うか

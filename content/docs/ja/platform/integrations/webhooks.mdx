@@ -1,0 +1,45 @@
+---
+title: Webhook チャンネル
+description: コンパイルされた通知ペイロードを独自の HTTP エンドポイントに送信します。
+---
+
+**Webhook** チャンネルは、設定した URL に構造化された JSON を POST します — 内部マイクロサービス、Zapier、カスタムオートメーションに最適です。
+
+## セットアップ
+
+1. インテグレーションで **Custom Webhook（カスタム Webhook）** を追加（`webhook_custom`）
+2. URL、認証方法、オプションの署名シークレットを設定
+3. ワークフローに **Webhook** チャンネルノードを追加
+
+## アウトバウンドペイロード
+
+```json
+{
+  "event": "notification.delivered",
+  "workflow": { "id": "…", "name": "order.shipped" },
+  "subscriber": { "id": "…", "externalId": "user_42" },
+  "channel": "WEBHOOK",
+  "data": { "orderId": "ORD-9912" },
+  "compiled": { "title": "…", "body": "…" }
+}
+```
+
+## 認証
+
+| メソッド | ヘッダー |
+|-------|------|
+| なし | — |
+| Bearer | `Authorization: Bearer …` |
+| Basic | `Authorization: Basic …` |
+| HMAC | `x-nexus-signature`、`x-nexus-timestamp` |
+
+設定された署名シークレットを使用してサーバーで HMAC を検証します。
+
+## 信頼性
+
+失敗した Webhook 配信は BullMQ でリトライされます。レスポンスは監査ログの `responseMeta` に保存されます。
+
+## 関連
+
+- [配信パイプライン](/docs/platform/concepts/delivery-pipeline)
+- [プロバイダーカタログ](/docs/platform/integrations/providers)
