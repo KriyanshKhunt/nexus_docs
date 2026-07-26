@@ -1,22 +1,42 @@
 ---
-title: MCP Server
-description: "@nexus-signal/mcp-server — expose Nexus to AI coding assistants (Cursor, Claude Code, Windsurf)."
+title: AI MCP Server
+description: "@nexus-signal/mcp-server — expose Nexus tools, prompts, and resources to AI coding assistants."
 ---
 
-The **MCP server** lets AI agents manage workflows, subscribers, objects, broadcasts, and guides without leaving your editor.
+The **Model Context Protocol (MCP)** server allows AI coding assistants (like Cursor, Claude Desktop, and Windsurf) to manage workflows, subscribers, objects, broadcasts, and guides directly from your editor using natural language.
 
-## Setup
+---
 
-Add to your IDE MCP config:
+## IDE Setup & Configuration
+
+Configure the server in your editor's MCP config file.
+
+### Environment Variables
+
+| Variable           | Required | Description                              | Default                 |
+| :----------------- | :------- | :--------------------------------------- | :---------------------- |
+| `NEXUS_SECRET_KEY` | **Yes**  | Your environment secret API key (`sk_*`) |                         |
+| `NEXUS_BASE_URL`   | No       | API endpoint base URL                    | `http://localhost:5000` |
+
+---
+
+### Configuration Files
+
+#### 1. Claude Desktop
+
+Add the configuration to your global settings:
+
+- **macOS / Linux**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "nexus-signal": {
       "command": "npx",
-      "args": ["@nexus-signal/mcp-server@latest"],
+      "args": ["-y", "@nexus-signal/mcp-server@latest"],
       "env": {
-        "NEXUS_SECRET_KEY": "sk_prd_...",
+        "NEXUS_SECRET_KEY": "sk_prd_your_secret_key",
         "NEXUS_BASE_URL": "https://api.nexussignal.dev"
       }
     }
@@ -24,53 +44,128 @@ Add to your IDE MCP config:
 }
 ```
 
-## MCP primitives
+#### 2. Cursor
 
-| Primitive | What it provides |
-|-----------|------------------|
-| **Tools** (21) | Callable actions — trigger, list, create, sync |
-| **Resources** (4) | Read-only context — integration guide, step types, channels |
-| **Prompts** (5) | Slash-command templates — transactional workflow, fan-out, debug |
+Go to **Settings → Features → MCP**, click **Add New MCP Server**, and configure:
 
-## Key tools
+- **Name**: `nexus-signal`
+- **Type**: `command`
+- **Command**: `npx -y @nexus-signal/mcp-server@latest`
+- **Environment Variables**: Add `NEXUS_SECRET_KEY` and `NEXUS_BASE_URL` as key-value pairs.
 
-| Tool | Description |
-|------|-------------|
-| `nexus_trigger_workflow` | Trigger a workflow for recipients |
-| `nexus_send_notification` | Compound tool — resolve subscriber + trigger |
-| `nexus_sync_workflows` | Push workflow-as-code definitions |
-| `nexus_set_object` | Create/update an object |
-| `nexus_subscribe_to_object` | Add subscribers to an object |
-| `nexus_create_broadcast` | Create audience broadcast |
-| `nexus_get_delivery_status` | Debug delivery by log ID |
+#### 3. Windsurf
 
-## Example prompts
+Add to `~/.codeium/windsurf/mcp_config.json`:
 
+```json
+{
+  "mcpServers": {
+    "nexus-signal": {
+      "command": "npx",
+      "args": ["-y", "@nexus-signal/mcp-server@latest"],
+      "env": {
+        "NEXUS_SECRET_KEY": "sk_prd_your_secret_key",
+        "NEXUS_BASE_URL": "https://api.nexussignal.dev"
+      }
+    }
+  }
+}
 ```
-"Set up a transactional notification workflow for order confirmations"
-"Send a welcome email to user john@example.com"
-"Subscribe users alice and bob to project-alpha"
-"Why didn't user-123 receive the payment-reminder notification?"
-```
 
-## Resources
+---
 
-Attach context for better AI reasoning:
+## MCP Primitives
 
-- `nexus://docs/integration-guide` — quick-start examples
-- `nexus://docs/step-types` — all workflow node types
-- `nexus://docs/channels` — supported channels
-- `nexus://workflows/{name}` — live workflow config
+The server exposes **30 tools**, **4 resources**, and **5 prompts** to let LLMs explore and execute notification setups.
 
-## Environment variables
+### 1. Tools
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXUS_SECRET_KEY` | Yes | Environment secret key (`sk_*`) |
-| `NEXUS_BASE_URL` | No | API URL (default `http://localhost:5000`) |
+Tools allow AI agents to execute write/read operations against your workspace:
 
-## Related
+#### Workflows
 
-- [CLI](/docs/sdk/devtools/cli)
+- `nexus_list_workflows` — List workflows in the current environment.
+- `nexus_get_workflow` — Fetch workflow configuration steps by name.
+- `nexus_trigger_workflow` — Run a workflow for multiple recipients.
+- `nexus_send_notification` — Send a workflow to a single recipient.
+- `nexus_sync_workflows` — Push code-defined workflow definitions.
+- `nexus_get_delivery_status` — Inspect delivery state of a log UUID.
+
+#### Subscribers
+
+- `nexus_list_subscribers` — Search recipients.
+- `nexus_get_subscriber` — Fetch subscriber details by ID.
+- `nexus_create_subscriber` — Upsert subscriber contact fields.
+- `nexus_delete_subscriber` — Purge subscriber and history.
+
+#### Objects
+
+- `nexus_set_object` — Create or update a non-user entity.
+- `nexus_get_object` — Get object details and subscribers count.
+- `nexus_subscribe_to_object` — Add subscribers to watch an object.
+- `nexus_unsubscribe_from_object` — Unsubscribe recipients from an object.
+
+#### B2B Tenants
+
+- `nexus_list_tenants` — Fetch multi-tenant brandings.
+- `nexus_create_or_update_tenant` — Upsert a tenant configuration.
+
+#### Audiences & Segments
+
+- `nexus_list_audiences` — Fetch dynamic audience segments.
+- `nexus_create_audience` — Create segment with logic rules.
+
+#### Broadcasts
+
+- `nexus_list_broadcasts` — View broadcasts and status.
+- `nexus_create_broadcast` — Setup a workflow send to an audience.
+- `nexus_send_broadcast` — Deliver a broadcast immediately.
+
+#### Content & Layouts
+
+- `nexus_list_layouts` — Fetch email HTML wrapper layouts.
+- `nexus_create_or_update_layout` — Create a shared email layout.
+- `nexus_list_translations` — List localization bundles.
+- `nexus_upsert_translation` — Create or update locale key-value dictionary.
+
+#### In-Product Guides
+
+- `nexus_list_guides` — List in-app banner/modal/tooltip configurations.
+- `nexus_get_guide` — Fetch layout schema for a guide.
+- `nexus_create_or_update_guide` — Upsert guide attributes.
+
+#### Schedules & System
+
+- `nexus_list_schedules` — List active recurring cron workflows.
+- `nexus_check_health` — Verify API connectivity status.
+
+---
+
+### 2. Resources
+
+Resources provide read-only context documents to AI models:
+
+- `nexus://docs/integration-guide` — Quick-start examples for Node.js.
+- `nexus://docs/step-types` — Reference schema for delay, digest, channel, and httpFetch.
+- `nexus://docs/channels` — Supported channels and required contact fields.
+- `nexus://workflows/{name}` — Live JSON schema of a configured workflow.
+
+---
+
+### 3. Prompts
+
+Prompts act as pre-configured templates that help models orchestrate tasks:
+
+- `setup-transactional-workflow` — Helps design transactional paths with channel-fallback and delays.
+- `setup-digest-workflow` — Scaffolds notification batching and email/in-app summaries.
+- `setup-escalation-workflow` — Creates escalation chains (`in-app` → `email` → `SMS`) based on priority.
+- `setup-object-fanout` — Creates objects, adds subscribers, and triggers workflows.
+- `debug-delivery` — Guides the model to debug failed deliveries by log IDs and preferences.
+
+---
+
+## Related Links
+
+- [Nexus CLI](/docs/sdk/devtools/cli)
 - [Management API](/docs/api/management)
 - [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

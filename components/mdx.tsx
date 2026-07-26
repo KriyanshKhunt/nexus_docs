@@ -5,7 +5,7 @@ import { Card, Cards } from "fumadocs-ui/components/card";
 import { Callout } from "fumadocs-ui/components/callout";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import { TypeTable } from "fumadocs-ui/components/type-table";
-import { File, Files } from "fumadocs-ui/components/files";
+import { File, Folder, Files } from "fumadocs-ui/components/files";
 import { Mermaid } from "@/components/mermaid";
 import {
   DashboardAuth,
@@ -29,6 +29,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Steps,
     TypeTable,
     File,
+    Folder,
     Files,
     Mermaid,
     SecretKeyAuth,
