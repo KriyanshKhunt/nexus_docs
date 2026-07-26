@@ -2,3 +2,90 @@
 title: API de Objetos
 description: Crie objetos, gerencie assinaturas e dispare notificações em leque.
 ---
+
+<SecretKeyAuth />
+
+Caminho base: `/v1/objects`
+
+## Definir objeto
+
+```http
+PUT /v1/objects/:collection/:externalId
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "team": "eng" }
+}
+```
+
+## Obter objeto
+
+```http
+GET /v1/objects/:collection/:externalId
+```
+
+## Listar objetos
+
+```http
+GET /v1/objects?collection=projects&page=1&limit=50
+```
+
+## Adicionar assinaturas
+
+```http
+POST /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_alice", "user_bob"]
+}
+```
+
+## Remover assinaturas
+
+```http
+DELETE /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_bob"]
+}
+```
+
+## Listar assinaturas
+
+```http
+GET /v1/objects/:collection/:externalId/subscriptions
+```
+
+## Disparar em leque (Fan-out)
+
+Use os destinatários do objeto no [Disparador de Workflows](/docs/api/workflows):
+
+```json
+{
+  "workflowName": "project.updated",
+  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
+  "data": {}
+}
+```
+
+## Node SDK
+
+```ts
+await nexus.objects.set({
+  collection: "projects",
+  externalId: "proj_alpha",
+  name: "Alpha",
+});
+await nexus.objects.addSubscriptions("projects", "proj_alpha", {
+  recipients: ["user_1"],
+});
+```
+
+Veja [Objetos e Assinaturas](/docs/platform/features/objects-subscriptions).

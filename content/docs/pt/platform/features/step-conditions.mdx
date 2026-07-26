@@ -1,4 +1,56 @@
 ---
 title: Condições de Passo
-description: Regras booleanas em qualquer nó do fluxo de trabalho — envia SMS apenas se valor > 100, etc.
+description: Regras booleanas em qualquer nó do fluxo de trabalho — envie SMS apenas quando o valor > 100, pule etapas nos finais de semana e muito mais.
 ---
+
+As **condições de etapa** permitem anexar regras de filtro a qualquer nó no canvas do fluxo de trabalho. Se as condições forem avaliadas como falsas, a etapa será ignorada e a execução continuará para o próximo nó.
+
+## Estrutura da condição
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 100 },
+    { "variable": "subscriber.locale", "operator": "equals", "value": "en" }
+  ]
+}
+```
+
+Use `"logic": "OR"` para corresponder a qualquer regra em vez de todas.
+
+## Variáveis suportadas
+
+| Prefixo        | Exemplos                                  |
+| -------------- | ----------------------------------------- |
+| `data.*`       | `data.orderTotal`, `data.plan`            |
+| `subscriber.*` | `subscriber.email`, `subscriber.locale`   |
+| `tenant.*`     | `tenant.name`, `tenant.properties.tier`   |
+| `object.*`     | `object.name`, `object.properties.status` |
+
+## Operadores
+
+`equals`, `not_equals`, `greater_than`, `greater_than_or_equals`, `less_than`, `less_than_or_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `in_list`, `not_in_list`, `regex_match`, `is_true`, `is_false`
+
+## Uso do canvas
+
+Clique em qualquer nó → painel **Conditions** → adicione as regras. Etapas ignoradas registram `CONDITION_SKIPPED` na árvore do ciclo de vida de execução.
+
+## Exemplo: apenas SMS de alto valor
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 500 }
+  ]
+}
+```
+
+Anexe a um nó de canal SMS — pedidos de baixo valor ignoram o SMS e prosseguem para a próxima etapa.
+
+## Relacionado
+
+- [Workflows](/docs/platform/concepts/workflows)
+- [Nó de Busca HTTP](/docs/platform/features/http-fetch-node)
+- [Nó de Fluxo de IA](/docs/platform/features/ai-workflow-node)

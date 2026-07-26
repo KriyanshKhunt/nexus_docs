@@ -51,7 +51,7 @@ Crea un [layout de email](/docs/platform/features/email-layouts) que haga refere
 ```html
 <img src="{{ branding.logoUrl }}" alt="{{ branding.companyName }}" />
 <div style="color: {{ branding.primaryColor }}">{{{ content }}}</div>
-<footer>{{ branding.footerHtml }}</footer>
+<footer>{{{ branding.footerHtml }}}</footer>
 ```
 
 Cuando un trigger incluye un `tenant`, el compilador inyecta la marca de ese tenant de forma automática.

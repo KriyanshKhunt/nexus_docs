@@ -28,7 +28,6 @@ await nexus.tenants.upsert({
   branding: {
     logoUrl: "https://cdn.acme.io/logo.png",
     primaryColor: "#2563eb",
-    companyName: "Acme Corp",
     footerHtml: "<p>© Acme Corp</p>",
   },
 });
@@ -40,7 +39,7 @@ await nexus.tenants.upsert({
 await nexus.workflows.trigger({
   workflowName: "invoice.sent",
   tenant: "tenant_acme",
-  recipients: [{ externalId: user.id, email: user.email }],
+  recipients: [{ externalId: "user_42", email: "billing@acme.io" }],
   data: { invoiceId: "INV-001" },
 });
 ```

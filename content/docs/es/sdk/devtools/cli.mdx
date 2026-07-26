@@ -86,10 +86,12 @@ Crea, descarga y sincroniza rutas de notificación definidas en código.
 - **Descargar definiciones**: Guarda los flujos de trabajo remotos localmente en archivos dentro de `.nexus/workflows/*.json`.
   ```bash
   nexus workflows pull --all
+  nexus workflows pull --dir ./custom-workflows-path
   ```
 - **Subir definiciones**: Sube las definiciones JSON locales dentro de `.nexus/workflows/` de vuelta a la plataforma.
   ```bash
   nexus workflows push --all
+  nexus workflows push --dir ./custom-workflows-path
   ```
 - **Disparar workflow**: Ejecuta un flujo de trabajo para las IDs de destinatarios especificadas.
   ```bash

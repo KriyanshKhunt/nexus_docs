@@ -1,4 +1,76 @@
 ---
 title: API de Guias
-description: Gerencie banners, modais e tooltips integrados ao produto.
+description: Gerencie banners, modais e tooltips no produto a partir do painel e do SDK.
 ---
+
+<DashboardAuth />
+
+Caminho base do painel (Dashboard): `/v1/guides`
+
+SDK (navegador): `GET /v1/sdk/guides`
+
+## Listar guias
+
+```http
+GET /v1/guides
+Authorization: Bearer <jwt>
+```
+
+## Criar guia
+
+```http
+POST /v1/guides
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Feature launch banner",
+  "type": "banner",
+  "content": {
+    "title": "New dashboard is live",
+    "body": "Check out the redesigned analytics view.",
+    "ctaLabel": "Explore",
+    "ctaUrl": "/analytics"
+  },
+  "targeting": {
+    "pathPatterns": ["/dashboard/*"],
+    "audienceId": null
+  },
+  "active": true
+}
+```
+
+## Tipos de guias
+
+`banner` · `modal` · `tooltip` · `badge`
+
+## SDK — buscar guias qualificadas
+
+<PublicKeyAuth />
+
+```http
+GET /v1/sdk/guides?pathname=/dashboard
+x-nexus-public-key: pk_prd_…
+```
+
+## Registrar eventos de guia
+
+```http
+POST /v1/sdk/guides/:guideId/events
+```
+
+```json
+{ "event": "seen" }
+```
+
+Eventos: `seen`, `interacted`, `dismissed`
+
+## Analytics
+
+```http
+GET /v1/guides/:id/analytics
+Authorization: Bearer <jwt>
+```
+
+Veja [Guias no Produto](/docs/platform/features/guides).

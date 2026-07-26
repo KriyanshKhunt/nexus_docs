@@ -1,4 +1,60 @@
 ---
 title: API de Audiências
-description: Crie e gerencie segmentos dinâmicos de assinantes baseados em regras de filtro.
+description: Crie e gerencie segmentos dinâmicos de assinantes com regras de filtro.
 ---
+
+<DashboardAuth />
+
+Caminho base: `/v1/audiences`
+
+## Listar audiências
+
+```http
+GET /v1/audiences?page=1&limit=20
+Authorization: Bearer <jwt>
+```
+
+## Criar audiência
+
+```http
+POST /v1/audiences
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Growth active",
+  "filters": {
+    "logic": "AND",
+    "rules": [
+      { "field": "properties.plan", "operator": "equals", "value": "growth" },
+      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+    ]
+  }
+}
+```
+
+## Obter audiência
+
+```http
+GET /v1/audiences/:id
+```
+
+## Visualizar membros
+
+```http
+GET /v1/audiences/:id/members?page=1&limit=50
+```
+
+Retorna a lista resolvida de assinantes correspondentes às regras de filtro atuais.
+
+## Atualizar / deletar
+
+```http
+PUT    /v1/audiences/:id
+DELETE /v1/audiences/:id
+```
+
+Requer a função de `OWNER`, `ADMIN` ou `DEVELOPER`.
+
+Veja [Audiências e Segmentação](/docs/platform/features/audiences).

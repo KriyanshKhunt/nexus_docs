@@ -1,4 +1,79 @@
 ---
 title: Traduções e i18n
-description: Faça upload de dicionários e utilize o helper t em templates para resolver idiomas.
+description: Armazenamentos de chave-valor centralizados por idioma com o helper de Handlebars {{ t "key" }} — strings reutilizáveis em todas as plantilhas.
 ---
+
+Os **arquivos de tradução** armazenam strings de idioma compartilhadas por ambiente. Faça referência a elas em qualquer template com `{{ t "welcome_message" }}` em vez de duplicar cópias completas de templates por idioma.
+
+<Callout type="info">
+  Isso complementa as [Plantilhas multi-idioma](/docs/platform/features/i18n),
+  que armazenam variantes completas de local dentro de `contentTemplates`. Use
+  arquivos de tradução para strings compartilhadas; use templates de local para
+  diferenças de layout específicas do canal.
+</Callout>
+
+## Enviar traduções
+
+Painel: **Templates → Translations**, ou API:
+
+API do painel / navegador:
+
+```http
+PUT /v1/translations
+Authorization: Bearer <jwt_token>
+```
+
+API de Gerenciamento / Servidor (CLI/Scripts):
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+## Usar em templates
+
+```html
+<h1>{{ t "welcome_message" }}</h1>
+<p>{{ t "order_shipped" }} — {{ data.orderId }}</p>
+<a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
+```
+
+## Cadeia de resolução de local
+
+1. Campo `locale` do assinante
+2. Substituição de `_locale` por trigger
+3. Idioma padrão do tenant (se o contexto do tenant estiver definido)
+4. Padrão do ambiente (`en`)
+5. Chave bruta se nenhuma tradução for encontrada
+
+## Namespaces (Espaços de nomes)
+
+Organize as strings por área de recurso:
+
+```json
+{
+  "locale": "ja",
+  "namespace": "billing",
+  "content": { "invoice_due": "請求書の支払期限" }
+}
+```
+
+Referência: `{{ t "billing.invoice_due" }}` (busca com reconhecimento de namespace).
+
+## Relacionado
+
+- [Plantilhas multi-idioma](/docs/platform/features/i18n)
+- [API de Traduções](/docs/api/translations)
+- [Puxar/enviar traduções da CLI](/docs/sdk/devtools/cli)

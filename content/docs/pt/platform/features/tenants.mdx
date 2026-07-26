@@ -1,4 +1,61 @@
 ---
 title: Marca Multi-Tenant
-description: Isolamento total, marcas personalizadas e credenciais por tenant para B2B SaaS.
+description: Notificações de marca branca para B2B SaaS — cada um de seus clientes obtém marca, preferências e substituições de provedores opcionais isoladas.
 ---
+
+Os **tenants** representam os _seus_ clientes dentro do Nexus (diferente das **organizações** do Nexus, que são o _seu_ workspace). Use tenants quando seu produto atender a várias empresas que precisam de emails com marca própria, feeds in-app delimitados e configurações isoladas.
+
+## Modelo de tenant
+
+Cada tenant (por ambiente) tem:
+
+| Campo                | Propósito                                           |
+| -------------------- | --------------------------------------------------- |
+| `externalId`         | Seu ID de cliente (por exemplo, `tenant_acme`)      |
+| `name`               | Nome de exibição                                    |
+| `branding`           | URL do logotipo, cor primária, HTML do rodapé       |
+| `providerOverrides`  | Chaves SendGrid/Twilio opcionais por tenant         |
+| `preferenceDefaults` | Matriz de preferências padrão para novos assinantes |
+
+## Criar um tenant
+
+Painel: página **Tenants**, ou SDK:
+
+```ts
+await nexus.tenants.upsert({
+  externalId: "tenant_acme",
+  name: "Acme Corp",
+  branding: {
+    logoUrl: "https://cdn.acme.io/logo.png",
+    primaryColor: "#2563eb",
+    footerHtml: "<p>© Acme Corp</p>",
+  },
+});
+```
+
+## Disparar com contexto de tenant
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "invoice.sent",
+  tenant: "tenant_acme",
+  recipients: [{ externalId: "user_42", email: "billing@acme.io" }],
+  data: { invoiceId: "INV-001" },
+});
+```
+
+La compilação do template aplica a marca do tenant aos layouts de email. Filtre notificações in-app por tenant via parâmetro de consulta `tenantId` do SDK.
+
+## Escopo do inbox no SDK
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+```
+
+Veja a [API de SDK](/docs/api/sdk) para filtragem de tenant no lado do cliente.
+
+## Relacionado
+
+- [Guia de configuração B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)
+- [API de Tenants](/docs/api/tenants)
+- [Layouts de Email](/docs/platform/features/email-layouts)

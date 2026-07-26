@@ -1,4 +1,59 @@
 ---
 title: API de Tenants
-description: Gerencie marca e configuração de provedores para multi-tenancy B2B.
+description: Branding por cliente, substituições de provedores e padrões de preferência para B2B SaaS.
 ---
+
+<DashboardAuth />
+
+Caminho base do painel (Dashboard): `/v1/tenants`
+
+API de Gerenciamento (CLI/MCP): `GET|PUT /v1/management/tenants`
+
+## Listar tenants
+
+```http
+GET /v1/tenants
+Authorization: Bearer <jwt>
+```
+
+## Salvar (Upsert) tenant
+
+```http
+PUT /v1/tenants
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "externalId": "tenant_acme",
+  "name": "Acme Corp",
+  "branding": {
+    "logoUrl": "https://cdn.acme.io/logo.png",
+    "primaryColor": "#2563eb",
+    "footerHtml": "<p>© Acme</p>"
+  },
+  "providerOverrides": {},
+  "preferenceDefaults": {}
+}
+```
+
+## Obter / atualizar / deletar
+
+```http
+GET    /v1/tenants/:id
+PATCH  /v1/tenants/:id
+DELETE /v1/tenants/:id
+```
+
+## Disparar com tenant
+
+```json
+{
+  "workflowName": "invoice.sent",
+  "tenant": "tenant_acme",
+  "recipients": [{ "externalId": "user_42" }],
+  "data": {}
+}
+```
+
+Veja [Branding por tenant](/docs/platform/features/tenants).

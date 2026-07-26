@@ -1,4 +1,71 @@
 ---
 title: Guias no Produto
-description: Exiba banners, modais e tooltips para usuários específicos sem alterar o código.
+description: Banners, modais e tooltips direcionados e gerenciados a partir do painel — não notificações disparadas por workflow.
 ---
+
+As **guias** fornecem superfícies de interface do usuário no produto (banners, modais, tooltips, badges) controladas a partir do painel. Os engenheiros definem o slot uma vez; os PMs gerenciam o conteúdo, direcionamento e ativação.
+
+## Tipos de guias
+
+| Tipo      | Caso de uso                                   |
+| --------- | --------------------------------------------- |
+| `banner`  | Anúncios no topo da página                    |
+| `modal`   | Lançamento de recursos, avisos de atualização |
+| `tooltip` | Dicas de integração de onboarding contextual  |
+| `badge`   | Destacar novos elementos de UI                |
+
+## Regras de direcionamento (Targeting)
+
+As guías correspondem a assinantes com base em:
+
+- Segmento de usuário / audiência
+- URL da página ou padrão de rota (pathname)
+- Feature flags ou contexto personalizado passado do seu aplicativo
+- Cronograma de ativação (datas de início/fim)
+
+## Integração com o SDK
+
+As guias são buscadas no lado do cliente (client-side) — não são enviadas via WebSocket como as notificações in-app.
+
+<Tabs items={['React', 'Headless JS']}>
+  <Tab value="React">
+
+```tsx
+import { useGuides } from "@nexus-signal/react";
+
+function GuideRenderer() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} onClick={() => markSeen(guide.id)}>
+      {guide.content.title}
+    </div>
+  ));
+}
+```
+
+  </Tab>
+  <Tab value="Headless JS">
+
+```ts
+await nexus.guides.fetch({ pathname: "/dashboard" });
+nexus.guides.markSeen(guideId);
+nexus.guides.dismiss(guideId);
+```
+
+  </Tab>
+</Tabs>
+
+Rota do SDK: `GET /v1/sdk/guides` — retorna guias ativas para o usuário atual + contexto.
+
+## Analytics
+
+Acompanhe impressões, interações e descartes via `POST /v1/sdk/guides/:guideId/events`.
+
+## Relacionado
+
+- [API de Guias](/docs/api/guides)
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)

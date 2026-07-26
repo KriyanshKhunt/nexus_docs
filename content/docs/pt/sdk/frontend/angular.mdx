@@ -1,4 +1,80 @@
 ---
 title: SDK de Angular
-description: "@nexus-signal/angular — componentes standalone para notificações, inbox e guias."
+description: "@nexus-signal/angular — componentes standalone e signals para a campana de notificação, inbox e guias."
 ---
+
+## Instalação
+
+```bash
+npm install @nexus-signal/angular socket.io-client
+```
+
+Requer **Angular 17+** (componentes standalone, signals).
+
+## Configuração
+
+```ts
+// app.config.ts
+import { provideNexus } from "@nexus-signal/angular";
+
+export const appConfig = {
+  providers: [
+    provideNexus({
+      publicKey: "pk_prd_...",
+      subscriberId: "user-123",
+      hmacSignature: hmacFromBackend,
+      apiBaseUrl: "https://api.nexussignal.dev",
+      onNotification: (n) => console.log(n.title),
+    }),
+  ],
+};
+```
+
+## Componentes
+
+```html
+<!-- Popover do sino -->
+<nexus-notification-bell />
+
+<!-- Inbox de página inteira com filtro de tag -->
+<nexus-notification-inbox tag="updates" [maxItems]="20" />
+
+<!-- Popups de notificação toast em tempo real -->
+<nexus-notification-toast position="top-right" [duration]="5000" />
+```
+
+## Serviços Headless
+
+Injete serviços para interfaces personalizadas:
+
+```ts
+import { NexusNotificationsService } from "@nexus-signal/angular";
+
+@Component({
+  template: `
+    <p>Não lidas: {{ notifications.unread() }}</p>
+    @for (item of notifications.items(); track item.logId) {
+      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
+    }
+  `,
+})
+export class InboxComponent {
+  notifications = inject(NexusNotificationsService);
+}
+```
+
+| Serviço                     | Signals                                 |
+| --------------------------- | --------------------------------------- |
+| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
+| `NexusGuidesService`        | `guides`, `loading`                     |
+| `NexusPreferencesService`   | `preferences`, `topics`, `loading`      |
+
+## Estilização
+
+Usa as mesmas variáveis CSS do React (`--nexus-theme-accent`, `--nexus-theme-border`, etc.).
+
+## Relacionado
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [Guias no Produto](/docs/platform/features/guides)

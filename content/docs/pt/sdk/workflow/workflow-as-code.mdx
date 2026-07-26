@@ -1,4 +1,111 @@
 ---
 title: Fluxo de trabalho como código
-description: Defina fluxos de trabalho em TypeScript para versionamento, testes e integração CI/CD.
+description: Defina fluxos de trabalho em TypeScript com defineWorkflow() e sincronize com a plataforma — lógica de notificação sob controle de versão.
 ---
+
+Defina workflows de notificação junto com o código da sua aplicação e sincronize-os com o Nexus com um único comando ou chamada de API.
+
+## Por que fluxo de trabalho como código
+
+| Apenas painel (Dashboard)      | Fluxo de trabalho como código                       |
+| ------------------------------ | --------------------------------------------------- |
+| Edições manuais de canvas      | Definições TypeScript rastreadas pelo Git           |
+| Difícil de revisar em PRs      | Compare alterações de workflow como qualquer código |
+| Sem verificações de compilação | Autocompletar do IDE em tipos de etapas             |
+
+## Definir um workflow
+
+```ts
+import { defineWorkflow } from "@nexus-signal/node";
+
+export const orderShipped = defineWorkflow("order.shipped", {
+  description: "Notify when an order ships",
+  tags: ["orders", "transactional"],
+  active: true,
+})
+  .addChannel("IN_APP")
+  .addChannel("EMAIL", { suppressWhenOnline: true })
+  .addDelay({ hours: 2 })
+  .addChannel("SMS", {
+    conditions: {
+      logic: "AND",
+      rules: [{ variable: "data.priority", operator: "equals", value: "high" }],
+    },
+  })
+  .toDefinition();
+```
+
+## Sincronizar com a plataforma
+
+```ts
+import { NexusClient } from "@nexus-signal/node";
+import { orderShipped } from "./workflows/order-shipped";
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+const result = await nexus.workflows.sync(orderShipped);
+// ou sincronizar múltiplos: await nexus.workflows.sync([orderShipped, welcomeEmail]);
+```
+
+Equivalente em HTTP:
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+## Construtores de etapas disponíveis
+
+| Método                                       | Mapeamento no nó do canvas       |
+| -------------------------------------------- | -------------------------------- |
+| `addChannel(kind, opts?)`                    | Canal (EMAIL, SMS, IN_APP, etc.) |
+| `addDelay({ hours, minutes })`               | Delay (Atraso)                   |
+| `addDigest({ windowMinutes })`               | Digest (Resumo)                  |
+| `addThrottle({ maxCount, windowSeconds })`   | Throttle (Limitador)             |
+| `addHttpFetch({ url, method, responseKey })` | HTTP Fetch (Busca HTTP)          |
+| `addAiNode({ prompt, responseKey })`         | AI Node (Nó de IA)               |
+
+Todos os métodos de etapas aceitam `conditions` opcionais — veja [Condições de Etapa](/docs/platform/features/step-conditions).
+
+## Exemplo avançado
+
+```ts
+export const escalation = defineWorkflow("payment.overdue")
+  .addHttpFetch({
+    url: "https://api.billing.com/invoices/{{ data.invoiceId }}",
+    method: "GET",
+    responseKey: "invoice",
+  })
+  .addAiNode({
+    prompt:
+      "Classify urgency for invoice {{ invoice.amount }} due {{ invoice.dueDate }}. Return: low, medium, or high.",
+    responseKey: "urgency",
+  })
+  .addChannel("EMAIL")
+  .addChannel("SMS", {
+    conditions: {
+      logic: "OR",
+      rules: [{ variable: "data.urgency", operator: "equals", value: "high" }],
+    },
+  })
+  .toDefinition();
+```
+
+## Sincronização via CLI
+
+```bash
+nexus workflows sync --file ./workflows/order-shipped.json
+# ou envie JSONs obtidos de .nexus/workflows/
+nexus workflows push --all
+```
+
+## Sincronização via MCP
+
+Os agentes de IA podem enviar definições através de `nexus_sync_workflows` — veja [Servidor MCP de IA](/docs/sdk/devtools/mcp-server).
+
+## Relacionado
+
+- [Conceito de Workflows](/docs/platform/concepts/workflows)
+- [CLI](/docs/sdk/devtools/cli)
+- [Nó de Busca HTTP](/docs/platform/features/http-fetch-node)
+- [Nó de Fluxo de IA](/docs/platform/features/ai-workflow-node)

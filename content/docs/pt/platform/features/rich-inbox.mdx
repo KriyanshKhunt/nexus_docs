@@ -1,4 +1,87 @@
 ---
 title: Caixa de Entrada Rica
-description: Feeds de notificação personalizáveis com abas, botões de ação e atores.
+description: Abas, botões de ação, atores e filtragem por tag — um feed de notificação completo além do sino básico.
 ---
+
+Os componentes do inbox SDK suportam feeds categorizados, CTAs por notificação, avatares de atores e filtragem baseada em tags.
+
+## Filtragem por tag
+
+Filtre por tag de tópico do workflow usando a propriedade `tag`:
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+Crie uma interface de abas personalizada renderizando vários feeds ou alternando a propriedade `tag`:
+
+```tsx
+const [tab, setTab] = useState<string | undefined>(undefined);
+
+<button onClick={() => setTab(undefined)}>All</button>
+<button onClick={() => setTab('billing')}>Billing</button>
+<NotificationInbox tag={tab} />
+```
+
+Atribua tags nos workflows no painel ou via [workflow-as-code](/docs/sdk/workflow/workflow-as-code). Os filtros mapeiam para `GET /v1/sdk/notifications?tag=...`.
+
+## Botões de ação
+
+Inclua ações em dados de trigger ou saída de template do workflow:
+
+```json
+{
+  "actions": [
+    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
+    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
+  ]
+}
+```
+
+As ações são renderizadas como botões clicáveis no item do inbox. As URLs podem ser relativas (seu aplicativo gerencia o roteamento) ou endpoints de API absolutos.
+
+## Suporte a atores
+
+Passe metadatos do ator no trigger para mostrar quem causou a notificação:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "comment.added",
+  recipients: [{ externalId: "user_42" }],
+  data: {
+    actor: {
+      name: "Sarah Chen",
+      avatarUrl: "https://cdn.example.com/sarah.jpg",
+    },
+    commentPreview: "Looks good to me!",
+  },
+});
+```
+
+Renderiza como "Sarah Chen comentou..." com o avatar no feed.
+
+## Ciclo de vida da notificação
+
+| Estado   | Significado                          |
+| -------- | ------------------------------------ |
+| Unread   | Entregue, não aberta                 |
+| Read     | O usuário clicou ou marcou como lida |
+| Archived | Oculto do feed ativo                 |
+| Seen     | (SDK) rolado no feed                 |
+
+Sincronização multidispositivo: marcar como lida em um dispositivo limpa os badges em todos os lugares via WebSocket.
+
+## Acesso Headless (JS SDK)
+
+```ts
+await nexus.notifications.refetch({ tags: ["billing"] });
+await nexus.notifications.loadMore({ tags: ["mention"] });
+```
+
+Crie uma UI totalmente personalizada com [`@nexus-signal/js`](/docs/sdk/frontend/js) enquanto o Nexus gerencia o WebSocket + estado da API.
+
+## Relacionado
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [API de SDK](/docs/api/sdk)

@@ -52,7 +52,7 @@ Pasa el objeto en lugar de los usuarios individuales:
 await nexus.workflows.trigger({
   workflowName: "project.updated",
   recipients: [{ collection: "projects", id: "proj_alpha" }],
-  data: { changeType: "milestone_completed", milestone: "v1.0" },
+  data: { changeType: "milestone_completed" },
 });
 ```
 

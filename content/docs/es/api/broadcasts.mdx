@@ -56,7 +56,7 @@ POST /v1/broadcasts/:id/cancel
 await nexus.broadcasts.create({
   name: "Launch",
   workflowId: "workflow-uuid",
-  audienceId: "workflow-uuid",
+  audienceId: "audience-uuid",
 });
 await nexus.broadcasts.send(broadcastId);
 ```
