@@ -1,4 +1,62 @@
 ---
 title: Marca Multi-Tenant
-description: Aislamiento completo, marcas personalizadas y credenciales por tenant para B2B SaaS.
+description: Notificaciones de marca blanca para B2B SaaS — cada uno de tus clientes obtiene marca, preferencias y anulaciones de proveedores opcionales aisladas.
 ---
+
+Los **tenants** representan a _tus_ propios clientes dentro de Nexus (a diferencia de las **organizaciones** de Nexus, que corresponden a _tu_ espacio de trabajo). Utiliza tenants cuando tu producto sirva a múltiples empresas que requieran correos de marca blanca, feeds in-app delimitados y configuraciones aisladas.
+
+## Modelo de Tenant
+
+Cada tenant (por entorno) contiene:
+
+| Campo                | Propósito                                                   |
+| -------------------- | ----------------------------------------------------------- |
+| `externalId`         | Tu ID de cliente (ej. `tenant_acme`)                        |
+| `name`               | Nombre a mostrar                                            |
+| `branding`           | URL del logo, color primario, HTML del pie de página        |
+| `providerOverrides`  | Claves SendGrid/Twilio opcionales específicas del tenant    |
+| `preferenceDefaults` | Matriz de preferencias por defecto para nuevos suscriptores |
+
+## Crear un tenant
+
+Desde el panel en la página **Tenants**, o mediante el SDK:
+
+```ts
+await nexus.tenants.upsert({
+  externalId: "tenant_acme",
+  name: "Acme Corp",
+  branding: {
+    logoUrl: "https://cdn.acme.io/logo.png",
+    primaryColor: "#2563eb",
+    companyName: "Acme Corp",
+    footerHtml: "<p>© Acme Corp</p>",
+  },
+});
+```
+
+## Disparar con contexto de tenant
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "invoice.sent",
+  tenant: "tenant_acme",
+  recipients: [{ externalId: user.id, email: user.email }],
+  data: { invoiceId: "INV-001" },
+});
+```
+
+La compilación de la plantilla aplicará la identidad visual del tenant a las plantillas de correo. También puedes filtrar notificaciones in-app por tenant utilizando el parámetro de consulta `tenantId` del SDK.
+
+## Delimitación de bandeja de entrada en el SDK
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+```
+
+Ver [API de SDK](/docs/api/sdk) para el filtrado de tenants en el cliente.
+
+## Relacionado
+
+- [Guía de configuración B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)
+- [API de Tenants](/docs/api/tenants)
+- [Layouts de Email](/docs/platform/features/email-layouts)

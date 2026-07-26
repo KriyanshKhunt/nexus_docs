@@ -1,4 +1,103 @@
 ---
 title: Tu Primer Broadcast
-description: Crea y envía notificaciones únicas a un segmento de audiencia.
+description: Envía un anuncio de producto único a un segmento de audiencia dinámico desde el panel de control, sin necesidad de desplegar código.
 ---
+
+Los **broadcasts** permiten a los equipos de producto y marketing enviar mensajes a través de múltiples canales a un **segmento** sin la participación de ingeniería.
+
+## Requisitos previos
+
+- Un flujo de trabajo publicado (ej. `product.announcement`) con canales Email + In-App.
+- Un segmento de [audiencia](/docs/platform/features/audiences) definido.
+
+## Paso 1 — Crear una audiencia
+
+Panel de control: **Audiences** → **New audience**
+
+Filtros de ejemplo:
+
+| Regla             | Operador    | Valor    |
+| ----------------- | ----------- | -------- |
+| `properties.plan` | equals      | `growth` |
+| `lastActiveAt`    | within days | `30`     |
+
+Guarda y observa la vista previa de la cantidad de miembros en tiempo real.
+
+## Paso 2 — Redactar el broadcast
+
+Panel de control: **Broadcasts** → **New broadcast**
+
+1. **Nombre:** "Q3 Feature Launch"
+2. **Flujo de trabajo:** selecciona `product.announcement`
+3. **Audiencia:** selecciona tu segmento Growth
+4. **Datos:** JSON opcional para variables de la plantilla:
+
+```json
+{
+  "featureName": "Smart Analytics",
+  "launchUrl": "https://app.example.com/analytics"
+}
+```
+
+5. **Programación:** envía ahora o elige una fecha y hora futura
+
+## Paso 3 — Vista previa y envío
+
+Revisa el tamaño de la audiencia y los canales del flujo de trabajo. Haz clic en **Send** (o programa el envío).
+
+El estado del broadcast progresa: `DRAFT` → `SENDING` → `COMPLETED`
+
+## Paso 4 — Monitorear los resultados
+
+Abre la vista detallada del broadcast para ver las estadísticas de entrega por canal. Consulta los **Audit Logs** para fallos individuales.
+
+## Alternativa mediante la API
+
+<DashboardAuth />
+
+```http
+POST /v1/broadcasts
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Q3 Feature Launch",
+  "workflowId": "workflow-uuid-from-dashboard",
+  "audienceId": "audience-uuid",
+  "data": { "featureName": "Smart Analytics" }
+}
+```
+
+Enviar:
+
+```http
+POST /v1/broadcasts/:id/send
+```
+
+<Callout type="info">
+  `workflowId` y `audienceId` son UUIDs de los endpoints de la lista del panel o
+  de la API de Gestión — no son cadenas de texto con nombres de flujos de
+  trabajo.
+</Callout>
+
+## SDK de Node
+
+```ts
+const created = await nexus.broadcasts.create({
+  name: "Q3 Launch",
+  workflowId: "uuid",
+  audienceId: "uuid",
+  data: { featureName: "Smart Analytics" },
+});
+
+if (created.ok) {
+  await nexus.broadcasts.send(created.data!.broadcast.id);
+}
+```
+
+## Relacionado
+
+- [Función de Broadcasts](/docs/platform/features/broadcasts)
+- [Audiencias](/docs/platform/features/audiences)
+- [API de Broadcasts](/docs/api/broadcasts)

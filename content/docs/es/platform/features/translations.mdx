@@ -1,4 +1,80 @@
 ---
 title: Traducciones e i18n
-description: Sube archivos de traducción y usa el helper t en plantillas para resolver locales.
+description: Almacenes de clave-valor centralizados por idioma con el helper de Handlebars {{ t "key" }} — cadenas reutilizables en todas las plantillas.
 ---
+
+Los **archivos de traducción** almacenan cadenas de texto compartidas por cada idioma y entorno. Haz referencia a ellas en cualquier plantilla con `{{ t "welcome_message" }}` en lugar de duplicar copias completas de plantillas para cada idioma.
+
+<Callout type="info">
+  Esto complementa a las [Plantillas
+  multi-idioma](/docs/platform/features/i18n), las cuales guardan variantes
+  completas de locales dentro de `contentTemplates`. Utiliza los archivos de
+  traducción para cadenas compartidas y las plantillas localizadas para
+  diferencias de diseño específicas de cada canal.
+</Callout>
+
+## Subir traducciones
+
+Desde el panel de control en **Templates → Translations** (Traducciones), o a través de la API:
+
+API del panel / navegador:
+
+```http
+PUT /v1/translations
+Authorization: Bearer <jwt_token>
+```
+
+API de Gestión / Servidor (CLI/Scripts):
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+## Uso en plantillas
+
+```html
+<h1>{{ t "welcome_message" }}</h1>
+<p>{{ t "order_shipped" }} — {{ data.orderId }}</p>
+<a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
+```
+
+## Cadena de resolución del idioma
+
+1. Campo `locale` del suscriptor.
+2. Anulación del idioma por trigger mediante la clave `_locale`.
+3. Idioma predeterminado del tenant (si se proporciona contexto de tenant).
+4. Idioma predeterminado del entorno (`en`).
+5. La clave en crudo si no se encuentra ninguna traducción.
+
+## Namespaces (Espacios de nombres)
+
+Organiza tus cadenas por áreas de funcionalidad:
+
+```json
+{
+  "locale": "ja",
+  "namespace": "billing",
+  "content": { "invoice_due": "請求書の支払期限" }
+}
+```
+
+Referencia: `{{ t "billing.invoice_due" }}` (búsqueda con reconocimiento de namespace).
+
+## Relacionado
+
+- [Plantillas multi-idioma](/docs/platform/features/i18n)
+- [API de Traducciones](/docs/api/translations)
+- [CLI pull/push de traducciones](/docs/sdk/devtools/cli)

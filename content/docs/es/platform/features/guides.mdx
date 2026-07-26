@@ -1,4 +1,71 @@
 ---
 title: Guías en el Producto
-description: Muestra banners, modales y tooltips a usuarios específicos sin cambiar el código.
+description: Banners, modales y tooltips dirigidos y gestionados desde el panel — no notificaciones disparadas por flujos de trabajo.
 ---
+
+Las **guías** entregan interfaces visuales dentro del producto (banners, modales, tooltips, badges) controladas desde el panel de control. Los desarrolladores definen el espacio (slot) una sola vez; luego, los Product Managers gestionan el contenido, la segmentación y la activación.
+
+## Tipos de guías
+
+| Tipo      | Caso de uso                                              |
+| --------- | -------------------------------------------------------- |
+| `banner`  | Anuncios en la parte superior de la página               |
+| `modal`   | Lanzamiento de funciones, avisos de actualización        |
+| `tooltip` | Consejos contextuales para la incorporación (onboarding) |
+| `badge`   | Destacar nuevos elementos de la interfaz de usuario      |
+
+## Reglas de segmentación (Targeting)
+
+Las guías se muestran a los suscriptores según:
+
+- Segmento de usuario / audiencia.
+- URL de la página o patrón de ruta (pathname).
+- Feature flags o contexto personalizado enviado desde tu aplicación.
+- Cronograma de activación (fechas de inicio y fin).
+
+## Integración con el SDK
+
+Las guías se obtienen en el lado del cliente (client-side) — no se envían por WebSocket como las notificaciones in-app.
+
+<Tabs items={['React', 'Headless JS']}>
+  <Tab value="React">
+
+```tsx
+import { useGuides } from "@nexus-signal/react";
+
+function GuideRenderer() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} onClick={() => markSeen(guide.id)}>
+      {guide.content.title}
+    </div>
+  ));
+}
+```
+
+  </Tab>
+  <Tab value="Headless JS">
+
+```ts
+await nexus.guides.fetch({ pathname: "/dashboard" });
+nexus.guides.markSeen(guideId);
+nexus.guides.dismiss(guideId);
+```
+
+  </Tab>
+</Tabs>
+
+Ruta del SDK: `GET /v1/sdk/guides` — devuelve las guías activas para el usuario actual y el contexto.
+
+## Analíticas
+
+Rastrea impresiones, interacciones y cierres de guías mediante la llamada a `POST /v1/sdk/guides/:guideId/events`.
+
+## Relacionado
+
+- [API de Guías](/docs/api/guides)
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)

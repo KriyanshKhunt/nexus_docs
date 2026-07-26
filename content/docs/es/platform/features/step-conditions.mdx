@@ -1,4 +1,56 @@
 ---
 title: Condiciones de Paso
-description: Reglas booleanas en cualquier nodo del flujo de trabajo — envía SMS solo si el monto > 100, etc.
+description: Reglas booleanas en cualquier nodo del flujo de trabajo — envía SMS solo si el monto > 100, omite pasos los fines de semana y más.
 ---
+
+Las **condiciones de paso** te permiten adjuntar reglas de filtrado a cualquier nodo en el lienzo del flujo de trabajo. Si las condiciones se evalúan como falsas, el paso se omite y la ejecución continúa con el siguiente nodo.
+
+## Estructura de las condiciones
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 100 },
+    { "variable": "subscriber.locale", "operator": "equals", "value": "en" }
+  ]
+}
+```
+
+Usa `"logic": "OR"` para que coincida con cualquier regla en lugar de todas ellas.
+
+## Variables compatibles
+
+| Prefijo        | Ejemplos                                  |
+| -------------- | ----------------------------------------- |
+| `data.*`       | `data.orderTotal`, `data.plan`            |
+| `subscriber.*` | `subscriber.email`, `subscriber.locale`   |
+| `tenant.*`     | `tenant.name`, `tenant.properties.tier`   |
+| `object.*`     | `object.name`, `object.properties.status` |
+
+## Operadores
+
+`equals`, `not_equals`, `greater_than`, `greater_than_or_equals`, `less_than`, `less_than_or_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `in_list`, `not_in_list`, `regex_match`, `is_true`, `is_false`
+
+## Uso en el lienzo (Canvas)
+
+Haz clic en cualquier nodo → panel **Conditions** (Condiciones) → añade tus reglas. Los pasos omitidos registran `CONDITION_SKIPPED` en el árbol del ciclo de vida de ejecución.
+
+## Ejemplo: solo SMS de alto valor
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 500 }
+  ]
+}
+```
+
+Adjúntalo a un nodo de canal SMS — los pedidos de bajo valor omitirán el SMS y procederán al siguiente paso.
+
+## Relacionado
+
+- [Concepto de Workflows](/docs/platform/concepts/workflows)
+- [Nodo de Petición HTTP](/docs/platform/features/http-fetch-node)
+- [Nodo de Flujo de IA](/docs/platform/features/ai-workflow-node)

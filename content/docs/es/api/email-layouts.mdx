@@ -1,4 +1,58 @@
 ---
 title: API de Layouts de Email
-description: Gestiona plantillas de envoltorio HTML compartidas y componentes parciales.
+description: Marcos de correo compartidos y parciales HTML reutilizables.
 ---
+
+<DashboardAuth />
+
+Ruta base: `/v1/email`
+
+## Layouts (Plantillas de Envoltorio)
+
+```http
+GET    /v1/email/layouts
+GET    /v1/email/layouts/:id
+POST   /v1/email/layouts
+PUT    /v1/email/layouts/:id
+DELETE /v1/email/layouts/:id
+```
+
+Cuerpo para crear un layout:
+
+```json
+{
+  "name": "Default",
+  "html": "<html><body>{{{ content }}}</body></html>",
+  "isActive": true
+}
+```
+
+## Partials (Parciales Reutilizables)
+
+```http
+GET    /v1/email/partials
+GET    /v1/email/partials/:id
+POST   /v1/email/partials
+PUT    /v1/email/partials/:id
+DELETE /v1/email/partials/:id
+```
+
+Cuerpo del partial:
+
+```json
+{
+  "name": "cta-button",
+  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+}
+```
+
+Referencia dentro de las plantillas: `{{> cta-button url=data.link label="Click here" }}`
+
+## API de Gestión
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+```
+
+Ver [Layouts de Email](/docs/platform/features/email-layouts).

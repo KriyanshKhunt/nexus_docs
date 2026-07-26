@@ -1,4 +1,80 @@
 ---
 title: SDK de Angular
-description: "@nexus-signal/angular — componentes standalone para notificaciones, inbox y guías."
+description: "@nexus-signal/angular — componentes standalone y signals para la campana de notificación, bandeja de entrada y guías."
 ---
+
+## Instalación
+
+```bash
+npm install @nexus-signal/angular socket.io-client
+```
+
+Requiere **Angular 17+** (componentes standalone, signals).
+
+## Configuración
+
+```ts
+// app.config.ts
+import { provideNexus } from "@nexus-signal/angular";
+
+export const appConfig = {
+  providers: [
+    provideNexus({
+      publicKey: "pk_prd_...",
+      subscriberId: "user-123",
+      hmacSignature: hmacFromBackend,
+      apiBaseUrl: "https://api.nexussignal.dev",
+      onNotification: (n) => console.log(n.title),
+    }),
+  ],
+};
+```
+
+## Componentes
+
+```html
+<!-- Campana en popover -->
+<nexus-notification-bell />
+
+<!-- Bandeja de entrada a pantalla completa con filtro de etiquetas -->
+<nexus-notification-inbox tag="updates" [maxItems]="20" />
+
+<!-- Popups de notificaciones toast en tiempo real -->
+<nexus-notification-toast position="top-right" [duration]="5000" />
+```
+
+## Servicios Headless
+
+Inyecta servicios para crear interfaces personalizadas:
+
+```ts
+import { NexusNotificationsService } from "@nexus-signal/angular";
+
+@Component({
+  template: `
+    <p>No leídos: {{ notifications.unread() }}</p>
+    @for (item of notifications.items(); track item.logId) {
+      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
+    }
+  `,
+})
+export class InboxComponent {
+  notifications = inject(NexusNotificationsService);
+}
+```
+
+| Servicio                    | Signals                                 |
+| --------------------------- | --------------------------------------- |
+| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
+| `NexusGuidesService`        | `guides`, `loading`                     |
+| `NexusPreferencesService`   | `preferences`, `topics`, `loading`      |
+
+## Estilos y Temas
+
+Utiliza las mismas variables CSS que la versión de React (`--nexus-theme-accent`, `--nexus-theme-border`, etc.).
+
+## Relacionado
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [Guías en el Producto](/docs/platform/features/guides)

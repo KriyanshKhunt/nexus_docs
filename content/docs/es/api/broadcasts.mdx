@@ -1,4 +1,64 @@
 ---
 title: API de Broadcasts
-description: Programa y ejecuta envíos únicos de flujos de trabajo a audiencias.
+description: Crea, programa y envía mensajes de envío único para audiencias.
 ---
+
+<DashboardAuth />
+
+Ruta base del panel (Dashboard): `/v1/broadcasts`
+
+API de Gestión: `GET|POST /v1/management/broadcasts`, `POST /v1/management/broadcasts/:id/send`
+
+## Listar broadcasts
+
+```http
+GET /v1/broadcasts?status=COMPLETED&page=1
+Authorization: Bearer <jwt>
+```
+
+## Crear broadcast
+
+```http
+POST /v1/broadcasts
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Q4 Update",
+  "workflowId": "workflow-uuid",
+  "audienceId": "audience-uuid",
+  "scheduledAt": "2026-08-01T09:00:00Z"
+}
+```
+
+Omite `scheduledAt` para borrador; envía manualmente más tarde.
+
+## Enviar inmediatamente
+
+```http
+POST /v1/broadcasts/:id/send
+```
+
+## Cancelar
+
+```http
+POST /v1/broadcasts/:id/cancel
+```
+
+## Estados de un Broadcast
+
+`DRAFT` · `SCHEDULED` · `SENDING` · `COMPLETED` · `FAILED` · `CANCELLED`
+
+## SDK de Node
+
+```ts
+await nexus.broadcasts.create({
+  name: "Launch",
+  workflowId: "workflow-uuid",
+  audienceId: "workflow-uuid",
+});
+await nexus.broadcasts.send(broadcastId);
+```
+
+Ver [Broadcasts](/docs/platform/features/broadcasts).

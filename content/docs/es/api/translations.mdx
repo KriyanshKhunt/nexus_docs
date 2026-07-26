@@ -1,4 +1,65 @@
 ---
 title: API de Traducciones
-description: Sube y gestiona paquetes de traducción por idioma.
+description: Guarda y gestiona archivos de traducción locales de clave-valor para el helper de plantilla {{ t "key" }}.
 ---
+
+<SecretKeyAuth />
+
+Ruta base: `/v1/management/translations`
+
+## Listar traducciones
+
+Obtén todos los paquetes de diccionarios de localización que se han subido.
+
+```http
+GET /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+Devuelve el idioma (locale), el namespace y la cantidad de claves por archivo:
+
+```json
+{
+  "translations": [
+    {
+      "id": "trans_123",
+      "locale": "es",
+      "namespace": "default",
+      "keyCount": 3,
+      "createdAt": "2026-07-26T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Guardar (Upsert) paquete de traducción
+
+Sube un diccionario JSON que contiene cadenas localizadas para un locale BCP 47.
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+El namespace por defecto es `default`.
+
+---
+
+## Enlaces Relacionados
+
+- [Guía de archivos de traducción](/docs/platform/features/translations)
+- [CLI pull/push de traducciones](/docs/sdk/devtools/cli)

@@ -1,4 +1,51 @@
 ---
 title: Audiencias y Segmentación
-description: Define segmentos dinámicos de suscriptores basados en reglas de filtrado de propiedades.
+description: Segmentos dinámicos de suscriptores con reglas de filtrado — objetivos de actualización automática para broadcasts y disparadores de flujos de trabajo.
 ---
+
+Las **audiencias** son segmentos dinámicos identificados por un nombre y definidos por reglas de filtrado. Los miembros se actualizan automáticamente a medida que cambian las propiedades del suscriptor, sin necesidad de mantenimiento manual de listas.
+
+## Reglas de filtrado
+
+Construye segmentos desde el panel en la sección **Audiences** (Audiencias) o mediante la API:
+
+```json
+{
+  "name": "Growth active users",
+  "filters": {
+    "logic": "AND",
+    "rules": [
+      { "field": "properties.plan", "operator": "equals", "value": "growth" },
+      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+    ]
+  }
+}
+```
+
+Los filtros compatibles incluyen propiedades de los suscriptores, idioma (locale), dominio de correo, actividad (último disparo, última apertura) y estado de preferencias.
+
+## Vista previa de miembros
+
+```http
+GET /v1/audiences/:id/members?page=1&limit=50
+```
+
+El panel de control muestra la cantidad de miembros en tiempo real mientras editas las reglas.
+
+## Uso en disparadores (Triggers)
+
+Haz referencia a una audiencia como destinatario (en los broadcasts del panel y futuras expansiones de disparadores):
+
+```ts
+// Flujo de Broadcast — ver función de Broadcasts
+{
+  "audienceId": "aud_growth_active",
+  "workflowId": "product-update"
+}
+```
+
+## Relacionado
+
+- [Broadcasts](/docs/platform/features/broadcasts)
+- [API de Audiencias](/docs/api/audiences)
+- [API de Suscriptores](/docs/api/subscribers)

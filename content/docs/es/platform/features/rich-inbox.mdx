@@ -1,4 +1,87 @@
 ---
 title: Bandeja de Entrada Rica
-description: Bandejas configurables con pestañas, botones de acción y actores de notificación.
+description: Pestañas, botones de acción, actores y filtrado por etiquetas — un feed de notificaciones completo más allá de la campana básica.
 ---
+
+Los componentes de SDK para la bandeja de entrada admiten feeds categorizados, llamadas a la acción (CTAs) por notificación, avatares de actores y filtrado basado en etiquetas (tags).
+
+## Filtrado por etiquetas (Tags)
+
+Filtra por etiqueta de tema del flujo de trabajo usando la propiedad `tag`:
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+Construye una interfaz de pestañas personalizada renderizando múltiples feeds o alternando la propiedad `tag`:
+
+```tsx
+const [tab, setTab] = useState<string | undefined>(undefined);
+
+<button onClick={() => setTab(undefined)}>All</button>
+<button onClick={() => setTab('billing')}>Billing</button>
+<NotificationInbox tag={tab} />
+```
+
+Asigna etiquetas a los flujos de trabajo en el panel o a través de [flujo de trabajo como código](/docs/sdk/workflow/workflow-as-code). Los filtros mapean internamente a `GET /v1/sdk/notifications?tag=...`.
+
+## Botones de acción
+
+Incluye acciones en la propiedad `data` del trigger o en la salida de la plantilla del flujo de trabajo:
+
+```json
+{
+  "actions": [
+    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
+    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
+  ]
+}
+```
+
+Las acciones se renderizan como botones seleccionables en el elemento de la bandeja de entrada. Las URLs pueden ser relativas (tu aplicación maneja el enrutamiento) o endpoints de API absolutos.
+
+## Soporte para actores
+
+Pasa metadatos del actor al disparar el flujo para mostrar quién originó la notificación:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "comment.added",
+  recipients: [{ externalId: "user_42" }],
+  data: {
+    actor: {
+      name: "Sarah Chen",
+      avatarUrl: "https://cdn.example.com/sarah.jpg",
+    },
+    commentPreview: "Looks good to me!",
+  },
+});
+```
+
+Se renderiza en el feed como "Sarah Chen comentó..." junto a su avatar.
+
+## Ciclo de vida de una notificación
+
+| Estado   | Significado                                  |
+| -------- | -------------------------------------------- |
+| Unread   | Entregada, no abierta                        |
+| Read     | El usuario hizo clic o la marcó como leída   |
+| Archived | Oculta del feed activo                       |
+| Seen     | (SDK) Desplazada en pantalla dentro del feed |
+
+Sincronización multidispositivo: marcar como leída en un dispositivo limpia el contador de notificaciones en el resto mediante WebSocket en tiempo real.
+
+## Acceso Headless (JS SDK)
+
+```ts
+await nexus.notifications.refetch({ tags: ["billing"] });
+await nexus.notifications.loadMore({ tags: ["mention"] });
+```
+
+Crea una interfaz de usuario completamente personalizada con [`@nexus-signal/js`](/docs/sdk/frontend/js) mientras Nexus gestiona el WebSocket y el estado de la API.
+
+## Relacionado
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [API de SDK](/docs/api/sdk)

@@ -2,3 +2,90 @@
 title: API de Objetos
 description: Crea objetos, gestiona suscripciones y dispara notificaciones en abanico.
 ---
+
+<SecretKeyAuth />
+
+Ruta base: `/v1/objects`
+
+## Guardar objeto
+
+```http
+PUT /v1/objects/:collection/:externalId
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "team": "eng" }
+}
+```
+
+## Obtener objeto
+
+```http
+GET /v1/objects/:collection/:externalId
+```
+
+## Listar objetos
+
+```http
+GET /v1/objects?collection=projects&page=1&limit=50
+```
+
+## Añadir suscripciones
+
+```http
+POST /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_alice", "user_bob"]
+}
+```
+
+## Eliminar suscripciones
+
+```http
+DELETE /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_bob"]
+}
+```
+
+## Listar suscripciones
+
+```http
+GET /v1/objects/:collection/:externalId/subscriptions
+```
+
+## Disparar en abanico (Fan-out)
+
+Usa los destinatarios de objetos en el [Disparador de Flujos de Trabajo](/docs/api/workflows):
+
+```json
+{
+  "workflowName": "project.updated",
+  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
+  "data": {}
+}
+```
+
+## SDK de Node
+
+```ts
+await nexus.objects.set({
+  collection: "projects",
+  externalId: "proj_alpha",
+  name: "Alpha",
+});
+await nexus.objects.addSubscriptions("projects", "proj_alpha", {
+  recipients: ["user_1"],
+});
+```
+
+Ver [Objetos y Suscripciones](/docs/platform/features/objects-subscriptions).

@@ -1,4 +1,98 @@
 ---
 title: API de Gestión
-description: Gestión programática de recursos para CLI, MCP y CI/CD.
+description: Gestión programática de recursos para CLI, MCP y CI/CD — mismo backend que @nexus-signal/cli.
 ---
+
+<ManagementAuth />
+
+Ruta base: `/v1/management`
+
+La API de Gestión alimenta la [CLI](/docs/sdk/devtools/cli) y el [servidor MCP](/docs/sdk/devtools/mcp-server). Todas las rutas requieren la cabecera `Authorization: Bearer sk_*`.
+
+## Workflows
+
+```http
+GET /v1/management/workflows
+GET /v1/management/workflows/:name
+```
+
+## Suscriptores
+
+```http
+GET    /v1/management/subscribers
+GET    /v1/management/subscribers/:id
+POST   /v1/management/subscribers
+DELETE /v1/management/subscribers/:id
+```
+
+## Tenants
+
+```http
+GET /v1/management/tenants
+PUT /v1/management/tenants
+```
+
+## Audiencias
+
+```http
+GET  /v1/management/audiences
+POST /v1/management/audiences
+```
+
+## Broadcasts
+
+```http
+GET  /v1/management/broadcasts
+POST /v1/management/broadcasts
+POST /v1/management/broadcasts/:id/send
+```
+
+## Guías
+
+```http
+GET  /v1/management/guides
+GET  /v1/management/guides/:id
+POST /v1/management/guides
+PUT  /v1/management/guides/:id
+```
+
+## Objetos
+
+```http
+GET    /v1/management/objects
+PUT    /v1/management/objects/:collection/:externalId
+GET    /v1/management/objects/:collection/:externalId
+POST   /v1/management/objects/:collection/:externalId/subscriptions
+DELETE /v1/management/objects/:collection/:externalId/subscriptions
+```
+
+## Contenido
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+GET  /v1/management/translations
+PUT  /v1/management/translations
+```
+
+## Schedules y registros (logs)
+
+```http
+GET /v1/management/schedules
+GET /v1/management/logs/:logId
+```
+
+## Sincronización de workflows (ruta separada)
+
+Sube tus flujos de trabajo definidos en código:
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+Ver [Flujo de trabajo como código](/docs/sdk/workflow/workflow-as-code) y [CLI](/docs/sdk/devtools/cli).
+
+## Límites de peticiones (Rate limits)
+
+Las rutas de gestión utilizan un limitador dedicado por usuario/clave. Usa la salida `--json` de la CLI para automatización y scripts.

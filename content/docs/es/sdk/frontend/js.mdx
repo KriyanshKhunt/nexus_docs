@@ -1,4 +1,88 @@
 ---
 title: SDK de JS Headless
-description: "@nexus-signal/js — notificaciones agnósticas de framework para Vue, Svelte o JS vanilla."
+description: "@nexus-signal/js — notificaciones, guías y preferencias agnósticas de framework para Vue, Svelte o JS vanilla."
 ---
+
+Utiliza **`@nexus-signal/js`** cuando no uses React ni Angular. Es el mismo stack de WebSocket + REST que el SDK de React, pero sin componentes de UI, permitiéndote construir tu propia interfaz.
+
+## Instalación
+
+```bash
+npm install @nexus-signal/js
+```
+
+## Inicio Rápido
+
+```ts
+import { NexusClient } from "@nexus-signal/js";
+
+const nexus = new NexusClient({
+  publicKey: "pk_prd_...",
+  subscriberId: "user-123",
+  hmacSignature: hmacFromYourBackend,
+  onNotification: (n) => console.log(n.title),
+});
+
+await nexus.connect();
+console.log(nexus.notifications.unread);
+```
+
+## Sub-clientes
+
+| Cliente               | Propósito                                                                      |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `nexus.notifications` | Lista de bandeja de entrada, marcar como leído, archivar, filtros de etiquetas |
+| `nexus.guides`        | Obtener y hacer seguimiento de las guías integradas en el producto             |
+| `nexus.preferences`   | Interruptores de preferencias de temas/canales                                 |
+| `nexus.events`        | Historial de eventos de entrega                                                |
+
+## Filtrado por Etiquetas
+
+```ts
+await nexus.notifications.refetch({ tags: ["billing"] });
+await nexus.notifications.loadMore({ tags: ["mention"] });
+```
+
+## Eventos
+
+```ts
+const unsub = nexus.on("notification.received", (n) => {
+  /* ... */
+});
+nexus.on("notifications.count_changed", (count) => {
+  /* badge */
+});
+unsub();
+```
+
+## Ejemplo en Vue 3
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from "vue";
+import { NexusClient } from "@nexus-signal/js";
+
+const nexus = new NexusClient({
+  publicKey: "pk_...",
+  subscriberId: "user-1",
+  hmacSignature: "...",
+});
+const unread = ref(0);
+
+onMounted(async () => {
+  await nexus.connect();
+  unread.value = nexus.notifications.unread;
+  nexus.on("notifications.count_changed", (c) => {
+    unread.value = c;
+  });
+});
+onUnmounted(() => nexus.disconnect());
+</script>
+```
+
+## Relacionado
+
+- [React SDK](/docs/sdk/frontend/react) — componentes de interfaz de usuario preconstruidos
+- [Angular SDK](/docs/sdk/frontend/angular)
+- [Bandeja de Entrada Rica](/docs/platform/features/rich-inbox)
+- [API de SDK](/docs/api/sdk)
