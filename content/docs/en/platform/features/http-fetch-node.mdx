@@ -18,13 +18,13 @@ flowchart LR
 
 ## Configuration
 
-| Field | Description |
-|-------|-------------|
-| `url` | Request URL — supports Handlebars: `https://api.carrier.com/track/{{ data.trackingId }}` |
-| `method` | `GET` or `POST` |
-| `headers` | Optional key-value header pairs |
-| `body` | POST body template (Handlebars) |
-| `responseKey` | Context key to store parsed JSON (default: merged into `data`) |
+| Field         | Description                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| `url`         | Request URL — supports Handlebars: `https://api.carrier.com/track/{{ data.trackingId }}` |
+| `method`      | `GET` or `POST`                                                                          |
+| `headers`     | Optional key-value header pairs                                                          |
+| `body`        | POST body template (Handlebars)                                                          |
+| `responseKey` | Context key to store parsed JSON (default: merged into `data`)                           |
 
 ## Example
 
@@ -52,15 +52,15 @@ Email template:
 ## Workflow-as-code
 
 ```ts
-import { defineWorkflow } from '@nexus-signal/node';
+import { defineWorkflow } from "@nexus-signal/node";
 
-defineWorkflow('order.shipped')
-  .httpFetch({
-    url: 'https://api.carrier.com/track/{{ data.trackingId }}',
-    method: 'GET',
-    responseKey: 'tracking',
+defineWorkflow("order.shipped")
+  .addHttpFetch({
+    url: "https://api.carrier.com/track/{{ data.trackingId }}",
+    method: "GET",
+    responseKey: "tracking",
   })
-  .channel('EMAIL');
+  .addChannel("EMAIL");
 ```
 
 ## Related

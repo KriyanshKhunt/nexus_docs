@@ -17,8 +17,8 @@ flowchart TB
     T2[Tenant: globex]
     W[Workflow engine]
   end
-  App -->|trigger + tenant: acme| T1
-  App -->|trigger + tenant: globex| T2
+  App ---->|trigger + tenant: acme| T1
+  App ---->|trigger + tenant: globex| T2
   T1 --> W
   T2 --> W
 ```
@@ -31,13 +31,13 @@ When a new customer signs up in your app:
 
 ```ts
 await nexus.tenants.upsert({
-  externalId: 'tenant_acme',
-  name: 'Acme Corp',
+  externalId: "tenant_acme",
+  name: "Acme Corp",
   branding: {
-    logoUrl: 'https://cdn.acme.io/logo.png',
-    primaryColor: '#2563eb',
-    companyName: 'Acme Corp',
-    footerHtml: '<p>© Acme Corp · support@acme.io</p>',
+    logoUrl: "https://cdn.acme.io/logo.png",
+    primaryColor: "#2563eb",
+    companyName: "Acme Corp",
+    footerHtml: "<p>© Acme Corp · support@acme.io</p>",
   },
 });
 ```
@@ -60,10 +60,10 @@ When a trigger includes `tenant`, the compiler injects that tenant's branding au
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: 'invoice.sent',
-  tenant: 'tenant_acme',
+  workflowName: "invoice.sent",
+  tenant: "tenant_acme",
   recipients: [{ externalId: user.id, email: user.email }],
-  data: { invoiceId: 'INV-001', amount: '$500' },
+  data: { invoiceId: "INV-001", amount: "$500" },
 });
 ```
 
@@ -84,18 +84,14 @@ Use this when your app shows a tenant-scoped notification center.
 ## Checklist
 
 <Steps>
-<Step>
-Create tenant on customer signup (sync `externalId` with your DB).
-</Step>
-<Step>
-Store branding assets (logo URLs must be HTTPS and publicly accessible).
-</Step>
-<Step>
-Pass `tenant` on every trigger for that customer's users.
-</Step>
-<Step>
-Test in Development with two tenants before Production.
-</Step>
+  <Step>
+    Create tenant on customer signup (sync `externalId` with your DB).
+  </Step>
+  <Step>
+    Store branding assets (logo URLs must be HTTPS and publicly accessible).
+  </Step>
+  <Step>Pass `tenant` on every trigger for that customer's users.</Step>
+  <Step>Test in Development with two tenants before Production.</Step>
 </Steps>
 
 ## Related

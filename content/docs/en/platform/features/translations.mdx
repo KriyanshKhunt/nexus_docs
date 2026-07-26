@@ -6,15 +6,27 @@ description: Centralized locale key-value stores with {{ t "key" }} Handlebars h
 **Translation files** store shared locale strings per environment. Reference them in any template with `{{ t "welcome_message" }}` instead of duplicating full template copies per language.
 
 <Callout type="info">
-This complements [Multi-language templates](/docs/platform/features/i18n), which store full locale variants inside `contentTemplates`. Use translation files for shared strings; use locale templates for channel-specific layout differences.
+  This complements [Multi-language templates](/docs/platform/features/i18n),
+  which store full locale variants inside `contentTemplates`. Use translation
+  files for shared strings; use locale templates for channel-specific layout
+  differences.
 </Callout>
 
 ## Upload translations
 
 Dashboard: **Templates → Translations**, or API:
 
+Dashboard / Browser API:
+
 ```http
 PUT /v1/translations
+Authorization: Bearer <jwt_token>
+```
+
+Management / Server-side API (CLI/Scripts):
+
+```http
+PUT /v1/management/translations
 Authorization: Bearer sk_prd_…
 ```
 
@@ -51,7 +63,11 @@ Authorization: Bearer sk_prd_…
 Organize strings by feature area:
 
 ```json
-{ "locale": "ja", "namespace": "billing", "content": { "invoice_due": "請求書の支払期限" } }
+{
+  "locale": "ja",
+  "namespace": "billing",
+  "content": { "invoice_due": "請求書の支払期限" }
+}
 ```
 
 Reference: `{{ t "billing.invoice_due" }}` (namespace-aware lookup).

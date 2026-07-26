@@ -1,28 +1,46 @@
 ---
 title: Translations API
-description: Upsert locale key-value translation files for {{ t "key" }} template helper.
+description: Upsert locale key-value translation files for the {{ t "key" }} template helper.
 ---
 
-<DashboardAuth />
+<SecretKeyAuth />
 
-Dashboard base path: `/v1/translations`
-
-Management API: `GET|PUT /v1/management/translations`
+Base path: `/v1/management/translations`
 
 ## List translations
 
+Fetch all uploaded localization dictionary bundles.
+
 ```http
-GET /v1/translations
-Authorization: Bearer <jwt>
+GET /v1/management/translations
+Authorization: Bearer sk_prd_…
 ```
 
-Returns locale, namespace, and key count per file.
+Returns locale, namespace, and key count per file:
 
-## Upsert translation file
+```json
+{
+  "translations": [
+    {
+      "id": "trans_123",
+      "locale": "es",
+      "namespace": "default",
+      "keyCount": 3,
+      "createdAt": "2026-07-26T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## Upsert translation bundle
+
+Upload a JSON dictionary containing localized strings for a BCP 47 locale.
 
 ```http
-PUT /v1/translations
-Authorization: Bearer <jwt>
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
 ```
 
 ```json
@@ -31,23 +49,17 @@ Authorization: Bearer <jwt>
   "namespace": "default",
   "content": {
     "welcome_message": "Bienvenido",
-    "order_shipped": "Tu pedido ha sido enviado"
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
   }
 }
 ```
 
-## Get translation
+Namespace defaults to `default`.
 
-```http
-GET /v1/translations/:id
-```
+---
 
-## Delete
+## Related Links
 
-```http
-DELETE /v1/translations/:id
-```
-
-Locale must be valid BCP 47 tag. Namespace defaults to `default`.
-
-See [Translation files](/docs/platform/features/translations).
+- [Translation files guide](/docs/platform/features/translations)
+- [CLI translations pull/push](/docs/sdk/devtools/cli)
