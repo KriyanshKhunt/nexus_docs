@@ -1,11 +1,13 @@
 {
-  "title": "SDKs",
-  "description": "Pacotes Node.js e React",
+  "title": "SDKs e Ferramentas",
+  "description": "Pacotes Node.js, React, JS headless, Angular, CLI e MCP",
   "root": true,
   "icon": "Code",
   "pages": [
     "index",
-    "node",
-    "react"
+    "workflow",
+    "backend",
+    "frontend",
+    "devtools"
   ]
 }

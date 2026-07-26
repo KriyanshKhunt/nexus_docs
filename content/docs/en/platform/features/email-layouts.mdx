@@ -1,0 +1,57 @@
+---
+title: Email Layouts & Partials
+description: Shared email frames and reusable HTML snippets — change branding once, update every template.
+---
+
+**Email layouts** wrap all email templates in a shared HTML frame (header, footer, styles). **Partials** are reusable Handlebars snippets referenced across templates.
+
+## Layouts
+
+Layouts define the outer shell with a content slot:
+
+```html
+<!DOCTYPE html>
+<html>
+  <body>
+    <img src="{{ branding.logoUrl }}" alt="Logo" />
+    <div class="content">{{{ content }}}</div>
+    <footer>{{ branding.footerHtml }}</footer>
+  </body>
+</html>
+```
+
+Dashboard: **Templates → Layouts**. One layout can be marked active per environment. Tenant branding variables inject automatically when a tenant context is set.
+
+## Partials
+
+Create reusable blocks in **Templates → Partials**:
+
+```html
+<!-- partial: cta-button -->
+<a href="{{ url }}" class="btn btn-primary">{{ label }}</a>
+```
+
+Reference in any email template:
+
+```html
+{{> cta-button url=data.checkoutUrl label="Complete purchase" }}
+```
+
+Change the partial once — every template using it updates on next send.
+
+## Compilation order
+
+```mermaid
+flowchart TD
+  T[Template HTML] --> P[Resolve partials]
+  P --> L[Wrap in active layout]
+  L --> B[Apply tenant branding]
+  B --> H[Handlebars compile]
+  H --> Out[Final HTML]
+```
+
+## Related
+
+- [Per-tenant branding](/docs/platform/features/tenants)
+- [Email layouts API](/docs/api/email-layouts)
+- [Multi-language templates](/docs/platform/features/i18n)

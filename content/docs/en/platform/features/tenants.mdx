@@ -1,0 +1,61 @@
+---
+title: Per-Tenant Branding
+description: White-label notifications for B2B SaaS — each of your customers gets isolated branding, preferences, and optional provider overrides.
+---
+
+**Tenants** represent *your* customers inside Nexus (distinct from Nexus **Organizations**, which are *your* workspace). Use tenants when your product serves multiple companies that need branded emails, scoped in-app feeds, and isolated settings.
+
+## Tenant model
+
+Each tenant (per environment) has:
+
+| Field | Purpose |
+|-------|---------|
+| `externalId` | Your customer ID (e.g. `tenant_acme`) |
+| `name` | Display name |
+| `branding` | Logo URL, primary color, footer HTML |
+| `providerOverrides` | Optional per-tenant SendGrid/Twilio keys |
+| `preferenceDefaults` | Default opt-in/out matrix for new subscribers |
+
+## Create a tenant
+
+Dashboard: **Tenants** page, or SDK:
+
+```ts
+await nexus.tenants.upsert({
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
+  branding: {
+    logoUrl: 'https://cdn.acme.io/logo.png',
+    primaryColor: '#2563eb',
+    footerHtml: '<p>© Acme Corp</p>',
+  },
+});
+```
+
+## Trigger with tenant context
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: 'user_42', email: 'billing@acme.io' }],
+  data: { invoiceId: 'INV-001' },
+});
+```
+
+Template compilation applies tenant branding to email layouts. Filter in-app notifications by tenant via the SDK query parameter `tenantId`.
+
+## SDK inbox scoping
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+```
+
+See [SDK API](/docs/api/sdk) for client-side tenant filtering.
+
+## Related
+
+- [B2B multi-tenant guide](/docs/platform/guides/b2b-multi-tenant)
+- [Tenants API](/docs/api/tenants)
+- [Email layouts](/docs/platform/features/email-layouts)

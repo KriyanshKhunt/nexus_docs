@@ -1,11 +1,13 @@
 {
-  "title": "SDK",
-  "description": "Node.js と React パッケージ",
+  "title": "SDK & ツール",
+  "description": "Node.js、React、ヘッドレス JS、Angular、CLI、MCP パッケージ",
   "root": true,
   "icon": "Code",
   "pages": [
     "index",
-    "node",
-    "react"
+    "workflow",
+    "backend",
+    "frontend",
+    "devtools"
   ]
 }

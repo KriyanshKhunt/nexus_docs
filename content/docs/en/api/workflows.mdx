@@ -17,6 +17,7 @@ Idempotency-Key: optional-unique-key
 ```json
 {
   "workflowName": "order.shipped",
+  "tenant": "tenant_acme",
   "recipients": [
     {
       "externalId": "user_42",
@@ -32,6 +33,28 @@ Idempotency-Key: optional-unique-key
   }
 }
 ```
+
+### Object fan-out recipient
+
+Notify all subscribers of an object with one entry in `recipients`:
+
+```json
+{
+  "workflowName": "project.updated",
+  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
+  "data": { "changeType": "milestone_completed" }
+}
+```
+
+See [Objects API](/docs/api/objects).
+
+### Optional fields
+
+| Field | Description |
+|-------|-------------|
+| `tenant` | Tenant external ID for branding scoping |
+| `data.actor` | `{ name, avatarUrl }` for rich inbox display |
+| `data.actions` | `[{ label, url, style }]` inbox action buttons |
 
 ### Response — 202 Accepted
 
@@ -61,10 +84,20 @@ Idempotency-Key: optional-unique-key
 | 409 | Workflow disabled |
 | 402/429 | Quota exceeded or rate limited |
 
+## Sync workflows (workflow-as-code)
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+Push TypeScript/JSON workflow definitions from code. See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
+
 ## Dashboard workflow CRUD
 
 Authenticated dashboard routes under `/v1/workflows/dashboard` for create, update, delete, test trigger, and A/B stats.
 
 ## Node SDK
 
-Prefer [`@nexus-signal/node`](/docs/sdk/node) for typed triggers, retries, and circuit breaking.
+Prefer [`@nexus-signal/node`](/docs/sdk/backend/node) for typed triggers, object fan-out, tenant context, and circuit breaking.

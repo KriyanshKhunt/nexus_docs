@@ -3,5 +3,21 @@
   "description": "REST endpoints for triggers, inbox, schedules, and analytics",
   "root": true,
   "icon": "Webhook",
-  "pages": ["index", "workflows", "sdk", "schedules", "subscribers", "topics", "analytics"]
+  "pages": [
+    "index",
+    "workflows",
+    "objects",
+    "subscribers",
+    "tenants",
+    "audiences",
+    "broadcasts",
+    "guides",
+    "sdk",
+    "schedules",
+    "topics",
+    "translations",
+    "email-layouts",
+    "analytics",
+    "management"
+  ]
 }

@@ -1,7 +1,13 @@
 {
-  "title": "SDKs",
-  "description": "Node.js server SDK and React UI components",
+  "title": "SDKs & Tools",
+  "description": "Node.js, React, headless JS, Angular, CLI, and MCP packages",
   "root": true,
   "icon": "Code",
-  "pages": ["index", "node", "react"]
+  "pages": [
+    "index",
+    "workflow",
+    "backend",
+    "frontend",
+    "devtools"
+  ]
 }

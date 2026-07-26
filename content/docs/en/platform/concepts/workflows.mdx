@@ -21,7 +21,11 @@ Every workflow starts with a **Trigger** node defining the event namespace. Your
 | **Throttle** | Rate-limit alerts per subscriber; optional divert to digest |
 | **Failover** | Primary channel → wait for read → fallback channel |
 | **A/B Split** | Percentage traffic split with engagement tracking |
+| **HTTP Fetch** | Call external APIs mid-workflow; merge response into context |
+| **AI Node** | Runtime LLM call for classification or dynamic copy |
 | **Smart Timing** | Toggle on channel nodes — delay to subscriber's peak hour |
+
+Any node can have **[step conditions](/docs/platform/features/step-conditions)** — skip execution when rules don't match.
 
 ## Channel node options
 
@@ -38,7 +42,11 @@ Each workflow has versioned **templates** (Draft → Production Active). Content
 <p>Hi {{ subscriber.externalId }}, your order {{ data.orderId }} shipped.</p>
 ```
 
-Multi-locale templates use locale keys — see [i18n](/docs/platform/features/i18n).
+Multi-locale templates use locale keys — see [i18n](/docs/platform/features/i18n). Shared strings use [translation files](/docs/platform/features/translations).
+
+## Workflow-as-code
+
+Define workflows in TypeScript and sync via `POST /v1/workflows/sync` — see [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
 
 ## Workflow ↔ Topic
 
@@ -47,4 +55,6 @@ Assign a workflow to a [Topic](/docs/platform/features/topics) so subscribers ma
 ## Related
 
 - [First workflow guide](/docs/platform/guides/first-workflow)
+- [HTTP Fetch node](/docs/platform/features/http-fetch-node)
+- [Step conditions](/docs/platform/features/step-conditions)
 - [Delivery pipeline](/docs/platform/concepts/delivery-pipeline)

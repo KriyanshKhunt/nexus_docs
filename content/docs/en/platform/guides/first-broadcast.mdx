@@ -1,0 +1,101 @@
+---
+title: Your First Broadcast
+description: Send a one-time product announcement to a dynamic audience segment from the dashboard — no code deploy required.
+---
+
+Broadcasts let product and marketing teams send cross-channel messages to a **segment** without engineering involvement.
+
+## Prerequisites
+
+- A published workflow (e.g. `product.announcement`) with Email + In-App channels
+- An [audience](/docs/platform/features/audiences) segment defined
+
+## Step 1 — Create an audience
+
+Dashboard: **Audiences** → **New audience**
+
+Example filters:
+
+| Rule | Operator | Value |
+|------|----------|-------|
+| `properties.plan` | equals | `growth` |
+| `lastActiveAt` | within days | `30` |
+
+Save and note the live member count preview.
+
+## Step 2 — Compose the broadcast
+
+Dashboard: **Broadcasts** → **New broadcast**
+
+1. **Name:** "Q3 Feature Launch"
+2. **Workflow:** select `product.announcement`
+3. **Audience:** select your Growth segment
+4. **Data:** optional JSON for template variables:
+
+```json
+{
+  "featureName": "Smart Analytics",
+  "launchUrl": "https://app.example.com/analytics"
+}
+```
+
+5. **Schedule:** send now or pick a future datetime
+
+## Step 3 — Preview and send
+
+Review the audience size and workflow channels. Click **Send** (or schedule).
+
+Broadcast status progresses: `DRAFT` → `SENDING` → `COMPLETED`
+
+## Step 4 — Monitor results
+
+Open the broadcast detail view for per-channel delivery stats. Cross-reference **Audit Logs** for individual failures.
+
+## API alternative
+
+<DashboardAuth />
+
+```http
+POST /v1/broadcasts
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Q3 Feature Launch",
+  "workflowId": "workflow-uuid-from-dashboard",
+  "audienceId": "audience-uuid",
+  "data": { "featureName": "Smart Analytics" }
+}
+```
+
+Send:
+
+```http
+POST /v1/broadcasts/:id/send
+```
+
+<Callout type="info">
+`workflowId` and `audienceId` are UUIDs from the dashboard or Management API list endpoints — not workflow name strings.
+</Callout>
+
+## Node SDK
+
+```ts
+const created = await nexus.broadcasts.create({
+  name: 'Q3 Launch',
+  workflowId: 'uuid',
+  audienceId: 'uuid',
+  data: { featureName: 'Smart Analytics' },
+});
+
+if (created.ok) {
+  await nexus.broadcasts.send(created.data!.broadcast.id);
+}
+```
+
+## Related
+
+- [Broadcasts feature](/docs/platform/features/broadcasts)
+- [Audiences](/docs/platform/features/audiences)
+- [Broadcasts API](/docs/api/broadcasts)

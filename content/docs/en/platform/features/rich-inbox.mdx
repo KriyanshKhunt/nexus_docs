@@ -1,0 +1,87 @@
+---
+title: Rich Inbox
+description: Tabs, action buttons, actors, and tag filtering — a full notification feed beyond the basic bell.
+---
+
+The inbox SDK components support categorized feeds, per-notification CTAs, actor avatars, and tag-based filtering.
+
+## Tag filtering
+
+Filter by workflow topic tag using the `tag` prop:
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+Build custom tab UI by rendering multiple feeds or switching the `tag` prop:
+
+```tsx
+const [tab, setTab] = useState<string | undefined>(undefined);
+
+<button onClick={() => setTab(undefined)}>All</button>
+<button onClick={() => setTab('billing')}>Billing</button>
+<NotificationInbox tag={tab} />
+```
+
+Assign tags on workflows in the dashboard or via [workflow-as-code](/docs/sdk/workflow/workflow-as-code). Filters map to `GET /v1/sdk/notifications?tag=...`.
+
+## Action buttons
+
+Include actions in trigger `data` or workflow template output:
+
+```json
+{
+  "actions": [
+    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
+    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
+  ]
+}
+```
+
+Actions render as clickable buttons in the inbox item. URLs can be relative (your app handles routing) or absolute API endpoints.
+
+## Actor support
+
+Pass actor metadata on trigger to show who caused the notification:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'comment.added',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    actor: {
+      name: 'Sarah Chen',
+      avatarUrl: 'https://cdn.example.com/sarah.jpg',
+    },
+    commentPreview: 'Looks good to me!',
+  },
+});
+```
+
+Renders as "Sarah Chen commented…" with avatar in the feed.
+
+## Notification lifecycle
+
+| State | Meaning |
+|-------|---------|
+| Unread | Delivered, not opened |
+| Read | User clicked or marked read |
+| Archived | Hidden from active feed |
+| Seen | (SDK) scrolled past in feed |
+
+Cross-device sync: marking read on one device clears badges everywhere via WebSocket.
+
+## Headless access (JS SDK)
+
+```ts
+await nexus.notifications.refetch({ tags: ['billing'] });
+await nexus.notifications.loadMore({ tags: ['mention'] });
+```
+
+Build fully custom UI with [`@nexus-signal/js`](/docs/sdk/frontend/js) while Nexus handles WebSocket + API state.
+
+## Related
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [SDK API](/docs/api/sdk)

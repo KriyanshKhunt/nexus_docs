@@ -1,0 +1,85 @@
+---
+title: Objects API
+description: Create objects, manage subscriptions, and trigger fan-out notifications.
+---
+
+<SecretKeyAuth />
+
+Base path: `/v1/objects`
+
+## Set object
+
+```http
+PUT /v1/objects/:collection/:externalId
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "team": "eng" }
+}
+```
+
+## Get object
+
+```http
+GET /v1/objects/:collection/:externalId
+```
+
+## List objects
+
+```http
+GET /v1/objects?collection=projects&page=1&limit=50
+```
+
+## Add subscriptions
+
+```http
+POST /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_alice", "user_bob"]
+}
+```
+
+## Remove subscriptions
+
+```http
+DELETE /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_bob"]
+}
+```
+
+## List subscriptions
+
+```http
+GET /v1/objects/:collection/:externalId/subscriptions
+```
+
+## Trigger fan-out
+
+Use object recipients in [Workflows trigger](/docs/api/workflows):
+
+```json
+{
+  "workflowName": "project.updated",
+  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
+  "data": {}
+}
+```
+
+## Node SDK
+
+```ts
+await nexus.objects.set({ collection: 'projects', externalId: 'proj_alpha', name: 'Alpha' });
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', { recipients: ['user_1'] });
+```
+
+See [Objects & Subscriptions](/docs/platform/features/objects-subscriptions).

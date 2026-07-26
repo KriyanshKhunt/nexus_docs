@@ -1,0 +1,71 @@
+---
+title: In-Product Guides
+description: Targeted banners, modals, and tooltips managed from the dashboard — not workflow-triggered notifications.
+---
+
+**Guides** deliver in-product UI surfaces (banners, modals, tooltips, badges) controlled from the dashboard. Engineers define the slot once; PMs manage content, targeting, and activation.
+
+## Guide types
+
+| Type | Use case |
+|------|----------|
+| `banner` | Top-of-page announcements |
+| `modal` | Feature launches, upgrade nudges |
+| `tooltip` | Contextual onboarding hints |
+| `badge` | Highlight new UI elements |
+
+## Targeting rules
+
+Guides match subscribers based on:
+
+- User segment / audience
+- Page URL or pathname pattern
+- Feature flags or custom context passed from your app
+- Activation schedule (start/end dates)
+
+## SDK integration
+
+Guides are fetched client-side — not pushed via WebSocket like in-app notifications.
+
+<Tabs items={['React', 'Headless JS']}>
+  <Tab value="React">
+
+```tsx
+import { useGuides } from '@nexus-signal/react';
+
+function GuideRenderer() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} onClick={() => markSeen(guide.id)}>
+      {guide.content.title}
+    </div>
+  ));
+}
+```
+
+  </Tab>
+  <Tab value="Headless JS">
+
+```ts
+await nexus.guides.fetch({ pathname: '/dashboard' });
+nexus.guides.markSeen(guideId);
+nexus.guides.dismiss(guideId);
+```
+
+  </Tab>
+</Tabs>
+
+SDK route: `GET /v1/sdk/guides` — returns active guides for the current user + context.
+
+## Analytics
+
+Track impressions, interactions, and dismissals via `POST /v1/sdk/guides/:guideId/events`.
+
+## Related
+
+- [Guides API](/docs/api/guides)
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)

@@ -1,0 +1,97 @@
+---
+title: Nexus CLI
+description: "@nexus-signal/cli — pull/push workflows, manage resources, and integrate with CI/CD from the terminal."
+---
+
+The **Nexus CLI** wraps the [Management API](/docs/api/management) for local development and automation.
+
+## Install
+
+```bash
+npm install -g @nexus-signal/cli
+# or run without install:
+npx @nexus-signal/cli --help
+```
+
+## Authenticate
+
+```bash
+nexus login
+# stores sk_* in ~/.nexus-signal/config.json
+
+nexus whoami
+nexus logout
+```
+
+Override stored credentials in CI:
+
+```bash
+export NEXUS_SECRET_KEY=sk_prd_...
+export NEXUS_BASE_URL=https://api.nexussignal.dev
+```
+
+## Workflows
+
+```bash
+nexus workflows list
+nexus workflows get order.shipped
+nexus workflows pull --all          # → .nexus/workflows/*.json
+nexus workflows push --all          # ← from .nexus/workflows/
+nexus workflows trigger order.shipped --to user_42 --data '{"orderId":"123"}'
+nexus workflows sync                # push code-defined workflows
+```
+
+## Subscribers & objects
+
+```bash
+nexus subscribers list --search alice
+nexus subscribers create --externalId user_1 --email alice@acme.io
+
+nexus objects set --collection projects --id proj_alpha --name "Alpha"
+nexus objects subscribe --collection projects --id proj_alpha --subscribers user_1,user_2
+```
+
+## Broadcasts & content
+
+```bash
+nexus broadcasts create --name "Launch" --workflowId uuid --audienceId uuid
+nexus broadcasts send <broadcast-id>
+
+nexus translations pull
+nexus translations push
+nexus layouts list
+```
+
+## Scripting
+
+Every command supports `--json` for piping to `jq`:
+
+```bash
+nexus workflows list --json | jq '.[].name'
+```
+
+Exit codes: `0` success, `1` error.
+
+## CI/CD example
+
+```yaml
+- name: Push Nexus workflows
+  run: npx @nexus-signal/cli workflows push --all
+  env:
+    NEXUS_SECRET_KEY: ${{ secrets.NEXUS_SECRET_KEY }}
+    NEXUS_BASE_URL: https://api.nexussignal.dev
+```
+
+## Local file layout
+
+<Files>
+  <File name=".nexus/workflows/order-shipped.json" />
+  <File name=".nexus/translations/en.json" />
+  <File name=".nexus/layouts/default-layout.html" />
+</Files>
+
+## Related
+
+- [Management API](/docs/api/management)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
+- [MCP server](/docs/sdk/devtools/mcp-server)

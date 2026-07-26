@@ -1,4 +1,11 @@
 {
   "title": "Guías",
-  "pages": ["index", "first-workflow", "production-checklist"]
+  "pages": [
+    "index",
+    "first-workflow",
+    "object-fanout",
+    "first-broadcast",
+    "b2b-multi-tenant",
+    "production-checklist"
+  ]
 }

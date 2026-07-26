@@ -35,10 +35,10 @@ const TAB_DEFS: TabDef[] = [
     url: '/docs/sdk',
     Icon: Code,
     labels: {
-      en: { title: 'SDKs', description: 'Node.js and React packages' },
-      es: { title: 'SDKs', description: 'Paquetes Node.js y React' },
-      pt: { title: 'SDKs', description: 'Pacotes Node.js e React' },
-      ja: { title: 'SDK', description: 'Node.js と React パッケージ' },
+      en: { title: 'SDKs & Tools', description: 'Node, React, JS, Angular, CLI, MCP' },
+      es: { title: 'SDKs y Herramientas', description: 'Node, React, JS, Angular, CLI, MCP' },
+      pt: { title: 'SDKs e Ferramentas', description: 'Node, React, JS, Angular, CLI, MCP' },
+      ja: { title: 'SDK & ツール', description: 'Node, React, JS, Angular, CLI, MCP' },
     },
   },
   {

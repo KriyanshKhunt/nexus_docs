@@ -1,17 +1,28 @@
 {
-  "title": "Recursos",
+  "title": "Funcionalidades",
   "pages": [
     "index",
     "cost-reduction",
     "smart-send-time",
-    "ai-content",
     "delivery-windows",
-    "i18n",
     "digest-throttle",
     "failover",
+    "sandbox",
+    "step-conditions",
+    "http-fetch-node",
+    "ai-workflow-node",
+    "ai-content",
+    "objects-subscriptions",
+    "audiences",
+    "broadcasts",
+    "guides",
+    "tenants",
+    "rich-inbox",
+    "translations",
+    "email-layouts",
+    "i18n",
     "topics",
     "schedules",
-    "cost-analytics",
-    "sandbox"
+    "cost-analytics"
   ]
 }

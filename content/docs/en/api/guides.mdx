@@ -1,0 +1,76 @@
+---
+title: Guides API
+description: Manage in-product banners, modals, and tooltips from the dashboard and SDK.
+---
+
+<DashboardAuth />
+
+Dashboard base path: `/v1/guides`
+
+SDK (browser): `GET /v1/sdk/guides`
+
+## List guides
+
+```http
+GET /v1/guides
+Authorization: Bearer <jwt>
+```
+
+## Create guide
+
+```http
+POST /v1/guides
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Feature launch banner",
+  "type": "banner",
+  "content": {
+    "title": "New dashboard is live",
+    "body": "Check out the redesigned analytics view.",
+    "ctaLabel": "Explore",
+    "ctaUrl": "/analytics"
+  },
+  "targeting": {
+    "pathPatterns": ["/dashboard/*"],
+    "audienceId": null
+  },
+  "active": true
+}
+```
+
+## Guide types
+
+`banner` · `modal` · `tooltip` · `badge`
+
+## SDK — fetch eligible guides
+
+<PublicKeyAuth />
+
+```http
+GET /v1/sdk/guides?pathname=/dashboard
+x-nexus-public-key: pk_prd_…
+```
+
+## Record guide events
+
+```http
+POST /v1/sdk/guides/:guideId/events
+```
+
+```json
+{ "event": "seen" }
+```
+
+Events: `seen`, `interacted`, `dismissed`
+
+## Analytics
+
+```http
+GET /v1/guides/:id/analytics
+Authorization: Bearer <jwt>
+```
+
+See [In-Product Guides](/docs/platform/features/guides).

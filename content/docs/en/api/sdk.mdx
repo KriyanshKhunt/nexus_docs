@@ -1,9 +1,11 @@
 ---
 title: SDK API
-description: Public-key authenticated endpoints for in-app inbox and subscriber preferences.
+description: Public-key authenticated endpoints for in-app inbox, guides, and subscriber preferences.
 ---
 
-All routes require header: `x-nexus-public-key: pk_prd_…`
+<PublicKeyAuth />
+
+All routes require header: `x-nexus-public-key: pk_prd_…` and subscriber identification via query or body.
 
 ## Notifications (inbox)
 
@@ -16,6 +18,8 @@ GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=un
 | Query | Values |
 |-------|--------|
 | `filter` | `unread`, `read`, `archived` |
+| `tag` / `tags` | Comma-separated workflow topic tags |
+| `tenantId` | Filter by tenant external ID |
 | `dateFrom` / `dateTo` | ISO timestamps |
 
 ```json
@@ -28,7 +32,10 @@ GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=un
       "read": false,
       "archived": false,
       "at": "2026-07-02T14:00:00.000Z",
-      "workflowName": "order.shipped"
+      "workflowName": "order.shipped",
+      "actor": { "name": "Sarah Chen", "avatarUrl": "https://..." },
+      "actions": [{ "label": "View order", "url": "/orders/9912", "style": "primary" }],
+      "tags": ["orders"]
     }
   ],
   "total": 128,
@@ -38,10 +45,11 @@ GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=un
 }
 ```
 
-### Mark read
+### Mark read / unread
 
 ```http
 POST /v1/sdk/notifications/:logId/read
+POST /v1/sdk/notifications/:logId/unread
 POST /v1/sdk/notifications/mark-all-read
 Body: { "subscriberExternalId": "user_42" }
 ```
@@ -50,8 +58,37 @@ Body: { "subscriberExternalId": "user_42" }
 
 ```http
 POST /v1/sdk/notifications/:logId/archive
+POST /v1/sdk/notifications/:logId/unarchive
 DELETE /v1/sdk/notifications/:logId
 ```
+
+### Unread count
+
+```http
+GET /v1/sdk/notifications/count?subscriberExternalId=user_42&filter=unread
+```
+
+## Guides (in-product)
+
+### Fetch eligible guides
+
+```http
+GET /v1/sdk/guides?subscriberExternalId=user_42&pathname=/dashboard
+```
+
+Returns active banners, modals, tooltips matching user + page context.
+
+### Record guide events
+
+```http
+POST /v1/sdk/guides/:guideId/events
+```
+
+```json
+{ "subscriberExternalId": "user_42", "event": "seen" }
+```
+
+Events: `seen`, `interacted`, `dismissed`
 
 ## Preferences
 
@@ -72,12 +109,16 @@ PUT /v1/sdk/subscribers/:externalId/preferences
 ## Events & topics
 
 ```http
-GET /v1/sdk/notification-events
+GET /v1/sdk/notification-events?subscriberExternalId=user_42
 GET /v1/sdk/topics
 ```
 
-Returns active workflows, topic list, and available preference channels for the React matrix.
+## Client SDKs
 
-## React SDK
+| SDK | Docs |
+|-----|------|
+| React | [`@nexus-signal/react`](/docs/sdk/frontend/react) |
+| Angular | [`@nexus-signal/angular`](/docs/sdk/frontend/angular) |
+| Headless JS | [`@nexus-signal/js`](/docs/sdk/frontend/js) |
 
-These endpoints power [`@nexus-signal/react`](/docs/sdk/react) components automatically.
+See also [Rich inbox](/docs/platform/features/rich-inbox) and [Guides](/docs/platform/features/guides).

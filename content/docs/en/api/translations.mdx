@@ -1,0 +1,53 @@
+---
+title: Translations API
+description: Upsert locale key-value translation files for {{ t "key" }} template helper.
+---
+
+<DashboardAuth />
+
+Dashboard base path: `/v1/translations`
+
+Management API: `GET|PUT /v1/management/translations`
+
+## List translations
+
+```http
+GET /v1/translations
+Authorization: Bearer <jwt>
+```
+
+Returns locale, namespace, and key count per file.
+
+## Upsert translation file
+
+```http
+PUT /v1/translations
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado"
+  }
+}
+```
+
+## Get translation
+
+```http
+GET /v1/translations/:id
+```
+
+## Delete
+
+```http
+DELETE /v1/translations/:id
+```
+
+Locale must be valid BCP 47 tag. Namespace defaults to `default`.
+
+See [Translation files](/docs/platform/features/translations).

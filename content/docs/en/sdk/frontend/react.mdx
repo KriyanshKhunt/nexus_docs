@@ -102,7 +102,36 @@ import { NotificationInbox } from "@nexus-signal/react";
 <NotificationInbox />;
 ```
 
-Uses `GET /v1/sdk/notifications` with pagination (`hasMore`, `loadMore`).
+Uses `GET /v1/sdk/notifications` with pagination. Filter by topic tag with the `tag` prop — see [Rich inbox](/docs/platform/features/rich-inbox).
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+## In-product guides
+
+Fetch and render dashboard-managed banners and modals:
+
+```tsx
+import { useGuides } from '@nexus-signal/react';
+
+function GuideSlot() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((g) => (
+    <div key={g.id} role="banner">
+      <strong>{g.content.title}</strong>
+      <p>{g.content.body}</p>
+      <button onClick={() => markSeen(g.id)}>Got it</button>
+      <button onClick={() => dismiss(g.id)}>Dismiss</button>
+    </div>
+  ));
+}
+```
+
+See [In-product guides](/docs/platform/features/guides).
 
 ## Preference matrix
 

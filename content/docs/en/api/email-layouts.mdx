@@ -1,0 +1,58 @@
+---
+title: Email Layouts API
+description: Shared email frames and reusable HTML partials.
+---
+
+<DashboardAuth />
+
+Base path: `/v1/email`
+
+## Layouts
+
+```http
+GET    /v1/email/layouts
+GET    /v1/email/layouts/:id
+POST   /v1/email/layouts
+PUT    /v1/email/layouts/:id
+DELETE /v1/email/layouts/:id
+```
+
+Create layout body:
+
+```json
+{
+  "name": "Default",
+  "html": "<html><body>{{{ content }}}</body></html>",
+  "isActive": true
+}
+```
+
+## Partials
+
+```http
+GET    /v1/email/partials
+GET    /v1/email/partials/:id
+POST   /v1/email/partials
+PUT    /v1/email/partials/:id
+DELETE /v1/email/partials/:id
+```
+
+Partial body:
+
+```json
+{
+  "name": "cta-button",
+  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+}
+```
+
+Reference in templates: `{{> cta-button url=data.link label="Click here" }}`
+
+## Management API
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+```
+
+See [Email layouts & partials](/docs/platform/features/email-layouts).

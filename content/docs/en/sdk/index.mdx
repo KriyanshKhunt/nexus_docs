@@ -1,16 +1,28 @@
 ---
 title: SDKs
-description: Official Nexus Signal SDKs — Node.js for server triggers and React for in-app UI.
+description: Official Nexus Signal packages — Node, React, headless JS, Angular, CLI, and MCP server.
 ---
 
 # Nexus Signal SDKs
 
-Official packages for triggering workflows from your backend and rendering in-app notifications in the browser.
+Official packages for server triggers, client inbox UI, terminal automation, and AI assistant integration.
+
+## Client & server SDKs
 
 <Cards>
-  <Card title="Node.js SDK" href="/docs/sdk/node" description="Triggers, schedules, HMAC — server-side only." />
-  <Card title="React SDK" href="/docs/sdk/react" description="Bell, inbox, preferences — browser UI." />
-  <Card title="API Reference" href="/docs/api" description="REST endpoints if you prefer raw HTTP." />
+  <Card title="Node.js SDK" href="/docs/sdk/backend/node" description="Triggers, objects, tenants, broadcasts, schedules." />
+  <Card title="React SDK" href="/docs/sdk/frontend/react" description="Bell, inbox, guides, preference matrix." />
+  <Card title="Headless JS SDK" href="/docs/sdk/frontend/js" description="Vue, Svelte, vanilla JS — no UI bundled." />
+  <Card title="Angular SDK" href="/docs/sdk/frontend/angular" description="Standalone components + signals." />
+</Cards>
+
+## Developer tooling
+
+<Cards>
+  <Card title="Workflow-as-code" href="/docs/sdk/workflow/workflow-as-code" description="defineWorkflow() + sync to platform." />
+  <Card title="Nexus CLI" href="/docs/sdk/devtools/cli" description="Pull/push resources, CI/CD automation." />
+  <Card title="MCP server" href="/docs/sdk/devtools/mcp-server" description="AI assistant tools for Cursor, Claude Code." />
+  <Card title="API Reference" href="/docs/api" description="Raw REST if you prefer HTTP." />
 </Cards>
 
 ## Integration flow
@@ -18,18 +30,19 @@ Official packages for triggering workflows from your backend and rendering in-ap
 ```mermaid
 flowchart LR
   BE[Your backend] -->|sk_* trigger| API[Nexus API]
-  BE -->|HMAC| FE[React app]
+  BE -->|HMAC| FE[Client app]
   API --> W[Worker]
   W -->|WebSocket| FE
   W --> P[Your providers]
+  CLI[CLI / MCP] -->|management| API
 ```
 
-1. Backend triggers workflows with the **secret key** (`sk_*`)
-2. Backend generates **HMAC** for the logged-in user
-3. Frontend wraps the app in `NexusProvider` with **public key + HMAC**
-4. In-app notifications stream to `NotificationCenterBell`
+1. Backend triggers with **secret key** (`sk_*`) and generates **HMAC** for the logged-in user
+2. Frontend connects via `NexusProvider` (React/Angular) or `NexusClient` (JS) with **public key + HMAC**
+3. In-app notifications stream over WebSocket; guides fetch via REST
+4. CLI/MCP manage workflows and resources from terminal or AI IDE
 
-## Quick trigger example
+## Quick trigger
 
 ```ts
 import { NexusClient } from '@nexus-signal/node';
@@ -42,50 +55,49 @@ const nexus = new NexusClient({
 await nexus.workflows.trigger({
   workflowName: 'order.shipped',
   recipients: [{ externalId: 'user_42', email: 'alex@acme.io' }],
+  tenant: 'tenant_acme',
   data: { trackingNumber: '1Z999AA10123456784' },
 });
 ```
 
-## Requirements
+## Package matrix
 
-| SDK | Requires |
-|-----|----------|
-| Node | Node.js 18+ |
-| React | React 18/19, `socket.io-client` ^4.8 |
+| Package | Runtime | Use for |
+|---------|---------|---------|
+| `@nexus-signal/node` | Node.js 18+ | Server triggers, objects, sync |
+| `@nexus-signal/react` | Browser + React 18/19 | Drop-in UI components |
+| `@nexus-signal/js` | Browser (any framework) | Headless inbox + guides |
+| `@nexus-signal/angular` | Browser + Angular 17+ | Standalone components |
+| `@nexus-signal/cli` | Node.js 18+ | Terminal + CI/CD |
+| `@nexus-signal/mcp-server` | Node.js 18+ | AI coding assistants |
 
 ## Install
 
-<Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
+<Tabs items={['Server', 'React', 'Tooling']}>
+  <Tab value="Server">
 
 ```bash
 npm install @nexus-signal/node
+```
+
+  </Tab>
+  <Tab value="React">
+
+```bash
 npm install @nexus-signal/react socket.io-client
 ```
 
   </Tab>
-  <Tab value="pnpm">
+  <Tab value="Tooling">
 
 ```bash
-pnpm add @nexus-signal/node
-pnpm add @nexus-signal/react socket.io-client
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-yarn add @nexus-signal/react socket.io-client
+npm install -g @nexus-signal/cli
+npx @nexus-signal/mcp-server@latest
 ```
 
   </Tab>
 </Tabs>
 
-<Callout type="info">
-REST-only integration? Skip the React SDK and use [API Reference](/docs/api) with your HTTP client.
-</Callout>
-
 <Callout type="warn">
-Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for SDK routes only.
+Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for client SDK routes only.
 </Callout>

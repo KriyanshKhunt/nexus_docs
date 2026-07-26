@@ -1,0 +1,76 @@
+---
+title: MCP Server
+description: "@nexus-signal/mcp-server — expose Nexus to AI coding assistants (Cursor, Claude Code, Windsurf)."
+---
+
+The **MCP server** lets AI agents manage workflows, subscribers, objects, broadcasts, and guides without leaving your editor.
+
+## Setup
+
+Add to your IDE MCP config:
+
+```json
+{
+  "mcpServers": {
+    "nexus-signal": {
+      "command": "npx",
+      "args": ["@nexus-signal/mcp-server@latest"],
+      "env": {
+        "NEXUS_SECRET_KEY": "sk_prd_...",
+        "NEXUS_BASE_URL": "https://api.nexussignal.dev"
+      }
+    }
+  }
+}
+```
+
+## MCP primitives
+
+| Primitive | What it provides |
+|-----------|------------------|
+| **Tools** (21) | Callable actions — trigger, list, create, sync |
+| **Resources** (4) | Read-only context — integration guide, step types, channels |
+| **Prompts** (5) | Slash-command templates — transactional workflow, fan-out, debug |
+
+## Key tools
+
+| Tool | Description |
+|------|-------------|
+| `nexus_trigger_workflow` | Trigger a workflow for recipients |
+| `nexus_send_notification` | Compound tool — resolve subscriber + trigger |
+| `nexus_sync_workflows` | Push workflow-as-code definitions |
+| `nexus_set_object` | Create/update an object |
+| `nexus_subscribe_to_object` | Add subscribers to an object |
+| `nexus_create_broadcast` | Create audience broadcast |
+| `nexus_get_delivery_status` | Debug delivery by log ID |
+
+## Example prompts
+
+```
+"Set up a transactional notification workflow for order confirmations"
+"Send a welcome email to user john@example.com"
+"Subscribe users alice and bob to project-alpha"
+"Why didn't user-123 receive the payment-reminder notification?"
+```
+
+## Resources
+
+Attach context for better AI reasoning:
+
+- `nexus://docs/integration-guide` — quick-start examples
+- `nexus://docs/step-types` — all workflow node types
+- `nexus://docs/channels` — supported channels
+- `nexus://workflows/{name}` — live workflow config
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXUS_SECRET_KEY` | Yes | Environment secret key (`sk_*`) |
+| `NEXUS_BASE_URL` | No | API URL (default `http://localhost:5000`) |
+
+## Related
+
+- [CLI](/docs/sdk/devtools/cli)
+- [Management API](/docs/api/management)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

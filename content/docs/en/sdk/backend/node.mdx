@@ -177,6 +177,81 @@ await nexus.schedules.update(id, { active: false });
 await nexus.schedules.delete(id);
 ```
 
+## Objects
+
+Fan-out notifications to everyone subscribed to an entity:
+
+```ts
+await nexus.objects.set({
+  collection: 'projects',
+  externalId: 'proj_alpha',
+  name: 'Project Alpha',
+});
+
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
+  recipients: ['user_alice', 'user_bob'],
+});
+
+await nexus.workflows.trigger({
+  workflowName: 'project.updated',
+  recipients: [{ collection: 'projects', id: 'proj_alpha' }],
+  data: { changeType: 'deploy' },
+});
+```
+
+See [Objects & Subscriptions](/docs/platform/features/objects-subscriptions).
+
+## Tenants
+
+White-label branding per B2B customer:
+
+```ts
+await nexus.tenants.upsert({
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
+  branding: { logoUrl: 'https://cdn.acme.io/logo.png', primaryColor: '#2563eb' },
+});
+
+await nexus.workflows.trigger({
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: 'user_42' }],
+  data: { invoiceId: 'INV-001' },
+});
+```
+
+## Broadcasts
+
+```ts
+const created = await nexus.broadcasts.create({
+  name: 'Product launch',
+  workflowId: 'workflow-uuid',
+  audienceId: 'audience-uuid',
+  data: { featureName: 'Analytics v2' },
+});
+
+if (created.ok) {
+  await nexus.broadcasts.send(created.data!.broadcast.id);
+}
+```
+
+## Workflow sync
+
+Push code-defined workflows:
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+const flow = defineWorkflow('order.shipped')
+  .addChannel('EMAIL')
+  .addChannel('IN_APP')
+  .toDefinition();
+
+await nexus.workflows.sync(flow);
+```
+
+See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
+
 ## Resilience
 
 - **Circuit breaker** — opens after 5 failures, auto-recovers after 60s

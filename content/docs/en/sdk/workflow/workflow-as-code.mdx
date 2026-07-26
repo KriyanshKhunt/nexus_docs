@@ -1,0 +1,110 @@
+---
+title: Workflow-as-Code
+description: Define workflows in TypeScript with defineWorkflow() and sync to the platform — version-controlled notification logic.
+---
+
+Define notification workflows alongside your application code, then sync them to Nexus with a single command or API call.
+
+## Why workflow-as-code
+
+| Dashboard-only | Workflow-as-code |
+|----------------|------------------|
+| Manual canvas edits | Git-tracked TypeScript definitions |
+| Hard to review in PRs | Diff workflow changes like any code |
+| No compile-time checks | IDE autocomplete on step types |
+
+## Define a workflow
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+export const orderShipped = defineWorkflow('order.shipped', {
+  description: 'Notify when an order ships',
+  tags: ['orders', 'transactional'],
+  active: true,
+})
+  .addChannel('IN_APP')
+  .addChannel('EMAIL', { suppressWhenOnline: true })
+  .addDelay({ hours: 2 })
+  .addChannel('SMS', {
+    conditions: {
+      logic: 'AND',
+      rules: [{ variable: 'data.priority', operator: 'equals', value: 'high' }],
+    },
+  })
+  .toDefinition();
+```
+
+## Sync to platform
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+import { orderShipped } from './workflows/order-shipped';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+const result = await nexus.workflows.sync(orderShipped);
+// or sync multiple: await nexus.workflows.sync([orderShipped, welcomeEmail]);
+```
+
+HTTP equivalent:
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+## Available step builders
+
+| Method | Maps to canvas node |
+|--------|---------------------|
+| `addChannel(kind, opts?)` | Channel (EMAIL, SMS, IN_APP, etc.) |
+| `addDelay({ hours, minutes })` | Delay |
+| `addDigest({ windowMinutes })` | Digest |
+| `addThrottle({ maxCount, windowSeconds })` | Throttle |
+| `addHttpFetch({ url, method, responseKey })` | HTTP Fetch |
+| `addAiNode({ prompt, responseKey })` | AI Node |
+
+All step methods accept optional `conditions` — see [Step conditions](/docs/platform/features/step-conditions).
+
+## Advanced example
+
+```ts
+export const escalation = defineWorkflow('payment.overdue')
+  .addHttpFetch({
+    url: 'https://api.billing.com/invoices/{{ data.invoiceId }}',
+    method: 'GET',
+    responseKey: 'invoice',
+  })
+  .addAiNode({
+    prompt: 'Classify urgency for invoice {{ invoice.amount }} due {{ invoice.dueDate }}. Return: low, medium, or high.',
+    responseKey: 'urgency',
+  })
+  .addChannel('EMAIL')
+  .addChannel('SMS', {
+    conditions: {
+      logic: 'OR',
+      rules: [{ variable: 'data.urgency', operator: 'equals', value: 'high' }],
+    },
+  })
+  .toDefinition();
+```
+
+## CLI sync
+
+```bash
+nexus workflows sync --file ./workflows/order-shipped.json
+# or push pulled JSON from .nexus/workflows/
+nexus workflows push --all
+```
+
+## MCP sync
+
+AI agents can push definitions via `nexus_sync_workflows` — see [MCP server](/docs/sdk/devtools/mcp-server).
+
+## Related
+
+- [Workflows concept](/docs/platform/concepts/workflows)
+- [CLI](/docs/sdk/devtools/cli)
+- [HTTP Fetch node](/docs/platform/features/http-fetch-node)
+- [AI workflow node](/docs/platform/features/ai-workflow-node)

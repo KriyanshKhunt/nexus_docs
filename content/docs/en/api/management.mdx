@@ -1,0 +1,98 @@
+---
+title: Management API
+description: Programmatic resource management for CLI, MCP, and CI/CD — same backend as @nexus-signal/cli.
+---
+
+<ManagementAuth />
+
+Base path: `/v1/management`
+
+The Management API powers the [CLI](/docs/sdk/devtools/cli) and [MCP server](/docs/sdk/devtools/mcp-server). All routes require `Authorization: Bearer sk_*`.
+
+## Workflows
+
+```http
+GET /v1/management/workflows
+GET /v1/management/workflows/:name
+```
+
+## Subscribers
+
+```http
+GET    /v1/management/subscribers
+GET    /v1/management/subscribers/:id
+POST   /v1/management/subscribers
+DELETE /v1/management/subscribers/:id
+```
+
+## Tenants
+
+```http
+GET /v1/management/tenants
+PUT /v1/management/tenants
+```
+
+## Audiences
+
+```http
+GET  /v1/management/audiences
+POST /v1/management/audiences
+```
+
+## Broadcasts
+
+```http
+GET  /v1/management/broadcasts
+POST /v1/management/broadcasts
+POST /v1/management/broadcasts/:id/send
+```
+
+## Guides
+
+```http
+GET  /v1/management/guides
+GET  /v1/management/guides/:id
+POST /v1/management/guides
+PUT  /v1/management/guides/:id
+```
+
+## Objects
+
+```http
+GET    /v1/management/objects
+PUT    /v1/management/objects/:collection/:externalId
+GET    /v1/management/objects/:collection/:externalId
+POST   /v1/management/objects/:collection/:externalId/subscriptions
+DELETE /v1/management/objects/:collection/:externalId/subscriptions
+```
+
+## Content
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+GET  /v1/management/translations
+PUT  /v1/management/translations
+```
+
+## Schedules & logs
+
+```http
+GET /v1/management/schedules
+GET /v1/management/logs/:logId
+```
+
+## Workflow sync (separate route)
+
+Push code-defined workflows:
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) and [CLI](/docs/sdk/devtools/cli).
+
+## Rate limits
+
+Management routes use a dedicated rate limiter per user/key. Use `--json` CLI output for scripting.

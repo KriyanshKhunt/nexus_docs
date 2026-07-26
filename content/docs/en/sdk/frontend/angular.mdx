@@ -1,0 +1,80 @@
+---
+title: Angular SDK
+description: "@nexus-signal/angular — standalone components and signals for notification bell, inbox, and guides."
+---
+
+## Install
+
+```bash
+npm install @nexus-signal/angular socket.io-client
+```
+
+Requires **Angular 17+** (standalone components, signals).
+
+## Setup
+
+```ts
+// app.config.ts
+import { provideNexus } from '@nexus-signal/angular';
+
+export const appConfig = {
+  providers: [
+    provideNexus({
+      publicKey: 'pk_prd_...',
+      subscriberId: 'user-123',
+      hmacSignature: hmacFromBackend,
+      apiBaseUrl: 'https://api.nexussignal.dev',
+      onNotification: (n) => console.log(n.title),
+    }),
+  ],
+};
+```
+
+## Components
+
+```html
+<!-- Popover bell -->
+<nexus-notification-bell />
+
+<!-- Full-page inbox with tag filter -->
+<nexus-notification-inbox tag="updates" [maxItems]="20" />
+
+<!-- Real-time toast popups -->
+<nexus-notification-toast position="top-right" [duration]="5000" />
+```
+
+## Headless services
+
+Inject services for custom UI:
+
+```ts
+import { NexusNotificationsService } from '@nexus-signal/angular';
+
+@Component({
+  template: `
+    <p>Unread: {{ notifications.unread() }}</p>
+    @for (item of notifications.items(); track item.logId) {
+      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
+    }
+  `,
+})
+export class InboxComponent {
+  notifications = inject(NexusNotificationsService);
+}
+```
+
+| Service | Signals |
+|---------|---------|
+| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
+| `NexusGuidesService` | `guides`, `loading` |
+| `NexusPreferencesService` | `preferences`, `topics`, `loading` |
+
+## Theming
+
+Uses the same CSS variables as React (`--nexus-theme-accent`, `--nexus-theme-border`, etc.).
+
+## Related
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [Guides](/docs/platform/features/guides)

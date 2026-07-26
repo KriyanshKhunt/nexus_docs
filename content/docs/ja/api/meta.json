@@ -1,15 +1,23 @@
 {
   "title": "API リファレンス",
-  "description": "トリガー、受信箱、スケジュール、分析用の REST エンドポイント",
+  "description": "トリガー、インボックス、スケジュール、分析の REST エンドポイント",
   "root": true,
   "icon": "Webhook",
   "pages": [
     "index",
     "workflows",
+    "objects",
+    "subscribers",
+    "tenants",
+    "audiences",
+    "broadcasts",
+    "guides",
     "sdk",
     "schedules",
-    "subscribers",
     "topics",
-    "analytics"
+    "translations",
+    "email-layouts",
+    "analytics",
+    "management"
   ]
 }

@@ -1,0 +1,51 @@
+---
+title: Audiences & Segmentation
+description: Dynamic subscriber segments with filter rules — auto-updating targets for broadcasts and workflow triggers.
+---
+
+**Audiences** are named, dynamic segments defined by filter rules. Members update automatically as subscriber properties change — no manual list maintenance.
+
+## Filter rules
+
+Build segments in the dashboard **Audiences** page or via API:
+
+```json
+{
+  "name": "Growth active users",
+  "filters": {
+    "logic": "AND",
+    "rules": [
+      { "field": "properties.plan", "operator": "equals", "value": "growth" },
+      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+    ]
+  }
+}
+```
+
+Supported filters include subscriber properties, locale, email domain, activity (last triggered, last opened), and preference state.
+
+## Preview members
+
+```http
+GET /v1/audiences/:id/members?page=1&limit=50
+```
+
+Dashboard shows live member count as you edit rules.
+
+## Use in triggers
+
+Reference an audience as a recipient (dashboard broadcasts and future trigger expansion):
+
+```ts
+// Broadcast flow — see Broadcasts feature
+{
+  "audienceId": "aud_growth_active",
+  "workflowId": "product-update"
+}
+```
+
+## Related
+
+- [Broadcasts](/docs/platform/features/broadcasts)
+- [Audiences API](/docs/api/audiences)
+- [Subscribers API](/docs/api/subscribers)

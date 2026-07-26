@@ -1,0 +1,63 @@
+---
+title: Translation Files
+description: Centralized locale key-value stores with {{ t "key" }} Handlebars helper — reusable strings across all templates.
+---
+
+**Translation files** store shared locale strings per environment. Reference them in any template with `{{ t "welcome_message" }}` instead of duplicating full template copies per language.
+
+<Callout type="info">
+This complements [Multi-language templates](/docs/platform/features/i18n), which store full locale variants inside `contentTemplates`. Use translation files for shared strings; use locale templates for channel-specific layout differences.
+</Callout>
+
+## Upload translations
+
+Dashboard: **Templates → Translations**, or API:
+
+```http
+PUT /v1/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+## Use in templates
+
+```html
+<h1>{{ t "welcome_message" }}</h1>
+<p>{{ t "order_shipped" }} — {{ data.orderId }}</p>
+<a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
+```
+
+## Locale resolution chain
+
+1. Subscriber `locale` field
+2. Per-trigger `_locale` override
+3. Tenant default locale (if tenant context set)
+4. Environment default (`en`)
+5. Raw key if no translation found
+
+## Namespaces
+
+Organize strings by feature area:
+
+```json
+{ "locale": "ja", "namespace": "billing", "content": { "invoice_due": "請求書の支払期限" } }
+```
+
+Reference: `{{ t "billing.invoice_due" }}` (namespace-aware lookup).
+
+## Related
+
+- [Multi-language templates](/docs/platform/features/i18n)
+- [Translations API](/docs/api/translations)
+- [CLI translations pull/push](/docs/sdk/devtools/cli)

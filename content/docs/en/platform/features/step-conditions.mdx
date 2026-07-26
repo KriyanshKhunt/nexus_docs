@@ -1,0 +1,56 @@
+---
+title: Step Conditions
+description: Boolean rules on any workflow node — send SMS only when amount > 100, skip steps on weekends, and more.
+---
+
+**Step conditions** let you attach filter rules to any node in the workflow canvas. If conditions evaluate to false, the step is skipped and execution continues to the next node.
+
+## Condition structure
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 100 },
+    { "variable": "subscriber.locale", "operator": "equals", "value": "en" }
+  ]
+}
+```
+
+Use `"logic": "OR"` to match any rule instead of all.
+
+## Supported variables
+
+| Prefix | Examples |
+|--------|----------|
+| `data.*` | `data.orderTotal`, `data.plan` |
+| `subscriber.*` | `subscriber.email`, `subscriber.locale` |
+| `tenant.*` | `tenant.name`, `tenant.properties.tier` |
+| `object.*` | `object.name`, `object.properties.status` |
+
+## Operators
+
+`equals`, `not_equals`, `greater_than`, `greater_than_or_equals`, `less_than`, `less_than_or_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `in_list`, `not_in_list`, `regex_match`, `is_true`, `is_false`
+
+## Canvas usage
+
+Click any node → **Conditions** panel → add rules. Skipped steps log `CONDITION_SKIPPED` in the execution lifecycle tree.
+
+## Example: high-value SMS only
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 500 }
+  ]
+}
+```
+
+Attach to an SMS channel node — low-value orders skip SMS and proceed to the next step.
+
+## Related
+
+- [Workflows](/docs/platform/concepts/workflows)
+- [HTTP Fetch node](/docs/platform/features/http-fetch-node)
+- [AI workflow node](/docs/platform/features/ai-workflow-node)

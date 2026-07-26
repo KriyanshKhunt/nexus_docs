@@ -1,0 +1,78 @@
+---
+title: Headless JS SDK
+description: "@nexus-signal/js — framework-agnostic notifications, guides, and preferences for Vue, Svelte, or vanilla JS."
+---
+
+Use **`@nexus-signal/js`** when you are not on React or Angular. Same WebSocket + REST stack as the React SDK, with no UI components — build your own feed.
+
+## Install
+
+```bash
+npm install @nexus-signal/js
+```
+
+## Quick start
+
+```ts
+import { NexusClient } from '@nexus-signal/js';
+
+const nexus = new NexusClient({
+  publicKey: 'pk_prd_...',
+  subscriberId: 'user-123',
+  hmacSignature: hmacFromYourBackend,
+  onNotification: (n) => console.log(n.title),
+});
+
+await nexus.connect();
+console.log(nexus.notifications.unread);
+```
+
+## Sub-clients
+
+| Client | Purpose |
+|--------|---------|
+| `nexus.notifications` | Inbox list, mark read, archive, tag filters |
+| `nexus.guides` | Fetch and track in-product guides |
+| `nexus.preferences` | Topic/channel preference toggles |
+| `nexus.events` | Delivery event history |
+
+## Tag filtering
+
+```ts
+await nexus.notifications.refetch({ tags: ['billing'] });
+await nexus.notifications.loadMore({ tags: ['mention'] });
+```
+
+## Events
+
+```ts
+const unsub = nexus.on('notification.received', (n) => { /* ... */ });
+nexus.on('notifications.count_changed', (count) => { /* badge */ });
+unsub();
+```
+
+## Vue 3 example
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { NexusClient } from '@nexus-signal/js';
+
+const nexus = new NexusClient({ publicKey: 'pk_...', subscriberId: 'user-1', hmacSignature: '...' });
+const unread = ref(0);
+
+onMounted(async () => {
+  await nexus.connect();
+  unread.value = nexus.notifications.unread;
+  nexus.on('notifications.count_changed', (c) => { unread.value = c; });
+});
+onUnmounted(() => nexus.disconnect());
+</script>
+```
+
+## Related
+
+- [React SDK](/docs/sdk/frontend/react) — pre-built UI components
+- [Angular SDK](/docs/sdk/frontend/angular)
+- [Rich inbox](/docs/platform/features/rich-inbox)
+- [SDK API](/docs/api/sdk)

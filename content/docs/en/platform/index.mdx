@@ -13,9 +13,9 @@ Everything about running Nexus as your notification control plane — from first
   <Card title="Quickstart" href="/docs/platform/getting-started/quickstart" description="Send your first notification in under 5 minutes." />
   <Card title="Getting Started" href="/docs/platform/getting-started" description="Workspace, environments, and authentication." />
   <Card title="Concepts" href="/docs/platform/concepts" description="Architecture, BYOP, workflows, pipeline." />
-  <Card title="Features" href="/docs/platform/features" description="Smart timing, presence, AI, cost tools." />
+  <Card title="Features" href="/docs/platform/features" description="Objects, broadcasts, AI nodes, guides, and more." />
   <Card title="Integrations" href="/docs/platform/integrations" description="SendGrid, Twilio, Slack, webhooks." />
-  <Card title="Guides" href="/docs/platform/guides/first-workflow" description="First workflow and production checklist." />
+  <Card title="Guides" href="/docs/platform/guides" description="Workflows, fan-out, broadcasts, multi-tenant." />
 </Cards>
 
 ## What makes Nexus different
@@ -26,7 +26,10 @@ Everything about running Nexus as your notification control plane — from first
 | **AI smart send-time** | Deliver at each subscriber's peak engagement hour |
 | **BYOP** | Your SendGrid, Twilio, Resend keys — zero message markup |
 | **Cost analytics** | Spend per provider, channel, and workflow with budget alerts |
-| **Visual workflows** | Delay, digest, throttle, failover, A/B split, delivery windows |
+| **Visual workflows** | Delay, digest, throttle, failover, A/B split, HTTP Fetch, AI nodes |
+| **Object fan-out** | Notify all subscribers of a project/issue with one trigger |
+| **Broadcasts & guides** | PM-driven announcements and in-product messaging |
+| **CLI + MCP** | Version-control workflows, AI assistant integration |
 
 ## Ten channels, one trigger
 
@@ -60,6 +63,9 @@ flowchart LR
 |--------------|------|
 | Send first notification | [Quickstart](/docs/platform/getting-started/quickstart) |
 | Understand async pipeline | [Delivery pipeline](/docs/platform/concepts/delivery-pipeline) |
+| Notify all watchers of an entity | [Object fan-out guide](/docs/platform/guides/object-fanout) |
+| Send product announcement | [First broadcast](/docs/platform/guides/first-broadcast) |
+| White-label per customer | [B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant) |
 | Reduce provider spend | [Cost reduction](/docs/platform/features/cost-reduction) |
 | Improve open rates | [Smart send-time](/docs/platform/features/smart-send-time) |
 | Go live safely | [Production checklist](/docs/platform/guides/production-checklist) |
