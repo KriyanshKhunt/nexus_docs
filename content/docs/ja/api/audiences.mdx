@@ -1,4 +1,60 @@
 ---
 title: オーディエンス API
-description: フィルタールールに基づいた動的なサブスクライバーセグメントを作成・管理します。
+description: フィルタールールを使用して動的な購読者セグメントを作成および管理します。
 ---
+
+<DashboardAuth />
+
+ベースパス: `/v1/audiences`
+
+## オーディエンスのリスト表示
+
+```http
+GET /v1/audiences?page=1&limit=20
+Authorization: Bearer <jwt>
+```
+
+## オーディエンスの作成
+
+```http
+POST /v1/audiences
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Growth active",
+  "filters": {
+    "logic": "AND",
+    "rules": [
+      { "field": "properties.plan", "operator": "equals", "value": "growth" },
+      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+    ]
+  }
+}
+```
+
+## オーディエンスの取得
+
+```http
+GET /v1/audiences/:id
+```
+
+## メンバーのプレビュー
+
+```http
+GET /v1/audiences/:id/members?page=1&limit=50
+```
+
+現在のフィルタールールに一致する購読者の解決済みリストを返します。
+
+## 更新 / 削除
+
+```http
+PUT    /v1/audiences/:id
+DELETE /v1/audiences/:id
+```
+
+`OWNER`、`ADMIN`、または `DEVELOPER` ロールが必要です。
+
+[オーディエンスとセグメンテーション](/docs/platform/features/audiences)を参照してください。

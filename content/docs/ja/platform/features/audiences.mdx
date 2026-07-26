@@ -1,4 +1,51 @@
 ---
-title: オーディエンスとセグメント
-description: フィルタールールに基づいて動的なサブスクライバーセグメントを構築します。
+title: オーディエンスとセグメンテーション
+description: フィルタールールを持つ動的な購読者セグメント — ブロードキャストとワークフロールトリガーの自動更新ターゲット。
 ---
+
+**オーディエンス**は、フィルタールールによって定義される動的な名前付きセグメントです。購読者のプロパティが変更されると、メンバーは自動的に更新されます — 手動でのリスト管理は不要です。
+
+## フィルタールール
+
+ダッシュボードの **Audiences** ページ、またはAPIを介してセグメントを作成します：
+
+```json
+{
+  "name": "Growth active users",
+  "filters": {
+    "logic": "AND",
+    "rules": [
+      { "field": "properties.plan", "operator": "equals", "value": "growth" },
+      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+    ]
+  }
+}
+```
+
+サポートされているフィルターには、購読者のプロパティ、ロケール、メールドメイン、アクティビティ（最終トリガー、最終開封）、および設定状態が含まれます。
+
+## メンバーのプレビュー
+
+```http
+GET /v1/audiences/:id/members?page=1&limit=50
+```
+
+ダッシュボードは、ルールを編集するときにリアルタイムのメンバー数を表示します。
+
+## トリガーでの使用
+
+ブロードキャストの宛先としてオーディエンスを参照します：
+
+```ts
+// Broadcast flow — see Broadcasts feature
+{
+  "audienceId": "aud_growth_active",
+  "workflowId": "product-update"
+}
+```
+
+## 関連リンク
+
+- [ブロードキャスト](/docs/platform/features/broadcasts)
+- [Audiences API](/docs/api/audiences)
+- [Subscribers API](/docs/api/subscribers)

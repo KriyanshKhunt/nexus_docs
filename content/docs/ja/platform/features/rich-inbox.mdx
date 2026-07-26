@@ -1,4 +1,87 @@
 ---
 title: リッチインボックス
-description: タブ・アクションボタン・アクター表示付きの強化された通知フィードを実現します。
+description: タブ、アクションボタン、アクター、およびタグフィルタリング — 基本的なベルを超えた完全な通知フィード。
 ---
+
+インボックスSDKコンポーネントは、カテゴリ別のフィード、通知ごとのCTA、アクターのアバター、およびタグベースのフィルタリングをサポートしています。
+
+## タグフィルタリング
+
+ワークフローのトピックタグでフィルタリングするには、 `tag` プロパティを使用します：
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+複数のフィードをレンダリングするか、 `tag` プロパティを切り替えて、カスタムのタブ付きUIを作成します：
+
+```tsx
+const [tab, setTab] = useState<string | undefined>(undefined);
+
+<button onClick={() => setTab(undefined)}>All</button>
+<button onClick={() => setTab('billing')}>Billing</button>
+<NotificationInbox tag={tab} />
+```
+
+ダッシュボードで、または [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) を介してワークフローにタグを割り当てます。フィルターは `GET /v1/sdk/notifications?tag=...` にマップされます。
+
+## アクションボタン
+
+トリガーデータまたはワークフローテンプレートの出力にアクションを含めます：
+
+```json
+{
+  "actions": [
+    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
+    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
+  ]
+}
+```
+
+アクションは、インボックスアイテム内のクリック可能なボタンとしてレンダリングされます。URLは相対パス（アプリケーションがルーティングを処理）または絶対APIエンドポイントのいずれかにすることができます。
+
+## アクターのサポート
+
+トリガー時アクターのメタデータを渡して、誰が通知の原因となったかを表示します：
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "comment.added",
+  recipients: [{ externalId: "user_42" }],
+  data: {
+    actor: {
+      name: "Sarah Chen",
+      avatarUrl: "https://cdn.example.com/sarah.jpg",
+    },
+    commentPreview: "Looks good to me!",
+  },
+});
+```
+
+フィード内でアバター付きの「Sarah Chen commented...」としてレンダリングされます。
+
+## 通知のライフサイクル
+
+| ステータス | 意味                                 |
+| ---------- | ------------------------------------ |
+| Unread     | 配信済み、未開封                     |
+| Read       | ユーザーがクリックしたか、既読に設定 |
+| Archived   | アクティブフィードから非表示         |
+| Seen       | (SDK) フィード内でスクロール通過済み |
+
+マルチデバイス同期：1つのデバイスで既読にすると、WebSocketを介してすべての場所でバッジ数がクリアされます。
+
+## ヘッドレサアクセス (JS SDK)
+
+```ts
+await nexus.notifications.refetch({ tags: ["billing"] });
+await nexus.notifications.loadMore({ tags: ["mention"] });
+```
+
+NexusがWebSocket + APIの状態を管理しながら、 [`@nexus-signal/js`](/docs/sdk/frontend/js) を使用して完全にカスタムなUIを構築します。
+
+## 関連リンク
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [SDK API](/docs/api/sdk)

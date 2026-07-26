@@ -1,4 +1,71 @@
 ---
-title: インプロダクトガイド
-description: コードを書かずにバナー・モーダル・ツールチップを特定ユーザーに表示します。
+title: プロダクト内ガイド
+description: ダッシュボードから管理されるターゲットバナー、モーダル、およびツールチップ — ワークフローでトリガーされる通知ではありません。
 ---
+
+**ガイド**は、ダッシュボードから制御されるプロダクト内のUIサーフェス（バナー、モーダル、ツールチップ、バッジ）を提供します。エンジニアはスロットを一度定義すれば、PMがコンテンツ、ターゲット、およびアクティブ化を管理できます。
+
+## ガイドの種類
+
+| タイプ    | ユースケース                         |
+| --------- | ------------------------------------ |
+| `banner`  | ページ上部のお知らせ                 |
+| `modal`   | 機能のリリース、アップグレード通知   |
+| `tooltip` | 文脈に応じたオンボーディングのヒント |
+| `badge`   | 新しいUI要素のハイライト             |
+
+## ターゲットルール
+
+ガイドは、以下に基づいて購読者に一致します：
+
+- ユーザーセグメント / オーディエンス
+- ページのURLまたはパス名パターン (pathname)
+- アプリケーションから渡される機能フラグまたはカスタムコンテキスト
+- アクティブ化スケジュール（開始/終了日時）
+
+## SDK 統合
+
+ガイドはクライアント側 (client-side) で取得されます — インapp通知のようにWebSocketを介して送信されることはありません。
+
+<Tabs items={['React', 'Headless JS']}>
+  <Tab value="React">
+
+```tsx
+import { useGuides } from "@nexus-signal/react";
+
+function GuideRenderer() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} onClick={() => markSeen(guide.id)}>
+      {guide.content.title}
+    </div>
+  ));
+}
+```
+
+  </Tab>
+  <Tab value="Headless JS">
+
+```ts
+await nexus.guides.fetch({ pathname: "/dashboard" });
+nexus.guides.markSeen(guideId);
+nexus.guides.dismiss(guideId);
+```
+
+  </Tab>
+</Tabs>
+
+SDKルート: `GET /v1/sdk/guides` — 現在のユーザー＋コンテキストに対してアクティブなガイドを返します。
+
+## アナリティクス
+
+`POST /v1/sdk/guides/:guideId/events` を介して、インプレッション、インタラクション、および非表示を追跡します。
+
+## 関連リンク
+
+- [Guides API](/docs/api/guides)
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)

@@ -1,4 +1,98 @@
 ---
 title: 管理 API
-description: CLI、MCP、およびCI/CD向けのプログラムによるリソース管理API。
+description: CLI、MCP、およびCI/CD用のプログラムによるリソース管理 — @nexus-signal/cliと同じバックエンド。
 ---
+
+<ManagementAuth />
+
+ベースパス: `/v1/management`
+
+管理APIは、[CLI](/docs/sdk/devtools/cli)および[MCPサーバー](/docs/sdk/devtools/mcp-server)を動かしています。すべてのルートに `Authorization: Bearer sk_*` が必要です。
+
+## ワークフロー
+
+```http
+GET /v1/management/workflows
+GET /v1/management/workflows/:name
+```
+
+## 購読者
+
+```http
+GET    /v1/management/subscribers
+GET    /v1/management/subscribers/:id
+POST   /v1/management/subscribers
+DELETE /v1/management/subscribers/:id
+```
+
+## テナント
+
+```http
+GET /v1/management/tenants
+PUT /v1/management/tenants
+```
+
+## オーディエンス
+
+```http
+GET  /v1/management/audiences
+POST /v1/management/audiences
+```
+
+## ブロードキャスト
+
+```http
+GET  /v1/management/broadcasts
+POST /v1/management/broadcasts
+POST /v1/management/broadcasts/:id/send
+```
+
+## ガイド
+
+```http
+GET  /v1/management/guides
+GET  /v1/management/guides/:id
+POST /v1/management/guides
+PUT  /v1/management/guides/:id
+```
+
+## オブジェクト
+
+```http
+GET    /v1/management/objects
+PUT    /v1/management/objects/:collection/:externalId
+GET    /v1/management/objects/:collection/:externalId
+POST   /v1/management/objects/:collection/:externalId/subscriptions
+DELETE /v1/management/objects/:collection/:externalId/subscriptions
+```
+
+## コンテンツ
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+GET  /v1/management/translations
+PUT  /v1/management/translations
+```
+
+## スケジュールとログ
+
+```http
+GET /v1/management/schedules
+GET /v1/management/logs/:logId
+```
+
+## ワークフローの同期 (個別ルート)
+
+コード定義のワークフローをアップロードします：
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+[Workflow-as-Code](/docs/sdk/workflow/workflow-as-code)および[CLI](/docs/sdk/devtools/cli)を参照してください。
+
+## レート制限
+
+管理ルートは、ユーザー/キーごとの専用レート制限を使用します。自動化やスクリプトには、CLIの `--json` 出力を使用してください。

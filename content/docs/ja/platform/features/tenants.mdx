@@ -1,4 +1,61 @@
 ---
-title: マルチテナントブランディング
-description: B2B SaaS の各テナントにホワイトラベルのブランディングと通知設定を提供します。
+title: テナントごとのブランディング
+description: B2B SaaS向けのブランド分離、優先設定、およびオプションのプロバイダーオーバーライドを備えたマルチテナント通知。
 ---
+
+**テナント**は、Nexus内の _あなたの_ 顧客（あなたのワークスペースであるNexus **組織**とは異なります）を表します。ブランド分離、顧客ごとの受信トレイ、および隔離された設定を必要とする複数の企業にプロダクトを提供する場合は、テナントを使用します。
+
+## テナントモデル
+
+各テナント（環境ごと）には以下が含まれます：
+
+| フィールド           | 目的                                          |
+| -------------------- | --------------------------------------------- |
+| `externalId`         | 顧客のID（例： `tenant_acme`）                |
+| `name`               | 表示名                                        |
+| `branding`           | ロゴのURL、プライマリカラー、フッターのHTML   |
+| `providerOverrides`  | テナント固有のオプションのSendGrid/Twilioキー |
+| `preferenceDefaults` | 新しい購読者向けのデフォルト設定配列          |
+
+## テナントの作成
+
+ダッシュボード： **Tenants** ページ、またはSDK：
+
+```ts
+await nexus.tenants.upsert({
+  externalId: "tenant_acme",
+  name: "Acme Corp",
+  branding: {
+    logoUrl: "https://cdn.acme.io/logo.png",
+    primaryColor: "#2563eb",
+    footerHtml: "<p>© Acme Corp</p>",
+  },
+});
+```
+
+## テナントコンテキストでのトリガー
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: "invoice.sent",
+  tenant: "tenant_acme",
+  recipients: [{ externalId: "user_42", email: "billing@acme.io" }],
+  data: { invoiceId: "INV-001" },
+});
+```
+
+テンプレートのコンパイルにより、テナントのブランディングがメールレイアウトに適用されます。SDKのクエリパラメータ `tenantId` を介して、テナントごとにインapp通知をフィルタリングします。
+
+## SDK受信トレイのスコープ
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+```
+
+クライアント側でのテナントフィルタリングについては、[SDK API](/docs/api/sdk)を参照してください。
+
+## 関連リンク
+
+- [B2Bマルチテナント設定ガイド](/docs/platform/guides/b2b-multi-tenant)
+- [Tenants API](/docs/api/tenants)
+- [メールレイアウト](/docs/platform/features/email-layouts)

@@ -1,4 +1,78 @@
 ---
-title: 翻訳 (i18n)
-description: ロケール別の翻訳バンドルを管理し、Handlebars の t ヘルパーで自動解決します。
+title: 翻訳ファイル
+description: `{{ t "key" }}` Handlebarsヘルパーを使用した集中型ロケールキー値ストア — すべてのテンプレートで再利用可能な文字列。
 ---
+
+**翻訳ファイル** は、ロケールごとの共有言語文字列を環境ごとに保存します。言語ごとテンプレートのコピーを複製する代わりに、任意のテンプレートで `{{ t "welcome_message" }}` を使用して参照します。
+
+<Callout type="info">
+  これは、 `contentTemplates` 内に完全なロケールバリアントを保存する
+  [マルチ言語テンプレート](/docs/platform/features/i18n)
+  を補完します。共有文字列には翻訳ファイルを使用し、チャネル固有のレイアウトの違いにはロケールテンプレートを使用します。
+</Callout>
+
+## 翻訳のアップロード
+
+ダッシュボード： **Templates → Translations** 、またはAPI：
+
+ダッシュボード/ブラウザAPI：
+
+```http
+PUT /v1/translations
+Authorization: Bearer <jwt_token>
+```
+
+管理/サーバーAPI（CLI/スクリプト）：
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+## テンプレートでの使用
+
+```html
+<h1>{{ t "welcome_message" }}</h1>
+<p>{{ t "order_shipped" }} — {{ data.orderId }}</p>
+<a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
+```
+
+## ロケールの解決チェーン
+
+1. 購読者の `locale` フィールド
+2. トリガーによる `_locale` のオーバーライド
+3. テナントのデフォルトロケール（テナントコンテキストが定義されている場合）
+4. 環境のデフォルトロケール (`en`)
+5. 翻訳が見つからない場合は生のキー
+
+## 名前空間 (Namespaces)
+
+機能領域ごとに文字列を整理します：
+
+```json
+{
+  "locale": "ja",
+  "namespace": "billing",
+  "content": { "invoice_due": "請求書の支払期限" }
+}
+```
+
+参照： `{{ t "billing.invoice_due" }}` （名前空間対応の検索）。
+
+## 関連リンク
+
+- [マルチ言語テンプレート](/docs/platform/features/i18n)
+- [Translations API](/docs/api/translations)
+- [CLIによる翻訳のプル/プッシュ](/docs/sdk/devtools/cli)

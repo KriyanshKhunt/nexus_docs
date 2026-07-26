@@ -1,4 +1,103 @@
 ---
-title: 初めてのブロードキャスト
-description: オーディエンスセグメントへのワンタイム通知の作成と送信方法を説明します。
+title: 最初のブロードキャスト
+description: コードのデプロイを必要とせず、ダッシュボードから動的なオーディエンスセグメントに1回限りの製品発表を送信します。
 ---
+
+**ブロードキャスト**を使用すると、製品およびマーケティングチームはエンジニアの介入なしに **セグメント** にマルチチャネルメッセージを送信できます。
+
+## 前提条件
+
+- Email + In-App チャネルを持つ公開済みのワークフロー（例： `product.announcement`）
+- 定義済みの [オーディエンス](/docs/platform/features/audiences) セグメント
+
+## ステップ 1 — オーディエンスの作成
+
+ダッシュボード： **Audiences** → **New audience**
+
+フィルター例：
+
+| 規則              | 演算子      | 値       |
+| ----------------- | ----------- | -------- |
+| `properties.plan` | equals      | `growth` |
+| `lastActiveAt`    | within days | `30`     |
+
+保存し、アクティブなメンバー数のプレビューを確認します。
+
+## ステップ 2 — ブロードキャストの作成
+
+ダッシュボード： **Broadcasts** → **New broadcast**
+
+1. **名前:** "Q3 Feature Launch"
+2. **ワークフロー:** `product.announcement` を選択
+3. **オーディエンス:** Growth セグメントを選択
+4. **データ:** テンプレート変数のためのオプションの JSON:
+
+```json
+{
+  "featureName": "Smart Analytics",
+  "launchUrl": "https://app.example.com/analytics"
+}
+```
+
+5. **スケジュール:** 今すぐ送信するか、将来の日時を選択
+
+## ステップ 3 — プレビューと送信
+
+オーディエンスの規模とワークフローチャネルを確認します。 **Send** をクリック（またはスケジュール）します。
+
+ブロードキャストのステータスが進行します： `DRAFT` → `SENDING` → `COMPLETED`
+
+## ステップ 4 — 結果の監視
+
+チャネルごとの配信統計を表示するには、ブロードキャスト詳細ビューを開きます。個別の失敗については **Audit Logs** を参照してください。
+
+## API による代替案
+
+<DashboardAuth />
+
+```http
+POST /v1/broadcasts
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Q3 Feature Launch",
+  "workflowId": "workflow-uuid-from-dashboard",
+  "audienceId": "audience-uuid",
+  "data": { "featureName": "Smart Analytics" }
+}
+```
+
+送信：
+
+```http
+POST /v1/broadcasts/:id/send
+```
+
+<Callout type="info">
+  `workflowId` と `audienceId`
+  は、ダッシュボードまたは管理APIのリストエンドポイントから取得したUUIDです —
+  ワークフロー名の文字列ではありません。
+</Callout>
+
+## Node SDK
+
+```ts
+const created = await nexus.broadcasts.create({
+  name: "Q3 Launch",
+  workflowId: "uuid",
+  audienceId: "uuid",
+  data: { featureName: "Smart Analytics" },
+});
+
+if (created.ok) {
+  await nexus.broadcasts.send(created.data!.broadcast.id);
+}
+```
+
+## 関連リンク
+
+- [ブロードキャスト機能](/docs/platform/features/broadcasts)
+- [オーディエンス](/docs/platform/features/audiences)
+- [Broadcasts API](/docs/api/broadcasts)

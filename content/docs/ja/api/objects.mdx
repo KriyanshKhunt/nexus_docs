@@ -1,4 +1,91 @@
 ---
 title: オブジェクト API
-description: オブジェクトの作成、サブスクリプション管理、ファンアウト通知のトリガー。
+description: オブジェクトの作成、購読管理、およびファンアウト通知のトリガー。
 ---
+
+<SecretKeyAuth />
+
+ベースパス: `/v1/objects`
+
+## オブジェクトの定義
+
+```http
+PUT /v1/objects/:collection/:externalId
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "team": "eng" }
+}
+```
+
+## オブジェクトの取得
+
+```http
+GET /v1/objects/:collection/:externalId
+```
+
+## オブジェクトのリスト表示
+
+```http
+GET /v1/objects?collection=projects&page=1&limit=50
+```
+
+## 購読の追加
+
+```http
+POST /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_alice", "user_bob"]
+}
+```
+
+## 購読の削除
+
+```http
+DELETE /v1/objects/:collection/:externalId/subscriptions
+```
+
+```json
+{
+  "recipients": ["user_bob"]
+}
+```
+
+## 購読のリスト表示
+
+```http
+GET /v1/objects/:collection/:externalId/subscriptions
+```
+
+## ファンアウトトリガー
+
+[Workflowトリガー](/docs/api/workflows)の宛先にオブジェクトの受信者を使用します：
+
+```json
+{
+  "workflowName": "project.updated",
+  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
+  "data": {}
+}
+```
+
+## Node SDK
+
+```ts
+await nexus.objects.set({
+  collection: "projects",
+  externalId: "proj_alpha",
+  name: "Alpha",
+});
+await nexus.objects.addSubscriptions("projects", "proj_alpha", {
+  recipients: ["user_1"],
+});
+```
+
+[オブジェクトと購読](/docs/platform/features/objects-subscriptions)を参照してください。

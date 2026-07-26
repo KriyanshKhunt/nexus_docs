@@ -1,4 +1,58 @@
 ---
 title: メールレイアウト API
-description: 共有メールレイアウトラッパーとパーシャルコンポーネントを管理します。
+description: 共有メールフレームと再利用可能なHTMLパーシャル。
 ---
+
+<DashboardAuth />
+
+ベースパス: `/v1/email`
+
+## レイアウト
+
+```http
+GET    /v1/email/layouts
+GET    /v1/email/layouts/:id
+POST   /v1/email/layouts
+PUT    /v1/email/layouts/:id
+DELETE /v1/email/layouts/:id
+```
+
+レイアウト作成のボディ：
+
+```json
+{
+  "name": "Default",
+  "html": "<html><body>{{{ content }}}</body></html>",
+  "isActive": true
+}
+```
+
+## パーシャル
+
+```http
+GET    /v1/email/partials
+GET    /v1/email/partials/:id
+POST   /v1/email/partials
+PUT    /v1/email/partials/:id
+DELETE /v1/email/partials/:id
+```
+
+パーシャルのボディ：
+
+```json
+{
+  "name": "cta-button",
+  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+}
+```
+
+テンプレート内での参照： `{{> cta-button url=data.link label="Click here" }}`
+
+## 管理API
+
+```http
+GET  /v1/management/email/layouts
+POST /v1/management/email/layouts
+```
+
+[メールレイアウトとパーシャル](/docs/platform/features/email-layouts)を参照してください。

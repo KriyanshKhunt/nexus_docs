@@ -1,4 +1,65 @@
 ---
 title: 翻訳 API
-description: ロケール翻訳バンドルのアップロードと管理を行います。
+description: `{{ t "key" }}` テンプレートヘルパー用のロケールキー値翻訳ファイルを保存します。
 ---
+
+<SecretKeyAuth />
+
+ベースパス: `/v1/management/translations`
+
+## 翻訳リストの表示
+
+アップロードされたすべてのロケール辞書パッケージを取得します。
+
+```http
+GET /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+ロケール、名前空間、およびファイルごとのキー数を返します：
+
+```json
+{
+  "translations": [
+    {
+      "id": "trans_123",
+      "locale": "es",
+      "namespace": "default",
+      "keyCount": 3,
+      "createdAt": "2026-07-26T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+## 翻訳パッケージの保存 (Upsert)
+
+BCP 47ロケールに対応するローカライズされた文字列を含むJSON辞書をアップロードします。
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+```
+
+```json
+{
+  "locale": "es",
+  "namespace": "default",
+  "content": {
+    "welcome_message": "Bienvenido",
+    "order_shipped": "Tu pedido ha sido enviado",
+    "cta_view_order": "Ver pedido"
+  }
+}
+```
+
+デフォルトの名前空間は `default` です。
+
+---
+
+## 関連リンク
+
+- [翻訳ファイルガイド](/docs/platform/features/translations)
+- [CLIによる翻訳のプル/プッシュ](/docs/sdk/devtools/cli)

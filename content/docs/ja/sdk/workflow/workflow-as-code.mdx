@@ -1,4 +1,111 @@
 ---
-title: コードによるワークフロー定義
-description: TypeScript でワークフロー定義を書き、バージョン管理・テスト・CI/CD 連携を実現します。
+title: Workflow-as-Code
+description: TypeScriptでdefineWorkflow()を使用してワークフローを定義し、プラットフォームと同期します — バージョン管理された通知ロジック。
 ---
+
+アプリケーションコードとともに通知ワークフローを定義し、単一のコマンドまたはAPI呼び出しでNexusに同期します。
+
+## なぜ Workflow-as-Code なのか
+
+| ダッシュボードのみ     | Workflow-as-Code                           |
+| ---------------------- | ------------------------------------------ |
+| 手動のキャンバス編集   | Gitで追跡されるTypeScript定義              |
+| PRでのレビューが困難   | ワークフローの変更をコードのように差分比較 |
+| コンパイルチェックなし | ステップタイプでのIDEオートコンプリート    |
+
+## ワークフローの定義
+
+```ts
+import { defineWorkflow } from "@nexus-signal/node";
+
+export const orderShipped = defineWorkflow("order.shipped", {
+  description: "Notify when an order ships",
+  tags: ["orders", "transactional"],
+  active: true,
+})
+  .addChannel("IN_APP")
+  .addChannel("EMAIL", { suppressWhenOnline: true })
+  .addDelay({ hours: 2 })
+  .addChannel("SMS", {
+    conditions: {
+      logic: "AND",
+      rules: [{ variable: "data.priority", operator: "equals", value: "high" }],
+    },
+  })
+  .toDefinition();
+```
+
+## プラットフォームへの同期
+
+```ts
+import { NexusClient } from "@nexus-signal/node";
+import { orderShipped } from "./workflows/order-shipped";
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+const result = await nexus.workflows.sync(orderShipped);
+// または複数同期: await nexus.workflows.sync([orderShipped, welcomeEmail]);
+```
+
+HTTPに相当：
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_…
+```
+
+## 利用可能なステップビルダー
+
+| メソッド                                     | キャンバスノードへのマッピング     |
+| -------------------------------------------- | ---------------------------------- |
+| `addChannel(kind, opts?)`                    | チャネル (EMAIL, SMS, IN_APP など) |
+| `addDelay({ hours, minutes })`               | Delay (遅延)                       |
+| `addDigest({ windowMinutes })`               | Digest (ダイジェスト)              |
+| `addThrottle({ maxCount, windowSeconds })`   | Throttle (スロットル)              |
+| `addHttpFetch({ url, method, responseKey })` | HTTP Fetch (HTTPデータ取得)        |
+| `addAiNode({ prompt, responseKey })`         | AI Node (AIノード)                 |
+
+すべてのステップメソッドは、オプションの `conditions` を受け入れます — [ステップ条件](/docs/platform/features/step-conditions) を参照してください。
+
+## 高度な例
+
+```ts
+export const escalation = defineWorkflow("payment.overdue")
+  .addHttpFetch({
+    url: "https://api.billing.com/invoices/{{ data.invoiceId }}",
+    method: "GET",
+    responseKey: "invoice",
+  })
+  .addAiNode({
+    prompt:
+      "Classify urgency for invoice {{ invoice.amount }} due {{ invoice.dueDate }}. Return: low, medium, or high.",
+    responseKey: "urgency",
+  })
+  .addChannel("EMAIL")
+  .addChannel("SMS", {
+    conditions: {
+      logic: "OR",
+      rules: [{ variable: "data.urgency", operator: "equals", value: "high" }],
+    },
+  })
+  .toDefinition();
+```
+
+## CLI による同期
+
+```bash
+nexus workflows sync --file ./workflows/order-shipped.json
+# または .nexus/workflows/ から取得したJSONをプッシュ
+nexus workflows push --all
+```
+
+## MCP による同期
+
+AIエージェントは `nexus_sync_workflows` を介して定義を送信できます — [AI MCP Server](/docs/sdk/devtools/mcp-server) を参照してください。
+
+## 関連リンク
+
+- [ワークフローの概念](/docs/platform/concepts/workflows)
+- [CLI](/docs/sdk/devtools/cli)
+- [HTTPデータ取得ノード](/docs/platform/features/http-fetch-node)
+- [AIワークフローノード](/docs/platform/features/ai-workflow-node)

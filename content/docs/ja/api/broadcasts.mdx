@@ -1,4 +1,64 @@
 ---
 title: ブロードキャスト API
-description: オーディエンスへのワンタイムワークフロー送信をスケジュール・実行します。
+description: 1回限りのオーディエンスメッセージを作成、スケジュール、および送信します。
 ---
+
+<DashboardAuth />
+
+ダッシュボードベースパス: `/v1/broadcasts`
+
+管理API: `GET|POST /v1/management/broadcasts`, `POST /v1/management/broadcasts/:id/send`
+
+## ブロードキャストのリスト表示
+
+```http
+GET /v1/broadcasts?status=COMPLETED&page=1
+Authorization: Bearer <jwt>
+```
+
+## ブロードキャストの作成
+
+```http
+POST /v1/broadcasts
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Q4 Update",
+  "workflowId": "workflow-uuid",
+  "audienceId": "audience-uuid",
+  "scheduledAt": "2026-08-01T09:00:00Z"
+}
+```
+
+下書きの場合は `scheduledAt` を省略し、後で手動で送信します。
+
+## 即時送信
+
+```http
+POST /v1/broadcasts/:id/send
+```
+
+## キャンセル
+
+```http
+POST /v1/broadcasts/:id/cancel
+```
+
+## ブロードキャストのステータス
+
+`DRAFT` · `SCHEDULED` · `SENDING` · `COMPLETED` · `FAILED` · `CANCELLED`
+
+## Node SDK
+
+```ts
+await nexus.broadcasts.create({
+  name: "Launch",
+  workflowId: "workflow-uuid",
+  audienceId: "audience-uuid",
+});
+await nexus.broadcasts.send(broadcastId);
+```
+
+[ブロードキャスト](/docs/platform/features/broadcasts)を参照してください。

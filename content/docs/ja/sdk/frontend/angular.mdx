@@ -1,4 +1,80 @@
 ---
 title: Angular SDK
-description: "@nexus-signal/angular — 通知ベル・インボックス・ガイド向けスタンドアロンコンポーネント。"
+description: "@nexus-signal/angular — 通知ベル、インボックス、およびガイド用のスタンドアロンコンポーネントとシグナル。"
 ---
+
+## インストール
+
+```bash
+npm install @nexus-signal/angular socket.io-client
+```
+
+**Angular 17+** （スタンドアロンコンポーネント、シグナル）が必要です。
+
+## 設定
+
+```ts
+// app.config.ts
+import { provideNexus } from "@nexus-signal/angular";
+
+export const appConfig = {
+  providers: [
+    provideNexus({
+      publicKey: "pk_prd_...",
+      subscriberId: "user-123",
+      hmacSignature: hmacFromBackend,
+      apiBaseUrl: "https://api.nexussignal.dev",
+      onNotification: (n) => console.log(n.title),
+    }),
+  ],
+};
+```
+
+## コンポーネント
+
+```html
+<!-- ポップオーバーベル -->
+<nexus-notification-bell />
+
+<!-- タグフィルター付きの全ページインボックス -->
+<nexus-notification-inbox tag="updates" [maxItems]="20" />
+
+<!-- リアルタイムのトーストポップアップ -->
+<nexus-notification-toast position="top-right" [duration]="5000" />
+```
+
+## ヘッドレササービス
+
+カスタムUI用のサービスを注入します：
+
+```ts
+import { NexusNotificationsService } from "@nexus-signal/angular";
+
+@Component({
+  template: `
+    <p>未読: {{ notifications.unread() }}</p>
+    @for (item of notifications.items(); track item.logId) {
+      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
+    }
+  `,
+})
+export class InboxComponent {
+  notifications = inject(NexusNotificationsService);
+}
+```
+
+| サービス                    | シグナル                                |
+| --------------------------- | --------------------------------------- |
+| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
+| `NexusGuidesService`        | `guides`, `loading`                     |
+| `NexusPreferencesService`   | `preferences`, `topics`, `loading`      |
+
+## スタイリング
+
+Reactと同じCSS変数を使用します（`--nexus-theme-accent`、`--nexus-theme-border` など）。
+
+## 関連リンク
+
+- [React SDK](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)
+- [プロダクト内ガイド](/docs/platform/features/guides)

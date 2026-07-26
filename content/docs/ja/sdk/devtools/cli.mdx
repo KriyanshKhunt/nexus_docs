@@ -1,4 +1,337 @@
 ---
 title: Nexus CLI
-description: "@nexus-signal/cli — ターミナルからワークフロー、翻訳、設定を管理します。"
+description: "@nexus-signal/cli — リソースのプル/プッシュ、ワークフローのトリガー、B2Bテナントの管理、およびCI/CDとの統合。"
 ---
+
+**Nexus CLI** は、ターミナルやCI/CDパイプライン内からワークフロー、翻訳、および設定を管理するために、[Management API](/docs/api/management)をラップします。
+
+## インストール
+
+パッケージをグローバルにインストールします：
+
+```bash
+npm install -g @nexus-signal/cli
+```
+
+または、インストールせずにコマンドをその場で実行します：
+
+```bash
+npx @nexus-signal/cli --help
+```
+
+---
+
+## 認証とベース設定
+
+CLIは資格情報をローカルに保存し、すべてのコマンドでキーを指定する手間を省きます。
+
+### ログイン
+
+Nexusワークスペースに認証します。これにより、シークレットキーが `~/.nexus-signal/config.json` に保存されます。
+
+```bash
+nexus login
+# インタラクティブプロンプトが sk_... キーを要求します
+```
+
+単一のコマンドまたはスクリプトで直接認証する場合：
+
+```bash
+nexus login --key sk_prd_your_secret_key --url https://api.nexussignal.dev
+```
+
+### IDの表示
+
+接続状態とキーの有効性を確認します：
+
+```bash
+nexus whoami
+```
+
+### ログアウト
+
+ローカルシステムからキャッシュされた資格情報を削除します：
+
+```bash
+nexus logout
+```
+
+### 環境のオーバーライド
+
+保存された資格情報をオーバーライドします（CI/CD環境に最適）：
+
+```bash
+export NEXUS_SECRET_KEY=sk_prd_your_secret_key
+export NEXUS_BASE_URL=https://api.nexussignal.dev
+```
+
+---
+
+## コマンドリファレンス
+
+すべてのコマンドは、解析可能なJSONを `stdout` に直接出力するための `--json` フラグをサポートしています。
+
+### 1. ワークフロー
+
+コード定義の通知パスを作成、ダウンロード、および同期します。
+
+- **ワークフローのリスト表示**:
+  ```bash
+  nexus workflows list
+  ```
+- **ワークフロー構造の表示**:
+  ```bash
+  nexus workflows get order.shipped
+  ```
+- **定義のダウンロード**: リモートワークフローをローカルの `.nexus/workflows/*.json` ファイルに保存します。
+  ```bash
+  nexus workflows pull --all
+  nexus workflows pull --dir ./custom-workflows-path
+  ```
+- **定義のプッシュ**: `.nexus/workflows/` 内のローカルJSON定義をプラットフォームにアップロードします。
+  ```bash
+  nexus workflows push --all
+  nexus workflows push --dir ./custom-workflows-path
+  ```
+- **ワークフローのトリガー**: 指定された受信者IDに対してワークフローを実行します。
+  ```bash
+  nexus workflows trigger order.shipped --to user_42,user_43 --data '{"orderId": "123"}' --tenant tenant_acme
+  ```
+
+---
+
+### 2. 購読者
+
+通知ワークフローの受信者を管理します。
+
+- **購読者のリスト表示**: 受信者を検索またはフィルターします。
+  ```bash
+  nexus subscribers list --search alice --page 1 --limit 20
+  ```
+- **詳細の取得**: 購読者のプロファイルを取得します。
+  ```bash
+  nexus subscribers get user_42
+  ```
+- **作成 / 更新**: 購読者の連絡先フィールドをアップサートします。
+  ```bash
+  nexus subscribers create --externalId user_42 --email billing@acme.io --phone +1234567890 --locale es --timezone America/New_York
+  ```
+- **購読者の削除**: GDPR準拠のクリーンアップヘルパー。明示的な確認が必要です。
+  ```bash
+  nexus subscribers delete user_42 --confirm
+  ```
+
+---
+
+### 3. オブジェクトと購読
+
+ファンアウト通知のために、ユーザー以外のエンティティ（プロジェクト、チーム、フォルダーなど）を管理します。
+
+- **オブジェクトのリスト表示**: 設定されたコレクションを取得します。
+  ```bash
+  nexus objects list
+  nexus objects list --collection projects
+  ```
+- **オブジェクトの保存 (Upsert)**: ユーザー以外のエンティティの詳細を構成します。
+  ```bash
+  nexus objects set --collection projects --id proj_alpha --name "Project Alpha" --properties '{"status": "active"}'
+  ```
+- **受信者の購読**: オブジェクトを監視するユーザーを登録します。このオブジェクトがトリガーされると、すべての購読者に通知されます。
+  ```bash
+  nexus objects subscribe --collection projects --id proj_alpha --subscribers user_42,user_43
+  ```
+
+---
+
+### 4. B2Bテナント
+
+B2Bマルチテナントアカウントのブランド分離、優先デフォルト、およびブランド上書きを管理します。
+
+- **テナントのリスト表示**:
+  ```bash
+  nexus tenants list
+  ```
+- **テナントの保存**: マルチテナント設定を作成または編集します。
+  ```bash
+  nexus tenants set --externalId tenant_acme --name "Acme Corp" --branding '{"logoUrl": "https://cdn.acme.io/logo.png", "primaryColor": "#2563eb"}'
+  ```
+
+---
+
+### 5. オーディエンス
+
+セグメンテーションルールに基づいて購読者を動的にグループ化します。
+
+- **オーディエンスのリスト表示**: セグメントを可視化します。
+  ```bash
+  nexus audiences list
+  ```
+- **オーディエンスの作成**: フィルター条件を使用してセグメントを作成します。
+  ```bash
+  nexus audiences create --name "Inactive Users" --filters '[{"field": "globalUnsubscribed", "operator": "is_false"}]' --description "Non-unsubscribed subscribers"
+  ```
+
+---
+
+### 6. ブロードキャスト
+
+オーディエンスへの1回限りのワークフロー通知をスケジュールまたは送信します。
+
+- **ブロードキャストのリスト表示**: ステータスと受信者数を確認します。
+  ```bash
+  nexus broadcasts list
+  ```
+- **ブロードキャストの作成**: 指定されたオーディエンスへのワークフロー送信を準備します。
+  ```bash
+  nexus broadcasts create --name "Q3 Update" --workflowId <workflow-uuid> --audienceId <audience-uuid> --scheduledAt "2026-10-01T12:00:00Z"
+  ```
+- **ブロードキャストの送信**: 作成されたブロードキャストを即座に送信します。
+  ```bash
+  nexus broadcasts send <broadcast-uuid>
+  ```
+
+---
+
+### 7. プロダクト内ガイド
+
+対象のバナー、バッジ、モーダルの定義を照会します。
+
+- **ガイドのリスト表示**: 設定されているアクティブなガイドを確認します。
+  ```bash
+  nexus guides list
+  ```
+- **詳細の取得**: ガイドの設定JSONを取得します。
+  ```bash
+  nexus guides get <guide-uuid>
+  ```
+
+---
+
+### 8. メールレイアウト
+
+メールのHTMLラッパーテンプレートをプログラムで管理します。
+
+- **レイアウトのリスト表示**: 利用可能なラッパーテンプレートをリスト表示します。
+  ```bash
+  nexus layouts list
+  ```
+- **レイアウトのプッシュ**: メールレイアウトテンプレートをアップロードします（`{{{content}}}` プレースホルダーが必要です）。
+  ```bash
+  nexus layouts push --name transactional-layout --file ./templates/layout.html --default
+  ```
+
+---
+
+### 9. 翻訳 (i18n)
+
+テンプレート用のローカライズされた辞書パッケージを管理します。
+
+- **翻訳パッケージのリスト表示**:
+  ```bash
+  nexus translations list
+  ```
+- **翻訳のダウンロード**: リモートのBCP 47翻訳をローカルの `.nexus/translations/` 内のファイルにダウンロードします。
+  ```bash
+  nexus translations pull --dir ./custom-locales-path
+  ```
+- **翻訳のプッシュ**: 特定のロケール用のローカルJSONキー値ファイルをアップロードします。
+  ```bash
+  nexus translations push --locale es --file ./locales/es.json --namespace billing
+  ```
+
+---
+
+### 10. ユーティリティとスケジュール
+
+接続の確認、健全性チェック、実行ログの照会、およびスケジュールの追跡を行います。
+
+- **接続チェック**: ping診断を実行します。
+  ```bash
+  nexus health
+  ```
+- **クイック送信**: 単一の受信者への直接ワークフロー送信ショートカット。
+  ```bash
+  nexus send order.shipped --to user_42 --data '{"orderId": "123"}' --tenant tenant_acme
+  ```
+- **ログの検査**: 配信ログIDのステータスを取得します。
+  ```bash
+  nexus logs <logId>
+  ```
+- **スケジュールのリスト表示**: アクティブな反復cronワークフローをマッピングします。
+  ```bash
+  nexus schedules list
+  ```
+
+---
+
+## パイプ処理とスクリプト作成
+
+`--json` 出力形式により、CLIと `jq` や `xargs` などのスクリプトユーティリティとの統合が容易になります：
+
+```bash
+# 全ワークフロー名のリスト表示
+nexus workflows list --json | jq -r '.[].name'
+
+# 失敗した受信者の配信ステップエラーの抽出
+nexus logs <logId> --json | jq '.deliverySteps[].error'
+```
+
+コマンドが成功すると、CLIは終了コード `0` で終了します。失敗した場合、終了コード `1` で終了します。
+
+---
+
+## ローカルディレクトリ構造
+
+`pull` および `push` コマンドを使用する場合、CLIはプロジェクトのルートにファイルを配置します：
+
+<Files>
+  <Folder name=".nexus" defaultOpen>
+    <Folder name="workflows">
+      <File name="order-shipped.json" />
+      <File name="welcome-email.json" />
+    </Folder>
+    <Folder name="translations">
+      <File name="en.json" />
+      <File name="es.json" />
+    </Folder>
+    <Folder name="layouts">
+      <File name="default-layout.html" />
+    </Folder>
+  </Folder>
+</Files>
+
+---
+
+## CI/CD 統合
+
+CLIをGitHub Actionsワークフローに組み込んで、デプロイを自動化できます：
+
+```yaml
+name: Deploy Notifications
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy Nexus Workflows
+        run: npx @nexus-signal/cli workflows push --all
+        env:
+          NEXUS_SECRET_KEY: ${{ secrets.NEXUS_SECRET_KEY }}
+          NEXUS_BASE_URL: https://api.nexussignal.dev
+```
+
+---
+
+## 関連リンク
+
+- [Management API](/docs/api/management)
+- [Workflow-as-Code](/docs/sdk/workflow/workflow-as-code)
+- [AI MCP Server](/docs/sdk/devtools/mcp-server)

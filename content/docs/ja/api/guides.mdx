@@ -1,4 +1,76 @@
 ---
 title: ガイド API
-description: インプロダクトのバナー・モーダル・ツールチップを管理します。
+description: ダッシュボードとSDKから、プロダクト内のバナー、モーダル、ツールチップを管理します。
 ---
+
+<DashboardAuth />
+
+ダッシュボードベースパス: `/v1/guides`
+
+SDK (ブラウザ): `GET /v1/sdk/guides`
+
+## ガイドのリスト表示
+
+```http
+GET /v1/guides
+Authorization: Bearer <jwt>
+```
+
+## ガイドの作成
+
+```http
+POST /v1/guides
+Authorization: Bearer <jwt>
+```
+
+```json
+{
+  "name": "Feature launch banner",
+  "type": "banner",
+  "content": {
+    "title": "New dashboard is live",
+    "body": "Check out the redesigned analytics view.",
+    "ctaLabel": "Explore",
+    "ctaUrl": "/analytics"
+  },
+  "targeting": {
+    "pathPatterns": ["/dashboard/*"],
+    "audienceId": null
+  },
+  "active": true
+}
+```
+
+## ガイドの種類
+
+`banner` · `modal` · `tooltip` · `badge`
+
+## SDK — 対象ガイドの取得
+
+<PublicKeyAuth />
+
+```http
+GET /v1/sdk/guides?pathname=/dashboard
+x-nexus-public-key: pk_prd_…
+```
+
+## ガイドイベントの記録
+
+```http
+POST /v1/sdk/guides/:guideId/events
+```
+
+```json
+{ "event": "seen" }
+```
+
+イベント: `seen`, `interacted`, `dismissed`
+
+## アナリティクス
+
+```http
+GET /v1/guides/:id/analytics
+Authorization: Bearer <jwt>
+```
+
+[プロダクト内ガイド](/docs/platform/features/guides)を参照してください。

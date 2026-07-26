@@ -1,4 +1,88 @@
 ---
-title: ヘッドレス JS SDK
-description: "@nexus-signal/js — Vue、Svelte、またはバニラJS向けのフレームワーク非依存の通知、ガイド、環境設定。"
+title: Headless JS SDK
+description: "@nexus-signal/js — Vue、Svelte、またはバニラJS向けのフレームワークに依存しない通知、ガイド、および優先設定。"
 ---
+
+ReactやAngularを使用していない場合は、**`@nexus-signal/js`** を使用します。React SDKと同じWebSocket + RESTスタックですが、UIコンポーネントは含まれていません。独自のフィードを構築できます。
+
+## インストール
+
+```bash
+npm install @nexus-signal/js
+```
+
+## クイックスタート
+
+```ts
+import { NexusClient } from "@nexus-signal/js";
+
+const nexus = new NexusClient({
+  publicKey: "pk_prd_...",
+  subscriberId: "user-123",
+  hmacSignature: hmacFromYourBackend,
+  onNotification: (n) => console.log(n.title),
+});
+
+await nexus.connect();
+console.log(nexus.notifications.unread);
+```
+
+## サブクライアント
+
+| クライアント          | 目的                                                       |
+| --------------------- | ---------------------------------------------------------- |
+| `nexus.notifications` | インボックスリスト、既読にする、アーカイブ、タグフィルター |
+| `nexus.guides`        | プロダクト内ガイドの取得と追跡                             |
+| `nexus.preferences`   | トピック/チャネル設定の切り替え                            |
+| `nexus.events`        | 配信イベント履歴                                           |
+
+## タグフィルタリング
+
+```ts
+await nexus.notifications.refetch({ tags: ["billing"] });
+await nexus.notifications.loadMore({ tags: ["mention"] });
+```
+
+## イベント
+
+```ts
+const unsub = nexus.on("notification.received", (n) => {
+  /* ... */
+});
+nexus.on("notifications.count_changed", (count) => {
+  /* badge */
+});
+unsub();
+```
+
+## Vue 3 の例
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from "vue";
+import { NexusClient } from "@nexus-signal/js";
+
+const nexus = new NexusClient({
+  publicKey: "pk_...",
+  subscriberId: "user-1",
+  hmacSignature: "...",
+});
+const unread = ref(0);
+
+onMounted(async () => {
+  await nexus.connect();
+  unread.value = nexus.notifications.unread;
+  nexus.on("notifications.count_changed", (c) => {
+    unread.value = c;
+  });
+});
+onUnmounted(() => nexus.disconnect());
+</script>
+```
+
+## 関連リンク
+
+- [React SDK](/docs/sdk/frontend/react) — 構築済みのUIコンポーネント
+- [Angular SDK](/docs/sdk/frontend/angular)
+- [リッチインボックス](/docs/platform/features/rich-inbox)
+- [SDK API](/docs/api/sdk)

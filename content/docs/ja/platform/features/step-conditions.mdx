@@ -1,4 +1,56 @@
 ---
 title: ステップ条件
-description: ワークフローの任意のノードにブール条件を設定 — 金額が100以上の場合のみSMSを送信など。
+description: 任意のワークフローノードのブール値ルール — 金額が100超の場合のみSMSを送信し、週末はステップをスキップするなど。
 ---
+
+**ステップ条件** を使用すると、ワークフローキャンバス内の任意のノードにフィルタールールを添付できます。条件がfalseと評価された場合、ステップはスキップされ、実行は次のノードに進みます。
+
+## 条件の構造
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 100 },
+    { "variable": "subscriber.locale", "operator": "equals", "value": "en" }
+  ]
+}
+```
+
+すべてのルールの代わりにいずれかに一致させるには、`"logic": "OR"` を使用します。
+
+## サポートされている変数
+
+| プレフィックス | 例                                        |
+| -------------- | ----------------------------------------- |
+| `data.*`       | `data.orderTotal`, `data.plan`            |
+| `subscriber.*` | `subscriber.email`, `subscriber.locale`   |
+| `tenant.*`     | `tenant.name`, `tenant.properties.tier`   |
+| `object.*`     | `object.name`, `object.properties.status` |
+
+## 演算子 (Operators)
+
+`equals`, `not_equals`, `greater_than`, `greater_than_or_equals`, `less_than`, `less_than_or_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `in_list`, `not_in_list`, `regex_match`, `is_true`, `is_false`
+
+## キャンバスでの使用
+
+任意のノードをクリックし、**Conditions** パネルでルールを追加します。スキップされたステップは、実行ライフサイクルツリーに `CONDITION_SKIPPED` を記録します。
+
+## 例：高額のSMSのみ
+
+```json
+{
+  "logic": "AND",
+  "rules": [
+    { "variable": "data.amount", "operator": "greater_than", "value": 500 }
+  ]
+}
+```
+
+これをSMSチャネルノードに添付すると、低額の注文はSMSをスキップして次のステップに進みます。
+
+## 関連リンク
+
+- [ワークフロー](/docs/platform/concepts/workflows)
+- [HTTPデータ取得ノード](/docs/platform/features/http-fetch-node)
+- [AIワークフローノード](/docs/platform/features/ai-workflow-node)
