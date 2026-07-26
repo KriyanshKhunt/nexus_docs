@@ -124,7 +124,7 @@ function getMermaidThemeVariables(isDark: boolean) {
 
         // Flowcharts & Nodes
         mainBkg: "hsl(0, 0%, 8%)",
-        nodeBorder: "#a9ceff",
+        nodeBorder: "#f56e6e",
         nodeTextColor: "hsl(0, 0%, 96%)",
 
         // Subgraphs/Clusters (Containers)
@@ -132,7 +132,7 @@ function getMermaidThemeVariables(isDark: boolean) {
 
         // Sequence diagram actors
         actorBkg: "hsl(0, 0%, 6%)",
-        actorBorder: "#a9ceff",
+        actorBorder: "#f56e6e",
         actorTextColor: "hsl(0, 0%, 96%)",
         actorLineColor: "hsl(0, 0%, 16%)",
 
@@ -158,7 +158,7 @@ function getMermaidThemeVariables(isDark: boolean) {
 
         // Flowcharts & Nodes
         mainBkg: "hsl(0, 0%, 100%)",
-        nodeBorder: "#297bff",
+        nodeBorder: "#eb5b5b",
         nodeTextColor: "hsl(0, 0%, 9%)",
 
         // Subgraphs/Clusters (Containers)
@@ -166,7 +166,7 @@ function getMermaidThemeVariables(isDark: boolean) {
 
         // Sequence diagram actors
         actorBkg: "hsl(0, 0%, 100%)",
-        actorBorder: "#297bff",
+        actorBorder: "#eb5b5b",
         actorTextColor: "hsl(0, 0%, 9%)",
         actorLineColor: "hsl(0, 0%, 90%)",
 
