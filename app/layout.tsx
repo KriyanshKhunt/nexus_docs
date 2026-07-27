@@ -1,28 +1,23 @@
-import { i18nConfig } from "@/lib/i18n";
-import { cookies } from "next/headers";
-import type { ReactNode } from "react";
-import { ThemeProvider } from "next-themes";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./global.css";
+import { i18nConfig } from '@/lib/i18n';
+import { cookies } from 'next/headers';
+import type { ReactNode } from 'react';
+import { ThemeProvider } from 'next-themes';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './global.css';
 
 const geistSans = Geist({
-  subsets: ["latin"],
-  variable: "--font-sans",
+  subsets: ['latin'],
+  variable: '--font-sans',
 });
 
 const geistMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  subsets: ['latin'],
+  variable: '--font-mono',
 });
 
-export default async function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies();
-  const locale =
-    cookieStore.get("FD_LOCALE")?.value ?? i18nConfig.defaultLanguage;
+  const locale = cookieStore.get('FD_LOCALE')?.value ?? i18nConfig.defaultLanguage;
 
   return (
     <html

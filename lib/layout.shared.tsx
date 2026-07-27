@@ -1,33 +1,33 @@
-import { i18n, i18nConfig } from "@/lib/i18n";
-import { localizeHref } from "@/lib/i18n-path";
-import { defineI18nUI } from "fumadocs-ui/i18n";
-import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import { NexusLogo } from "@/components/brand/nexus-logo";
+import { i18n, i18nConfig } from '@/lib/i18n';
+import { localizeHref } from '@/lib/i18n-path';
+import { defineI18nUI } from 'fumadocs-ui/i18n';
+import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+import { NexusLogo } from '@/components/brand/nexus-logo';
 
 export const { provider: i18nProvider } = defineI18nUI(i18n, {
   en: {
-    displayName: "English",
-    search: "Search documentation…",
+    displayName: 'English',
+    search: 'Search documentation…',
   },
   es: {
-    displayName: "Español",
-    search: "Buscar en la documentación…",
+    displayName: 'Español',
+    search: 'Buscar en la documentación…',
   },
   pt: {
-    displayName: "Português",
-    search: "Buscar na documentação…",
+    displayName: 'Português',
+    search: 'Buscar na documentação…',
   },
   ja: {
-    displayName: "日本語",
-    search: "ドキュメントを検索…",
+    displayName: '日本語',
+    search: 'ドキュメントを検索…',
   },
 });
 
 const navLabels: Record<string, { dashboard: string; pricing: string }> = {
-  en: { dashboard: "Dashboard", pricing: "Pricing" },
-  es: { dashboard: "Dashboard", pricing: "Precios" },
-  pt: { dashboard: "Dashboard", pricing: "Preços" },
-  ja: { dashboard: "ダッシュボード", pricing: "料金" },
+  en: { dashboard: 'Dashboard', pricing: 'Pricing' },
+  es: { dashboard: 'Dashboard', pricing: 'Precios' },
+  pt: { dashboard: 'Dashboard', pricing: 'Preços' },
+  ja: { dashboard: 'ダッシュボード', pricing: '料金' },
 };
 
 export function baseOptions(locale: string): BaseLayoutProps {
@@ -43,20 +43,20 @@ export function baseOptions(locale: string): BaseLayoutProps {
           </span>
         </span>
       ),
-      url: localizeHref("/docs/platform", locale),
+      url: localizeHref('/docs/platform', locale),
     },
     links: [
       {
         text: labels.dashboard,
-        url: "https://app.nexussignal.dev",
+        url: 'https://app.nexussignal.dev',
         external: true,
       },
       {
         text: labels.pricing,
-        url: "https://nexussignal.dev/pricing",
+        url: 'https://nexussignal.dev/pricing',
         external: true,
       },
     ],
-    githubUrl: "https://github.com/nexussignal",
+    githubUrl: 'https://github.com/nexussignal',
   };
 }

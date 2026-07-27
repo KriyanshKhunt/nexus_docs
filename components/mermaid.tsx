@@ -1,48 +1,48 @@
-"use client";
+'use client';
 
-import { useEffect, useId, useState } from "react";
-import { Loader2, Maximize2, X } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useI18n } from "fumadocs-ui/contexts/i18n";
+import { useEffect, useId, useState } from 'react';
+import { Loader2, Maximize2, X } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useI18n } from 'fumadocs-ui/contexts/i18n';
 
 const loadingTexts: Record<string, string> = {
-  en: "Loading diagram…",
-  es: "Cargando diagrama…",
-  pt: "Carregando diagrama…",
-  ja: "ダイアグラムを読み込み中…",
+  en: 'Loading diagram…',
+  es: 'Cargando diagrama…',
+  pt: 'Carregando diagrama…',
+  ja: 'ダイアグラムを読み込み中…',
 };
 
 export function Mermaid({ chart }: { chart: string }) {
-  const id = useId().replace(/:/g, "");
-  const [svg, setSvg] = useState<string>("");
+  const id = useId().replace(/:/g, '');
+  const [svg, setSvg] = useState<string>('');
   const [isOpen, setIsOpen] = useState(false);
   const { resolvedTheme } = useTheme();
-  const { locale = "en" } = useI18n();
+  const { locale = 'en' } = useI18n();
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = "";
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 
   useEffect(() => {
     let cancelled = false;
-    const isDark = resolvedTheme === "dark";
+    const isDark = resolvedTheme === 'dark';
     const themeVars = getMermaidThemeVariables(isDark);
 
-    void import("mermaid")
+    void import('mermaid')
       .then(({ default: mermaid }) => {
         mermaid.initialize({
           startOnLoad: false,
-          theme: "base",
+          theme: 'base',
           themeVariables: themeVars,
-          securityLevel: "strict",
-          fontFamily: "var(--font-sans), ui-sans-serif, system-ui, sans-serif",
+          securityLevel: 'strict',
+          fontFamily: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif',
           flowchart: {
             subGraphTitleMargin: { top: 15, bottom: 10 },
           },
@@ -52,9 +52,9 @@ export function Mermaid({ chart }: { chart: string }) {
       .then((result) => {
         if (!cancelled && result?.svg) {
           const cleanSvg = result.svg
-            .replace(/<script\b[\s\S]*?<\/script>/gi, "")
-            .replace(/<script\b[\s\S]*?\/>/gi, "")
-            .replace(/<script\b[\s\S]*?>/gi, "");
+            .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+            .replace(/<script\b[\s\S]*?\/>/gi, '')
+            .replace(/<script\b[\s\S]*?>/gi, '');
           setSvg(cleanSvg);
         }
       });
@@ -118,70 +118,70 @@ function getMermaidThemeVariables(isDark: boolean) {
   return isDark
     ? {
         // General variables
-        primaryColor: "hsl(0, 0%, 6%)",
-        textColor: "hsl(0, 0%, 96%)",
-        lineColor: "hsl(0, 0%, 70%)",
+        primaryColor: 'hsl(0, 0%, 6%)',
+        textColor: 'hsl(0, 0%, 96%)',
+        lineColor: 'hsl(0, 0%, 70%)',
 
         // Flowcharts & Nodes
-        mainBkg: "hsl(0, 0%, 8%)",
-        nodeBorder: "#f56e6e",
-        nodeTextColor: "hsl(0, 0%, 96%)",
+        mainBkg: 'hsl(0, 0%, 8%)',
+        nodeBorder: '#f56e6e',
+        nodeTextColor: 'hsl(0, 0%, 96%)',
 
         // Subgraphs/Clusters (Containers)
-        clusterBorder: "hsl(0, 0%, 16%)",
+        clusterBorder: 'hsl(0, 0%, 16%)',
 
         // Sequence diagram actors
-        actorBkg: "hsl(0, 0%, 6%)",
-        actorBorder: "#f56e6e",
-        actorTextColor: "hsl(0, 0%, 96%)",
-        actorLineColor: "hsl(0, 0%, 16%)",
+        actorBkg: 'hsl(0, 0%, 6%)',
+        actorBorder: '#f56e6e',
+        actorTextColor: 'hsl(0, 0%, 96%)',
+        actorLineColor: 'hsl(0, 0%, 16%)',
 
         // Signals & Labels
-        signalColor: "hsl(0, 0%, 70%)",
-        signalTextColor: "hsl(0, 0%, 70%)",
-        labelBoxBkgColor: "hsl(0, 0%, 6%)",
-        labelBoxBorderColor: "hsl(0, 0%, 16%)",
-        labelTextTextColor: "hsl(0, 0%, 70%)",
-        labelTextColor: "hsl(0, 0%, 70%)",
+        signalColor: 'hsl(0, 0%, 70%)',
+        signalTextColor: 'hsl(0, 0%, 70%)',
+        labelBoxBkgColor: 'hsl(0, 0%, 6%)',
+        labelBoxBorderColor: 'hsl(0, 0%, 16%)',
+        labelTextTextColor: 'hsl(0, 0%, 70%)',
+        labelTextColor: 'hsl(0, 0%, 70%)',
 
         // Notes & Loops
-        noteBkgColor: "hsl(0, 0%, 6%)",
-        noteBorderColor: "hsl(0, 0%, 16%)",
-        noteTextColor: "hsl(0, 0%, 70%)",
-        loopTextColor: "hsl(0, 0%, 70%)",
+        noteBkgColor: 'hsl(0, 0%, 6%)',
+        noteBorderColor: 'hsl(0, 0%, 16%)',
+        noteTextColor: 'hsl(0, 0%, 70%)',
+        loopTextColor: 'hsl(0, 0%, 70%)',
       }
     : {
         // General variables
-        primaryColor: "hsl(0, 0%, 100%)",
-        textColor: "hsl(0, 0%, 9%)",
-        lineColor: "hsl(0, 0%, 30%)",
+        primaryColor: 'hsl(0, 0%, 100%)',
+        textColor: 'hsl(0, 0%, 9%)',
+        lineColor: 'hsl(0, 0%, 30%)',
 
         // Flowcharts & Nodes
-        mainBkg: "hsl(0, 0%, 100%)",
-        nodeBorder: "#eb5b5b",
-        nodeTextColor: "hsl(0, 0%, 9%)",
+        mainBkg: 'hsl(0, 0%, 100%)',
+        nodeBorder: '#eb5b5b',
+        nodeTextColor: 'hsl(0, 0%, 9%)',
 
         // Subgraphs/Clusters (Containers)
-        clusterBorder: "hsl(0, 0%, 90%)",
+        clusterBorder: 'hsl(0, 0%, 90%)',
 
         // Sequence diagram actors
-        actorBkg: "hsl(0, 0%, 100%)",
-        actorBorder: "#eb5b5b",
-        actorTextColor: "hsl(0, 0%, 9%)",
-        actorLineColor: "hsl(0, 0%, 90%)",
+        actorBkg: 'hsl(0, 0%, 100%)',
+        actorBorder: '#eb5b5b',
+        actorTextColor: 'hsl(0, 0%, 9%)',
+        actorLineColor: 'hsl(0, 0%, 90%)',
 
         // Signals & Labels
-        signalColor: "hsl(0, 0%, 30%)",
-        signalTextColor: "hsl(0, 0%, 30%)",
-        labelBoxBkgColor: "hsl(0, 0%, 100%)",
-        labelBoxBorderColor: "hsl(0, 0%, 90%)",
-        labelTextTextColor: "hsl(0, 0%, 30%)",
-        labelTextColor: "hsl(0, 0%, 30%)",
+        signalColor: 'hsl(0, 0%, 30%)',
+        signalTextColor: 'hsl(0, 0%, 30%)',
+        labelBoxBkgColor: 'hsl(0, 0%, 100%)',
+        labelBoxBorderColor: 'hsl(0, 0%, 90%)',
+        labelTextTextColor: 'hsl(0, 0%, 30%)',
+        labelTextColor: 'hsl(0, 0%, 30%)',
 
         // Notes & Loops
-        noteBkgColor: "hsl(0, 0%, 100%)",
-        noteBorderColor: "hsl(0, 0%, 90%)",
-        noteTextColor: "hsl(0, 0%, 30%)",
-        loopTextColor: "hsl(0, 0%, 30%)",
+        noteBkgColor: 'hsl(0, 0%, 100%)',
+        noteBorderColor: 'hsl(0, 0%, 90%)',
+        noteTextColor: 'hsl(0, 0%, 30%)',
+        loopTextColor: 'hsl(0, 0%, 30%)',
       };
 }

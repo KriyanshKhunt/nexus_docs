@@ -5,9 +5,7 @@ import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { getMDXComponents } from '@/components/mdx';
 
-export default async function Page(props: {
-  params: Promise<{ lang: string; slug?: string[] }>;
-}) {
+export default async function Page(props: { params: Promise<{ lang: string; slug?: string[] }> }) {
   const params = await props.params;
   const page = source.getPage(params.slug, params.lang);
   if (!page) notFound();
