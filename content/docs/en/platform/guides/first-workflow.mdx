@@ -1,67 +1,160 @@
 ---
 title: Build Your First Workflow
-description: Create a multi-channel welcome workflow with template, trigger, and in-app bell.
+description: Create a multi-channel welcome workflow with email, in-app bell, and real-time delivery — step by step.
 ---
 
-This guide builds a **user.signup** welcome flow: email + in-app notification.
+This guide walks you through building a **`user.signup`** welcome workflow that sends an email and an in-app notification the moment a user registers.
 
-## 1. Create the workflow
+---
 
-Dashboard → **Workflows** → New workflow named `user.signup`.
+## Prerequisites
 
-Add nodes:
+- A Nexus Signal workspace with at least one active environment
+- Node SDK installed (`@nexus-signal/node`) and initialized with a secret key
+- At least one email provider connected in **Integrations**
+
+---
+
+## Step 1 — Create the workflow
+
+In the dashboard, navigate to **Workflows** → **New Workflow**.
+
+- **Name:** `user.signup`
+- **Channels:** Add a **Email** node and an **In-App** node
+
+Your canvas should look like:
 
 ```
-Trigger → Channel (Email) → Channel (In-App)
+Trigger → Email → In-App
 ```
 
-Enable **Suppress when online** on the Email node if you want presence-aware delivery.
+> **Tip:** Enable **Suppress when online** on the Email node if you want to skip email delivery when the user is currently active in your app.
 
-## 2. Write templates
+---
 
-Open **Templates** for this workflow.
+## Step 2 — Write the templates
 
-**Email (HTML):**
+Click each channel node to open the template editor.
+
+**Email template (HTML):**
+
 ```html
 <h1>Welcome, {{ data.name }}!</h1>
-<p>Thanks for joining. Your account ID is {{ subscriber.externalId }}.</p>
+<p>Thanks for joining. Your account ID is <strong>{{ subscriber.externalId }}</strong>.</p>
+<p><a href="{{ data.dashboardUrl }}">Go to your dashboard →</a></p>
 ```
 
-**In-App:**
+**In-App template:**
+
 ```json
-{ "title": "Welcome!", "body": "Hi {{ data.name }}, glad you're here." }
+{
+  "title": "Welcome, {{ data.name }}!",
+  "body": "Your account is ready. Click to explore.",
+  "redirect": "{{ data.dashboardUrl }}"
+}
 ```
 
-Promote template to **Production Active**.
+When done, promote the templates to **Production Active** status.
 
-## 3. Create a test subscriber
+---
 
-**Subscribers** → Add subscriber with your test `externalId` and email.
+## Step 3 — Create a test subscriber
 
-## 4. Trigger from code
+In the dashboard: **Subscribers** → **Add Subscriber**
+
+Fill in:
+
+- `externalId`: `test_user_01`
+- `email`: `you@example.com`
+
+> Subscribers must be created **before** triggering. The trigger endpoint identifies recipients by `externalId` — it does not register new users inline.
+
+---
+
+## Step 4 — Trigger from your backend
+
+Install and initialize the Node SDK:
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+```
+
+Fire the trigger after a user registers:
 
 ```ts
 await nexus.workflows.trigger({
   workflowName: 'user.signup',
-  recipients: [{ externalId: 'test_user', email: 'you@example.com' }],
-  data: { name: 'Test User' },
+  recipients: [{ externalId: 'test_user_01' }],
+  data: {
+    name: 'Test User',
+    dashboardUrl: 'https://app.example.com/dashboard',
+  },
 });
 ```
 
-In Development, email appears in **Sandbox**. In-app requires the React SDK.
+> **Note:** The `recipients` array accepts `externalId` or `subscriberId` to identify the target. Do **not** pass raw contact details like `email` or `phoneNumber` here — those belong on the subscriber profile, not the trigger payload.
 
-## 5. Add in-app bell
+In **Development** environment, emails are captured in the **Sandbox** tab — no real emails are sent.
 
-```tsx
-<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
-  <NotificationCenterBell />
-</NexusProvider>
+---
+
+## Step 5 — Add the in-app bell to your frontend
+
+Install the React SDK:
+
+```bash
+npm install @nexus-signal/react
 ```
 
-Trigger again — bell badge updates in real time.
+Wrap your app and add the bell component:
+
+```tsx
+import { NexusProvider, NotificationCenterBell } from '@nexus-signal/react';
+
+export function App() {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId="test_user_01"
+      hmacSignature={userSession.nexusHmac}
+    >
+      <NotificationCenterBell />
+      {/* rest of your app */}
+    </NexusProvider>
+  );
+}
+```
+
+> **Security:** `hmacSignature` must be generated server-side using your **Secret Key** + the subscriber's `externalId`. Never compute it in the browser. See [Authentication](/docs/platform/getting-started/authentication) for the HMAC formula.
+
+Trigger again — the bell badge increments in real time via WebSocket.
+
+---
+
+## What happens internally
+
+```mermaid
+sequenceDiagram
+  participant App as Your Backend
+  participant Nexus as Nexus API
+  participant Queue as BullMQ Worker
+  participant Provider as Email Provider
+
+  App->>Nexus: POST /v1/workflows/trigger
+  Nexus->>Nexus: Validate schema, resolve subscriber
+  Nexus-->>App: 202 Accepted
+  Nexus->>Queue: Enqueue delivery jobs
+  Queue->>Provider: Send email (SMTP/API)
+  Queue->>App: Push in-app via WebSocket
+```
+
+---
 
 ## Next steps
 
-- Add [smart send-time](/docs/platform/features/smart-send-time) on email
-- Assign workflow to a [topic](/docs/platform/features/topics)
-- Add [delivery window](/docs/platform/features/delivery-windows) for marketing sends
+- Add [Smart Send-Time](/docs/platform/features/smart-send-time) to email for optimal open rates
+- Assign this workflow to a [Topic](/docs/platform/features/topics) for user preference control
+- Set a [Delivery Window](/docs/platform/features/delivery-windows) to avoid sending at night
+- Add a [step condition](/docs/platform/features/step-conditions) to skip email when the user is on mobile

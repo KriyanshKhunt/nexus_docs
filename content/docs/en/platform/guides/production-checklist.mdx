@@ -1,57 +1,87 @@
 ---
 title: Production Checklist
-description: Verify your Nexus Signal integration before switching to Production keys.
+description: Verify your Nexus Signal integration is ready before switching to Production keys and routing live traffic.
 ---
 
-Use this checklist before routing live traffic to Production.
+Use this checklist before routing live user traffic to Production. Work through each section in order.
+
+---
 
 ## Keys & environments
 
-- [ ] Production secret key (`sk_prd_`) stored in secrets manager — not in git
-- [ ] Staging tested with `sk_stg_` and real provider keys
-- [ ] Public key (`pk_prd_`) in frontend env vars only
+- [ ] Production secret key (`sk_prd_…`) stored in a secrets manager (e.g. AWS Secrets Manager, Vault, Railway secrets) — **never committed to git**
+- [ ] Staging environment tested end-to-end with `sk_stg_…` and real provider credentials
+- [ ] Public key (`pk_prd_…`) stored in frontend environment variables only — never exposed in backend services
+
+---
 
 ## Providers
 
-- [ ] All required providers connected and **test connection** passed
-- [ ] Weight splits configured if using multiple providers per layer
-- [ ] Provider unit costs set for [cost analytics](/docs/platform/features/cost-analytics)
-- [ ] Optional monthly budget configured with alert email verified
+- [ ] All required channel providers connected under the Production environment
+- [ ] **Test connection** button passed for each provider
+- [ ] Weight splits configured correctly if using multiple providers per channel layer
+- [ ] Provider unit costs entered for accurate [cost analytics](/docs/platform/features/cost-analytics)
+- [ ] Monthly budget cap configured and alert email address verified
 
-## Workflows
+---
 
-- [ ] Templates promoted to **Production Active** (not Draft)
-- [ ] Workflows marked **active**
-- [ ] Failover paths tested via Development chaos mode
-- [ ] Delivery windows set for user-facing marketing sends
-- [ ] Topics assigned and preference matrix tested
+## Workflows & templates
 
-## SDK integration
+- [ ] All templates promoted to **Production Active** (not Draft or Archived)
+- [ ] All workflows set to **Active** in the Production environment
+- [ ] Failover chains tested — at least one secondary provider per critical channel
+- [ ] Delivery windows configured for user-facing marketing and digest sends
+- [ ] Topics assigned to appropriate workflows and preference matrix tested end-to-end
+- [ ] Smart Send-Time enabled on campaigns where applicable
 
-- [ ] HMAC generated server-side per session
-- [ ] Node SDK circuit breaker / retry handling in place
-- [ ] Subscriber `externalId` matches your auth user IDs
+---
+
+## SDK & backend integration
+
+- [ ] HMAC signature generated **server-side** per subscriber session — never computed in the browser
+- [ ] Subscriber `externalId` values match your authentication system's user IDs exactly
+- [ ] Node SDK error handling in place — check `result.ok` before using `result.data`
+- [ ] Idempotency keys used on trigger calls that may retry on network failure
+- [ ] Trigger payloads validated for correct `workflowName`, `recipients`, and `data` shape before sending
+
+---
 
 ## Compliance & ops
 
-- [ ] GDPR purge process documented (subscriber delete API)
-- [ ] Team roles assigned (Owner, Developer, Marketer)
-- [ ] MFA enabled for admin accounts
-- [ ] Audit log retention and monitoring plan defined
+- [ ] GDPR subscriber purge process documented — use `DELETE /v1/subscribers/:id` to erase profile, logs, and Redis state
+- [ ] GDPR export endpoint tested — `GET /v1/subscribers/:id/export` returns complete data bundle
+- [ ] Team roles assigned (Owner, Admin, Developer, Marketer) — no shared credentials
+- [ ] MFA enabled for all Owner and Admin accounts
+- [ ] Audit log retention and on-call monitoring plan defined
+
+---
 
 ## Billing
 
-- [ ] Plan tier matches expected volume
-- [ ] Spend cap preference configured
-- [ ] Stripe billing portal access for admins
+- [ ] Plan tier matches expected monthly trigger volume
+- [ ] Overage behaviour confirmed (soft cap with alert or hard stop)
+- [ ] Stripe billing portal access confirmed for account Owners
 
-## Go live
+---
 
-1. Switch dashboard environment to **Production**
-2. Deploy backend with `sk_prd_` secret
-3. Send a canary trigger to internal team
-4. Monitor **Audit Logs** and **Overview** for first hour
+## Go-live procedure
+
+1. Switch the dashboard environment selector to **Production**
+2. Deploy your backend with `sk_prd_…` and `pk_prd_…` environment variables
+3. Send a canary trigger to an internal team subscriber first
+4. Monitor **Audit Logs** and the **Overview** dashboard during the first hour
+5. Confirm delivery success rate is above expected threshold before removing canary limits
 
 <Callout type="warn">
-Development sandbox does **not** run in Production. Every trigger sends through real providers and incurs provider charges.
+  Development Sandbox mode does **not** carry over to Production. Every trigger in Production sends
+  through real providers and incurs provider charges. Test thoroughly in Staging before switching.
 </Callout>
+
+---
+
+## Related
+
+- [Authentication & security](/docs/platform/getting-started/authentication) — HMAC setup
+- [Environments guide](/docs/platform/getting-started/environments) — environment isolation
+- [Cost Analytics](/docs/platform/features/cost-analytics) — monitoring spend
+- [Failover feature](/docs/platform/features/failover) — provider redundancy

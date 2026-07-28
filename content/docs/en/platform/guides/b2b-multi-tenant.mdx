@@ -1,105 +1,158 @@
 ---
 title: B2B Multi-Tenant Setup
-description: White-label notifications for each of your customers — branding, scoped triggers, and template variables.
+description: White-label notifications for each of your customers — per-tenant branding, scoped triggers, and in-app feed isolation.
 ---
 
-If your product serves multiple companies (tenants), Nexus **Tenants** let each customer get branded notifications without separate Nexus workspaces.
+If your product serves multiple companies, Nexus **Tenants** let each customer receive branded notifications without separate workspaces per customer.
 
-## Architecture
+---
+
+## How it works
 
 ```mermaid
 flowchart TB
   subgraph Your SaaS
     App[Your application]
   end
-  subgraph Nexus
+  subgraph Nexus Workspace
     T1[Tenant: acme]
     T2[Tenant: globex]
     W[Workflow engine]
   end
-  App ---->|trigger + tenant: acme| T1
-  App ---->|trigger + tenant: globex| T2
+  App ---->|trigger + tenant: tenant_acme| T1
+  App ---->|trigger + tenant: tenant_globex| T2
   T1 --> W
   T2 --> W
 ```
 
-**Organization** = your Nexus workspace. **Tenant** = your customer's company inside that workspace.
+**Organization** = your Nexus workspace (one per product).
+**Tenant** = one of your B2B customers inside that workspace.
 
-## Step 1 — Create tenants
+The `tenant` field on the trigger payload tells Nexus which customer's branding context to apply when compiling the message.
 
-When a new customer signs up in your app:
+---
+
+## Step 1 — Register tenants
+
+Call the Node SDK `upsert` whenever a new company signs up in your app:
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
 await nexus.tenants.upsert({
-  externalId: "tenant_acme",
-  name: "Acme Corp",
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
   branding: {
-    logoUrl: "https://cdn.acme.io/logo.png",
-    primaryColor: "#2563eb",
-    companyName: "Acme Corp",
-    footerHtml: "<p>© Acme Corp · support@acme.io</p>",
+    logo: 'https://cdn.acme.io/logo.png',
+    primaryColor: '#2563eb',
+    footerHtml: '<p>© Acme Corp · <a href="mailto:support@acme.io">support@acme.io</a></p>',
+  },
+  properties: {
+    planTier: 'enterprise',
   },
 });
 ```
 
-Supported branding fields: `logo`, `logoUrl`, `primaryColor`, `iconUrl`, `companyName`, `footerHtml`, `headerHtml`.
+**`branding` fields** — any string key-value pairs you want accessible in templates. Common keys:
 
-## Step 2 — Apply branding in email layouts
+| Key            | Example value                  |
+| -------------- | ------------------------------ |
+| `logo`         | `https://cdn.acme.io/logo.png` |
+| `primaryColor` | `#2563eb`                      |
+| `companyName`  | `Acme Corp`                    |
+| `footerHtml`   | `<p>© Acme Corp</p>`           |
 
-Create an [email layout](/docs/platform/features/email-layouts) that references branding:
+> **Note:** The `branding` object is a free-form `Record<string, string>` — you can define any keys and reference them inside templates as `{{ branding.yourKey }}`.
+
+---
+
+## Step 2 — Use branding in email layouts
+
+Create an [email layout](/docs/platform/features/email-layouts) that references the tenant's branding keys:
 
 ```html
-<img src="{{ branding.logoUrl }}" alt="{{ branding.companyName }}" />
-<div style="color: {{ branding.primaryColor }}">{{{ content }}}</div>
+<header>
+  <img src="{{ branding.logo }}" alt="{{ branding.companyName }}" height="40" />
+</header>
+
+<main style="color: {{ branding.primaryColor }}">{{{ content }}}</main>
+
 <footer>{{{ branding.footerHtml }}}</footer>
 ```
 
-When a trigger includes `tenant`, the compiler injects that tenant's branding automatically.
+When a trigger includes a `tenant` value, the template compiler automatically injects that tenant's branding object into the Handlebars context.
+
+---
 
 ## Step 3 — Trigger with tenant context
 
+Pass the tenant's `externalId` in the `tenant` field of every trigger for that company's users:
+
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "invoice.sent",
-  tenant: "tenant_acme",
-  recipients: [{ externalId: user.id, email: user.email }],
-  data: { invoiceId: "INV-001", amount: "$500" },
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: user.id }],
+  data: {
+    invoiceId: 'INV-001',
+    amount: '$500',
+  },
 });
 ```
 
-## Step 4 — Per-tenant preferences (optional)
+> The `tenant` field matches the `externalId` you used in the `upsert` call — not the internal UUID.
 
-Set `preferenceDefaults` on the tenant to control opt-in defaults for new subscribers under that tenant.
+---
 
-## Step 5 — Filter in-app feed by tenant
+## Step 4 — Scope the in-app notification feed
 
-SDK notifications support tenant scoping via query parameter:
+When your app shows a tenant-scoped notification center, filter the SDK feed by the tenant's database UUID:
 
 ```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=<tenant-uuid>
+x-nexus-public-key: pk_prd_your_public_key
 ```
 
-Use this when your app shows a tenant-scoped notification center.
+<Callout type="info">
+  `tenantId` in the SDK query is the internal **UUID** of the tenant (from the list response), not
+  the `externalId` string. Use the [Tenants API](/docs/api/tenants) or Management API to retrieve
+  it.
+</Callout>
+
+---
+
+## Step 5 — Test with two tenants before Production
+
+1. Create two test tenants (`tenant_acme`, `tenant_globex`) with different branding values in **Development**.
+2. Trigger the same workflow twice — once per tenant — to the same subscriber.
+3. Confirm that each email shows the correct logo and footer in the Sandbox preview.
+4. Promote to **Production** only after branding renders correctly.
+
+---
 
 ## Checklist
 
 <Steps>
   <Step>
-    Create tenant on customer signup (sync `externalId` with your DB).
+    Register each tenant on customer signup — sync `externalId` with your database's company ID.
   </Step>
   <Step>
-    Store branding assets (logo URLs must be HTTPS and publicly accessible).
+    Upload branding assets to a publicly accessible HTTPS CDN. Nexus does not host images.
   </Step>
   <Step>
-    Pass `tenant` on every trigger for that customer's users.
+    Add the `tenant` field on every trigger fired for that company's users.
   </Step>
   <Step>
-    Test in Development with two tenants before Production.
+    Test with two tenants in Development before going live in Production.
   </Step>
 </Steps>
 
+---
+
 ## Related
 
-- [Per-tenant branding](/docs/platform/features/tenants)
+- [Per-tenant branding feature guide](/docs/platform/features/tenants)
 - [Email layouts](/docs/platform/features/email-layouts)
-- [Tenants API](/docs/api/tenants)
+- [Tenants API reference](/docs/api/tenants)

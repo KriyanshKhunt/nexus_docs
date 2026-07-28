@@ -1,36 +1,49 @@
 ---
 title: Your First Broadcast
-description: Send a one-time product announcement to a dynamic audience segment from the dashboard — no code deploy required.
+description: Send a one-time product announcement to a dynamic audience segment — from dashboard setup to Node SDK automation.
 ---
 
-Broadcasts let product and marketing teams send cross-channel messages to a **segment** without engineering involvement.
+Broadcasts let product and marketing teams send a cross-channel message to a filtered audience segment without a new code deploy. This guide takes you through the complete flow.
+
+---
 
 ## Prerequisites
 
-- A published workflow (e.g. `product.announcement`) with Email + In-App channels
-- An [audience](/docs/platform/features/audiences) segment defined
+- A published workflow (e.g. `product.announcement`) with at least one active channel node
+- Subscribers already registered in your environment
+- At least one connected email or push provider
 
-## Step 1 — Create an audience
+---
 
-Dashboard: **Audiences** → **New audience**
+## Step 1 — Define an audience segment
 
-Example filters:
+Navigate to **Audiences** → **New Audience**.
 
-| Rule | Operator | Value |
-|------|----------|-------|
-| `properties.plan` | equals | `growth` |
-| `lastActiveAt` | within days | `30` |
+Give your audience a name (e.g. `Growth Plan Users`) and add filter rules. Example:
 
-Save and note the live member count preview.
+| Field                | Operator      | Value |
+| -------------------- | ------------- | ----- |
+| `locale`             | `starts_with` | `en`  |
+| `globalUnsubscribed` | `is_false`    | —     |
+
+> Supported filter fields: `email`, `phoneNumber`, `locale`, `timezone`, `globalUnsubscribed`, `externalId`, `createdAt`. See [Audiences](/docs/platform/features/audiences) for all operators.
+
+Save the segment — the dashboard shows a live member count preview.
+
+---
 
 ## Step 2 — Compose the broadcast
 
-Dashboard: **Broadcasts** → **New broadcast**
+Navigate to **Broadcasts** → **New Broadcast**.
 
-1. **Name:** "Q3 Feature Launch"
-2. **Workflow:** select `product.announcement`
-3. **Audience:** select your Growth segment
-4. **Data:** optional JSON for template variables:
+| Field        | Value                                        |
+| ------------ | -------------------------------------------- |
+| **Name**     | `Q3 Feature Launch`                          |
+| **Workflow** | Select `product.announcement`                |
+| **Audience** | Select the segment you created               |
+| **Data**     | Optional JSON context for template variables |
+
+Example data payload:
 
 ```json
 {
@@ -39,63 +52,99 @@ Dashboard: **Broadcasts** → **New broadcast**
 }
 ```
 
-5. **Schedule:** send now or pick a future datetime
+| Schedule option | Behavior                                                           |
+| --------------- | ------------------------------------------------------------------ |
+| **Send now**    | Immediately queues delivery jobs                                   |
+| **Schedule at** | Sets a future ISO datetime; a background job fires it at that time |
+
+---
 
 ## Step 3 — Preview and send
 
-Review the audience size and workflow channels. Click **Send** (or schedule).
+Review the estimated audience size and the channels that will run. Click **Send** (or **Schedule**).
 
-Broadcast status progresses: `DRAFT` → `SENDING` → `COMPLETED`
+Broadcast lifecycle states:
+
+| Status      | Meaning                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| `DRAFT`     | Saved, not yet dispatched. Fully editable.                                    |
+| `SCHEDULED` | Queued for a future time. Still editable.                                     |
+| `SENDING`   | Actively pushing jobs into the delivery queue. Cannot be edited or cancelled. |
+| `COMPLETED` | All audience members processed.                                               |
+| `CANCELLED` | Stopped before or during execution.                                           |
+| `FAILED`    | A fatal error interrupted dispatch.                                           |
+
+---
 
 ## Step 4 — Monitor results
 
-Open the broadcast detail view for per-channel delivery stats. Cross-reference **Audit Logs** for individual failures.
+Open the broadcast detail view for per-channel delivery statistics. Cross-reference **Audit Logs** for individual delivery failures or bounce details.
 
-## API alternative
+---
+
+## API alternative (Dashboard JWT)
+
+Use the dashboard REST API from an authenticated session:
 
 <DashboardAuth />
 
 ```http
 POST /v1/broadcasts
-Authorization: Bearer <jwt>
-```
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-```json
 {
   "name": "Q3 Feature Launch",
-  "workflowId": "workflow-uuid-from-dashboard",
-  "audienceId": "audience-uuid",
-  "data": { "featureName": "Smart Analytics" }
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+  "data": { "featureName": "Smart Analytics" },
+  "scheduledAt": "2026-09-01T09:00:00.000Z"
 }
 ```
 
-Send:
+Then send it:
 
 ```http
-POST /v1/broadcasts/:id/send
+POST /v1/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/send
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
 <Callout type="info">
-`workflowId` and `audienceId` are UUIDs from the dashboard or Management API list endpoints — not workflow name strings.
+  `workflowId` and `audienceId` are UUID strings. Get them from the dashboard URL or from the
+  Management API list endpoints — not workflow name strings.
 </Callout>
 
-## Node SDK
+---
+
+## Node SDK alternative (Secret Key)
+
+Use the Node SDK for CI/CD or scripted broadcast automation:
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
+// Create the broadcast
 const created = await nexus.broadcasts.create({
-  name: 'Q3 Launch',
-  workflowId: 'uuid',
-  audienceId: 'uuid',
+  name: 'Q3 Feature Launch',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  audienceId: '771e8400-e29b-41d4-a716-446655440000',
   data: { featureName: 'Smart Analytics' },
 });
 
+// Send it immediately
 if (created.ok) {
   await nexus.broadcasts.send(created.data!.broadcast.id);
 }
 ```
 
+> The Node SDK calls `/v1/management/broadcasts` (Secret Key auth) — not the dashboard JWT path.
+
+---
+
 ## Related
 
-- [Broadcasts feature](/docs/platform/features/broadcasts)
-- [Audiences](/docs/platform/features/audiences)
-- [Broadcasts API](/docs/api/broadcasts)
+- [Broadcasts feature overview](/docs/platform/features/broadcasts)
+- [Audiences](/docs/platform/features/audiences) — building segment rules
+- [Broadcasts API reference](/docs/api/broadcasts)
