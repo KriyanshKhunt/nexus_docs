@@ -9,25 +9,25 @@ Email layouts define the header, footer, and outer container frames for your HTM
 
 ## Access & paths
 
-- **Server / SDK Management (`sk_*` auth)**: `GET` / `POST` requests under `/v1/management/email/layouts`
-- **Dashboard Frontend (JWT auth)**: Requests under `/v1/email`
+- **Server / SDK Management (`sk_*` auth)**: `GET` / `POST` under `/v1/management/email/layouts`
+- **Dashboard Frontend (JWT auth)**: All routes under `/v1/email`
 
 ---
 
 ## Endpoint summary
 
-| Method   | Access Scope     | Path                     | Description                                      |
-| :------- | :--------------- | :----------------------- | :----------------------------------------------- |
-| `GET`    | Dashboard / Mgmt | `/v1/email/layouts`      | List all layouts in the environment.             |
-| `POST`   | Dashboard / Mgmt | `/v1/email/layouts`      | Create a new HTML layout.                        |
-| `GET`    | Dashboard        | `/v1/email/layouts/:id`  | Retrieve a layout's HTML body and variables.     |
-| `PUT`    | Dashboard        | `/v1/email/layouts/:id`  | Update an existing HTML layout.                  |
-| `DELETE` | Dashboard        | `/v1/email/layouts/:id`  | Delete an HTML layout.                           |
-| `GET`    | Dashboard        | `/v1/email/partials`     | List all Handlebars partials in the environment. |
-| `POST`   | Dashboard        | `/v1/email/partials`     | Create a reusable Handlebars HTML partial.       |
-| `GET`    | Dashboard        | `/v1/email/partials/:id` | Retrieve a partial's details.                    |
-| `PUT`    | Dashboard        | `/v1/email/partials/:id` | Update a partial.                                |
-| `DELETE` | Dashboard        | `/v1/email/partials/:id` | Delete a partial.                                |
+| Method   | Management Path (`sk_*`)       | Dashboard Path (JWT)     | Description                                      |
+| :------- | :----------------------------- | :----------------------- | :----------------------------------------------- |
+| `GET`    | `/v1/management/email/layouts` | `/v1/email/layouts`      | List all layouts in the environment.             |
+| `POST`   | `/v1/management/email/layouts` | `/v1/email/layouts`      | Create a new HTML layout.                        |
+| `GET`    | —                              | `/v1/email/layouts/:id`  | Retrieve a layout's HTML body and variables.     |
+| `PUT`    | —                              | `/v1/email/layouts/:id`  | Update an existing HTML layout.                  |
+| `DELETE` | —                              | `/v1/email/layouts/:id`  | Delete an HTML layout.                           |
+| `GET`    | —                              | `/v1/email/partials`     | List all Handlebars partials in the environment. |
+| `POST`   | —                              | `/v1/email/partials`     | Create a reusable Handlebars HTML partial.       |
+| `GET`    | —                              | `/v1/email/partials/:id` | Retrieve a partial's details.                    |
+| `PUT`    | —                              | `/v1/email/partials/:id` | Update a partial.                                |
+| `DELETE` | —                              | `/v1/email/partials/:id` | Delete a partial.                                |
 
 ---
 

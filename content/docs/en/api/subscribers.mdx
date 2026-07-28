@@ -9,23 +9,23 @@ Subscribers are the target profiles who receive your notifications. This API all
 
 ## Authentication & access
 
-- **Base path**: `/v1/subscribers`
-- **Auth**: Requires a user JWT session token.
-- **Roles**: Reading is accessible to all workspace users. Creating, updating, deleting, or exporting data requires `OWNER`, `ADMIN`, or `DEVELOPER` roles.
+Subscribers are accessible via two separate authenticated paths:
+
+- **Server-to-Server / SDK (`sk_*` auth)**: Root path is `/v1/management/subscribers`
+- **Dashboard Frontend (JWT auth)**: Root path is `/v1/subscribers`
 
 ---
 
 ## Endpoint summary
 
-| Method   | Path                                     | Description                                          |
-| :------- | :--------------------------------------- | :--------------------------------------------------- |
-| `GET`    | `/v1/subscribers?environment=PRODUCTION` | List subscribers (paginated, searchable).            |
-| `POST`   | `/v1/subscribers`                        | Create a new subscriber.                             |
-| `GET`    | `/v1/subscribers/:id`                    | Get subscriber profile, recent logs, and totals.     |
-| `PUT`    | `/v1/subscribers/:id`                    | Update subscriber profile fields or preferences.     |
-| `DELETE` | `/v1/subscribers/:id`                    | GDPR purge — delete profile, logs, and Redis states. |
-| `GET`    | `/v1/subscribers/:id/export`             | GDPR export — retrieve all stored user data.         |
-| `GET`    | `/v1/subscribers/:id/engagement`         | Retrieve engagement timezone heatmap scores.         |
+| Method   | Management Path (`sk_*`)         | Dashboard Path (JWT)             | Description                                  |
+| :------- | :------------------------------- | :------------------------------- | :------------------------------------------- |
+| `GET`    | `/v1/management/subscribers`     | `/v1/subscribers`                | List subscribers (paginated, searchable).    |
+| `GET`    | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | Get subscriber profile.                      |
+| `POST`   | `/v1/management/subscribers`     | `/v1/subscribers`                | Create or identify a subscriber (upsert).    |
+| `DELETE` | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | GDPR purge — delete profile and logs.        |
+| `GET`    | —                                | `/v1/subscribers/:id/export`     | GDPR export — retrieve all stored user data. |
+| `GET`    | —                                | `/v1/subscribers/:id/engagement` | Retrieve engagement timezone heatmap scores. |
 
 ---
 

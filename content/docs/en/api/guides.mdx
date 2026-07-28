@@ -9,25 +9,26 @@ Guides are interactive in-product components targeted to specific subscribers or
 
 ## Access & paths
 
-Endpoints are separated by audience:
+Guides are managed from three access points:
 
-- **Server / SDK Management (`sk_*` auth)**: `PUT` / `GET` / `POST` requests under `/v1/management/guides`
-- **Dashboard Frontend (JWT auth)**: Requests under `/v1/guides`
-- **Subscriber SDK Client (Public Key auth)**: Requests under `/v1/sdk/guides`
+- **Server / SDK Management (`sk_*` auth)**: Create, get, update under `/v1/management/guides`
+- **Dashboard Frontend (JWT auth)**: Full CRUD + analytics under `/v1/guides`
+- **Subscriber SDK Client (`pk_*` auth)**: Load and track under `/v1/sdk/guides`
 
 ---
 
 ## Endpoint summary
 
-| Method | Access Scope        | Path                             | Description                                            |
-| :----- | :------------------ | :------------------------------- | :----------------------------------------------------- |
-| `GET`  | Dashboard / Mgmt    | `/v1/management/guides`          | List all guide campaigns in the environment.           |
-| `POST` | Dashboard / Mgmt    | `/v1/management/guides`          | Create a new guide campaign (Draft).                   |
-| `GET`  | Dashboard / Mgmt    | `/v1/management/guides/:id`      | Retrieve guide details.                                |
-| `PUT`  | Dashboard / Mgmt    | `/v1/management/guides/:id`      | Update guide configuration, targeting, or status.      |
-| `GET`  | Dashboard           | `/v1/guides/:id/analytics`       | Retrieve guide event conversion analytics.             |
-| `GET`  | Client SDK (`pk_*`) | `/v1/sdk/guides`                 | Retrieve active eligible guides matching path/context. |
-| `POST` | Client SDK (`pk_*`) | `/v1/sdk/guides/:guideId/events` | Record a guide interaction telemetry event.            |
+| Method   | Management Path (`sk_*`)    | Dashboard Path (JWT)             | Description                                            |
+| :------- | :-------------------------- | :------------------------------- | :----------------------------------------------------- |
+| `GET`    | `/v1/management/guides`     | `/v1/guides`                     | List all guide campaigns in the environment.           |
+| `POST`   | `/v1/management/guides`     | `/v1/guides`                     | Create a new guide campaign (Draft).                   |
+| `GET`    | `/v1/management/guides/:id` | `/v1/guides/:id`                 | Retrieve guide details.                                |
+| `PUT`    | `/v1/management/guides/:id` | `/v1/guides/:id`                 | Update guide configuration, targeting, or status.      |
+| `DELETE` | —                           | `/v1/guides/:id`                 | Delete a guide campaign.                               |
+| `GET`    | —                           | `/v1/guides/:id/analytics`       | Retrieve guide event conversion analytics.             |
+| `GET`    | Client SDK (`pk_*`)         | `/v1/sdk/guides`                 | Retrieve active eligible guides matching path/context. |
+| `POST`   | Client SDK (`pk_*`)         | `/v1/sdk/guides/:guideId/events` | Record a guide interaction telemetry event.            |
 
 ---
 
