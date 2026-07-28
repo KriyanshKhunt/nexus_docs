@@ -1,60 +1,83 @@
 ---
-title: Workflows
-description: Visual workflow canvas — triggers, channels, delays, digests, failover, and more.
+title: Visual Workflows & Templates
+description: Visual workflow canvas — design triggers, channels, delays, digests, failovers, and conditional step routes.
 ---
 
-A **workflow** is a named automation (`order.shipped`, `user.signup`) backed by a **step tree** from the visual canvas.
+# Visual Workflows & Templates
 
-## Trigger
+A **workflow** is the structural automation plan (`user.welcome`, `billing.payment_failed`) that handles your event triggers. Workflows are composed visually in the dashboard canvas as a **step tree** of functional nodes.
 
-Every workflow starts with a **Trigger** node defining the event namespace. Your SDK call uses `workflowName` matching this identifier.
+---
 
-## Node types
+## Trigger Events
 
-| Node | Purpose |
-|------|---------|
-| **Channel** | Send via Email, SMS, Push, In-App, WhatsApp, Slack, Discord, Teams, or Webhook |
-| **Delay** | Wait a fixed duration before the next step |
-| **Wait Until** | Wait until a timestamp from trigger payload (e.g. 24h before appointment) |
-| **Delivery Window** | Only deliver between hours in subscriber's local timezone |
-| **Digest** | Batch high-frequency events into one summary (default 30 min window) |
-| **Throttle** | Rate-limit alerts per subscriber; optional divert to digest |
-| **Failover** | Primary channel → wait for read → fallback channel |
-| **A/B Split** | Percentage traffic split with engagement tracking |
-| **HTTP Fetch** | Call external APIs mid-workflow; merge response into context |
-| **AI Node** | Runtime LLM call for classification or dynamic copy |
-| **Smart Timing** | Toggle on channel nodes — delay to subscriber's peak hour |
+Every workflow starts with a single **Trigger Node** defining the event namespace. When your application server triggers an event using the SDK, the `workflowName` parameter must match this visual identifier:
 
-Any node can have **[step conditions](/docs/platform/features/step-conditions)** — skip execution when rules don't match.
-
-## Channel node options
-
-On any **Channel** node you can enable:
-
-- **`suppressWhenOnline`** — skip external channels if user has active WebSocket (see [cost reduction](/docs/platform/features/cost-reduction))
-- **`smartTiming`** — AI send-time optimization (see [smart send-time](/docs/platform/features/smart-send-time))
-
-## Templates
-
-Each workflow has versioned **templates** (Draft → Production Active). Content supports Handlebars variables:
-
-```html
-<p>Hi {{ subscriber.externalId }}, your order {{ data.orderId }} shipped.</p>
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.welcome', // Matches the trigger node namespace
+  recipients: [{ externalId: 'user_12' }],
+  data: { name: 'Alex' },
+});
 ```
 
-Multi-locale templates use locale keys — see [i18n](/docs/platform/features/i18n). Shared strings use [translation files](/docs/platform/features/translations).
+---
 
-## Workflow-as-code
+## Detailed Node Catalog
 
-Define workflows in TypeScript and sync via `POST /v1/workflows/sync` — see [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
+The canvas visual builder supports ten node classes to control message timing, execution logic, and provider choices:
 
-## Workflow ↔ Topic
+| Node Class          | Icon            | Action & Function                                                                                                                                               |
+| :------------------ | :-------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Channel Node**    | `MessageSquare` | Dispatches notifications over Email, SMS, Web Push, Mobile Push, In-App bell, Slack, Discord, Microsoft Teams, WhatsApp, or Webhooks.                           |
+| **Delay Node**      | `Clock`         | Pauses execution for a relative duration (e.g. `24 hours` or `3 days`) before executing the next step.                                                          |
+| **Wait Until Node** | `Calendar`      | Holds execution until a dynamic ISO-8601 timestamp passed in your trigger payload (e.g. `data.trialExpirationDate`).                                            |
+| **Delivery Window** | `Moon`          | Intercepts delivery and holds notifications to release them strictly during subscriber-friendly hours (e.g. `9:00 AM - 6:00 PM`) matching their local timezone. |
+| **Digest Node**     | `Archive`       | Collapses high-frequency alerts into a single consolidated summary index (e.g., batching 10 comment notifications over 30 minutes into one digest).             |
+| **Throttle Node**   | `Activity`      | Rate-limits notification dispatches to prevent spamming subscribers (e.g. max `1 email per hour` per subscriber).                                               |
+| **Failover Node**   | `RefreshCw`     | Attempts a primary channel, waits for a read callback (or specific duration), and automatically falls back to secondary channels if not read.                   |
+| **A/B Split Node**  | `Split`         | Splits execution traffic down two branches (e.g. `50% Branch A`, `50% Branch B`) with trackable open and click metrics to optimize copy.                        |
+| **HTTP Fetch Node** | `Globe`         | Fetches external data from third-party APIs mid-workflow. Merges JSON response properties directly into the Handlebars context variables.                       |
+| **AI Node**         | `Brain`         | Executes runtime LLM requests (OpenAI/Anthropic) to classify incoming events or write dynamic copywriting copy matching subscriber profiles.                    |
 
-Assign a workflow to a [Topic](/docs/platform/features/topics) so subscribers manage preferences by category instead of individual event names.
+---
 
-## Related
+## Step Conditions
 
-- [First workflow guide](/docs/platform/guides/first-workflow)
-- [HTTP Fetch node](/docs/platform/features/http-fetch-node)
-- [Step conditions](/docs/platform/features/step-conditions)
-- [Delivery pipeline](/docs/platform/concepts/delivery-pipeline)
+You can attach boolean rules to **any node** inside your visual tree. If the condition rules evaluate to `false` at runtime, the worker skips that node (and its child nodes) completely:
+
+```mermaid
+flowchart TD
+    Node[Email Node] --> Check{Condition: data.isAdmin == true}
+    Check -->|True| Send[Send Email]
+    Check -->|False| Skip[Skip & Continue Pipeline]
+```
+
+Example rules check parameters from:
+
+- **Trigger Payload Context**: `data.planType == 'enterprise'`
+- **Subscriber Profile**: `subscriber.country == 'ES'`
+- **B2B Tenant Details**: `tenant.brandingColor == '#ff0000'`
+
+---
+
+## Handlebars Templating Syntax
+
+Message body layouts support **Handlebars (`{{ }}`) variables** to inject dynamic properties at runtime:
+
+```html title="Email Template Body"
+<h2>Hi {{ subscriber.firstName }},</h2>
+<p>Your order <strong>#{{ data.orderId }}</strong> has been shipped!</p>
+<p>You can track your package using: <a href="{{ data.trackingUrl }}">Tracking Link</a>.</p>
+
+{{#if tenant}}
+<p>Thank you for shopping at {{ tenant.name }}.</p>
+{{/if}}
+```
+
+### Context variables available during rendering:
+
+- `{{ subscriber }}`: Includes profile fields (`externalId`, `email`, `phone`, `locale`).
+- `{{ data }}`: The raw trigger JSON payload metadata.
+- `{{ tenant }}`: Scoped customer organization parameters (`name`, `brandingColor`).
+- `{{ steps }}`: Responses merged from upstream **HTTP Fetch Nodes** (e.g. `{{ steps.fetch_product_data.title }}`).

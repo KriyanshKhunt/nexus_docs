@@ -1,39 +1,73 @@
 ---
-title: Environments
-description: Development, Staging, and Production — isolated keys, data, and behavior.
+title: Environments & Scopes
+description: Development, Staging, and Production — manage isolated workspaces, promotion pipelines, and the local sandbox environment.
 ---
 
-Every Nexus workspace includes **three environments**. Each is a fully isolated scope for workflows, subscribers, templates, schedules, and topics.
+# Environments & Scopes
 
-## Environment matrix
+Every Nexus Signal workspace is divided into **three fully isolated environments**: **Development**, **Staging**, and **Production**.
 
-| | Development | Staging | Production |
-|---|-------------|---------|------------|
-| **Public key** | `pk_dev_*` | `pk_stg_*` | `pk_prd_*` |
-| **Secret key** | `sk_dev_*` | `sk_stg_*` | `sk_prd_*` |
-| **Sandbox mode** | Yes — simulated delivery | No | No |
-| **Chaos mode** | Optional — test failover | No | No |
-| **Real providers** | Only if you disable sandbox path | Yes | Yes |
+Each environment operates as an independent logical database partition, meaning that workflows, templates, subscribers, preferences, topics, and tenant settings **do not cross boundaries**.
 
-## Sandbox (Development only)
+---
 
-In **Development**, outbound channels (except in-app) route through the **virtual sandbox** instead of real carrier APIs. Payloads stream over WebSocket to the dashboard simulator — test complex workflows **without spending provider credits**.
+## Environment Matrix
 
-See [Sandbox mode](/docs/platform/features/sandbox) for details.
+| Feature                   | Development                                       | Staging                                            | Production                                |
+| :------------------------ | :------------------------------------------------ | :------------------------------------------------- | :---------------------------------------- |
+| **API Keys**              | `pk_dev_*` / `sk_dev_*`                           | `pk_stg_*` / `sk_stg_*`                            | `pk_prd_*` / `sk_prd_*`                   |
+| **Outbound Dispatch**     | **Sandbox interception** (Simulated carrier APIs) | Real Carrier dispatch (Postmark, Twilio, SendGrid) | Real Carrier dispatch (Live users)        |
+| **In-App Delivery**       | Live WebSockets to active client sessions         | Live WebSockets to active client sessions          | Live WebSockets to active client sessions |
+| **Database Scoping**      | Isolated                                          | Isolated                                           | Isolated                                  |
+| **Chaos Mode (Failover)** | Enabled (Allows simulating provider downtimes)    | Disabled                                           | Disabled                                  |
 
-## Switching environments
+---
 
-Use the environment dropdown in the dashboard top bar. All API calls must use the matching secret key for that environment.
+## Development & Sandbox Mode
 
-<Callout type="warn">
-Never use Production keys in local `.env` files committed to git. Use Development keys for local work.
-</Callout>
+The **Development** environment is engineered for local integration and automated tests.
 
-## Subscribers are per-environment
+To save carrier credits and prevent accidental messaging to real users during development, outbound nodes (Email, SMS, Push, WhatsApp, Chat platforms) route directly to a **virtual sandbox** instead of calling external APIs.
 
-A subscriber with `externalId: user_123` in Development is a **different record** from the same ID in Production. Sync or migrate subscribers when promoting integrations.
+```mermaid
+flowchart LR
+    Trigger[Dev Trigger] --> Worker[Worker]
+    Worker --> Channel{Channel Type}
+    Channel -->|In-App| WebSocket[Real WebSocket bell]
+    Channel -->|Email / SMS / Push| Sandbox[Sandbox Interceptor]
+    Sandbox -->|Stream payload| UI[Dashboard Inbox Simulator]
+```
 
-## Related
+- **Inbox Simulator**: In the dashboard, you can view the fully compiled HTML, SMS text, or JSON payload as it would appear to the user.
+- **Opt-out of Sandbox**: If you need to test real delivery in Development (e.g. testing an actual email layout in your client client), toggle **Integrations → Development Integrations → Bypass Sandbox** for that provider.
 
-- [Authentication](/docs/platform/getting-started/authentication) — which key goes where
-- [Production checklist](/docs/platform/guides/production-checklist) — before you go live
+---
+
+## Workspace Promotion Flow
+
+To deploy changes from Development to Production, use our promotion pipeline instead of replicating layouts manually:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Development : Design & Test Workflows
+    Development --> Staging : Deploy to QA via CLI/API
+    Staging --> Production : Push to Live Workspace
+```
+
+### Promoting Workflows as Code (Recommended)
+
+By defining your step trees inside your repository, you promotion pipeline is handled automatically via git branches:
+
+1. **Dev Branch**: Run `npx nexus-signal sync --env dev` inside your local workspace.
+2. **Main Branch**: Trigger `npx nexus-signal sync --env prd` from your CI/CD pipeline upon merging.
+
+For details, see the [Workflow-as-Code](/docs/sdk/workflow/workflow-as-code) documentation.
+
+---
+
+## Subscriber Separation
+
+Subscribers are fully sandboxed. A subscriber created with `externalId: usr_99` using `sk_dev_*` **does not exist** in the `sk_prd_*` environment.
+
+- Make sure your server-side onboarding trigger creates or registers the subscriber profile whenever switching environments.
+- Test preferences and topics independently across stages.

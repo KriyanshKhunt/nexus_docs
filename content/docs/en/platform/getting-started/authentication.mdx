@@ -1,65 +1,124 @@
 ---
-title: Authentication
-description: Secret keys, public keys, and HMAC signatures for secure Nexus Signal integration.
+title: Authentication & Security
+description: Manage secret keys, public keys, and HMAC signatures to secure your backend triggers and real-time frontend bells.
 ---
 
-Nexus Signal uses **environment-scoped API keys**. Different credentials apply to server triggers vs. browser-facing SDK components.
+# Authentication & Security
 
-## Key types
+Nexus Signal uses environment-scoped API credentials. Different keys are scoped for server-side trigger requests vs. browser-facing components to ensure your provider integrations remain secure.
 
-| Key | Prefix | Used by | Exposure |
-|-----|--------|---------|----------|
-| **Secret key** | `sk_*` | Server SDK, workflow triggers, schedule SDK | **Server only — never in browser** |
-| **Public key** | `pk_*` | React SDK, inbox API, WebSocket join | Safe to embed in frontend |
+---
 
-Secret keys are sent as `Authorization: Bearer sk_prd_…` on trigger requests.
+## API Key Scopes
 
-Public keys are sent as `x-nexus-public-key` on SDK routes.
+Every environment (Development, Staging, Production) has a distinct pair of keys:
 
-## Workflow trigger auth
+| Key Type       | Prefix | Target Environment   | Deployment Scope                                             | Exposure Rule                                                                  |
+| :------------- | :----- | :------------------- | :----------------------------------------------------------- | :----------------------------------------------------------------------------- |
+| **Secret Key** | `sk_*` | Environment specific | Server-side triggers, workflow syncing, and manager scripts. | **Never expose to client-side code.** Keep in secure backend `.env` variables. |
+| **Public Key** | `pk_*` | Environment specific | React/Next.js/Angular/JS notification bell initializing.     | Safe to embed in frontend scripts and config files.                            |
+
+---
+
+## Workflow Ingestion Authentication
+
+Server-side trigger calls require the Secret Key passed as a standard Bearer token in the `Authorization` header:
 
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_your_secret_key
+Host: api.nexussignal.dev
+Authorization: Bearer sk_prd_your_secret_key_here
 Content-Type: application/json
+
+{
+  "workflowName": "user.welcome",
+  "recipients": [{ "externalId": "usr_992" }]
+}
 ```
 
-The API validates the key, resolves the environment and organization, then returns **202 Accepted** while the worker processes delivery asynchronously.
+The ingestion gateway validates the signature, maps the request to your organization, enqueues the delivery execution, and responds with `202 Accepted` in milliseconds.
 
-## HMAC for real-time (in-app)
+---
 
-Browser WebSocket connections cannot use secret keys. Instead:
+## Secure Real-time Feeds (HMAC Signatures)
 
-1. **Your backend** generates an HMAC signature with the secret key and subscriber ID
-2. **Your frontend** passes the signature to `NexusProvider`
+To prevent users from subscribing to other users' in-app notification streams, the frontend browser connection cannot use a raw secret key. Instead, Nexus secures real-time WebSocket feeds using **HMAC-SHA256 signatures**.
+
+1. **Your Backend Server**: Generates a signature when the subscriber log-in is authenticated.
+2. **Your Frontend Client**: Receives the signature and passes it along with the public key during WebSocket handshake connection.
+
+```mermaid
+sequenceDiagram
+    participant Browser as Client Browser
+    participant Server as Your Backend Server
+    participant Nexus as Nexus Signal Gateway
+
+    Browser->>Server: 1. Request page (User Auth Session)
+    activate Server
+    Server->>Server: 2. Generate HMAC signature<br/>HMAC-SHA256(sk_key, subscriberId)
+    Server-->>Browser: 3. Return user ID + HMAC signature
+    deactivate Server
+
+    Browser->>Nexus: 4. WebSocket connect (pk_key, subscriberId, signature)
+    activate Nexus
+    Nexus->>Nexus: 5. Verify signature internally
+    Nexus-->>Browser: 6. Handshake accepted (Subscribe to real-time events)
+    deactivate Nexus
+```
+
+### 1. Backend Signature Generation
+
+#### Using the Node SDK
 
 ```ts
-// Server — @nexus-signal/node
-const hmac = nexus.auth.generateHmacSignature('user_123');
+import { NexusClient } from '@nexus-signal/node';
 
-// Client — @nexus-signal/react
-<NexusProvider
-  publicKey="pk_prd_…"
-  subscriberId="user_123"
-  hmacSignature={hmac}
-  backendUrl="https://api.nexussignal.dev"
-/>
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+// Generate HMAC for a user
+const hmacSignature = nexus.auth.generateHmacSignature('usr_123');
 ```
 
-The platform verifies: `HMAC-SHA256(secretKey, subscriberExternalId)`.
+#### Native Node.js (Alternative / Non-SDK)
 
-<Callout type="error">
-Regenerate HMAC on each page load or session — treat it like a short-lived session token derived from your backend auth.
-</Callout>
+If you are generating signatures in environments without the SDK installed, use the native `crypto` module:
 
-## Dashboard auth
+```ts
+import crypto from 'crypto';
 
-The web dashboard uses JWT sessions (email/password, magic link, GitHub, or Google OAuth) with optional MFA. Team members get role-based access: Owner, Admin, Developer, or Marketer.
+function generateHmac(secretKey: string, subscriberExternalId: string): string {
+  return crypto.createHmac('sha256', secretKey).update(subscriberExternalId).digest('hex');
+}
 
-## Key rotation
+const hmacSignature = generateHmac(process.env.NEXUS_SECRET_KEY!, 'usr_123');
+```
 
-Roll secret keys from **Settings → API Keys**. Old keys can be deprecated without downtime if you rotate both server and HMAC generation together.
+### 2. Frontend Handshake Configuration
 
-## Related
+Pass the generated signature directly to the client provider initialization:
 
-- [Authentication](/docs/platform/getting-started/authentication) — which key goes where
+```tsx
+import { NexusProvider, NotificationFeed } from '@nexus-signal/react';
+
+function App() {
+  return (
+    <NexusProvider
+      publicKey="pk_prd_your_public_key"
+      subscriberId="usr_123"
+      hmacSignature="the_backend_generated_hmac_signature"
+    >
+      <NotificationFeed />
+    </NexusProvider>
+  );
+}
+```
+
+---
+
+## Key Rotation Procedure
+
+If a secret key is accidentally leaked, rotate it immediately from the **Settings → API Keys** section of the dashboard:
+
+1. **Generate Secondary Key**: Click **Roll Key** to generate a new key while keeping the old key temporarily active (dual-key window).
+2. **Deploy Backend Key**: Update your server-side `.env` variables with the new `sk_*` key.
+3. **Deactivate Old Key**: Once your servers are deployed, click **Revoke** on the old key in the dashboard to disable it permanently.

@@ -1,46 +1,56 @@
 ---
-title: Bring Your Own Provider
-description: Use your own SendGrid, Twilio, and Resend keys — zero per-message markup from Nexus.
+title: Bring Your Own Provider (BYOP)
+description: Connect your SendGrid, Twilio, and Resend credentials — zero per-message markup fees, no vendor lock-in.
 ---
 
-**BYOP (Bring Your Own Provider)** is the foundation of Nexus Signal. We orchestrate delivery; **you** own the carrier relationships and pay providers directly.
+# Bring Your Own Provider (BYOP)
 
-## What Nexus does
+**BYOP (Bring Your Own Provider)** is the foundation of Nexus Signal. Unlike legacy notification platforms that act as middleman carriers and charge a markup on every email or SMS, Nexus acts purely as the orchestration software layer.
 
-- Visual workflow builder and template engine
-- Smart routing, failover, and circuit breaking across **your** provider accounts
-- Subscriber preferences, topics, and inbox APIs
-- Analytics, audit logs, and cost tracking
+You enter **your own API keys** for providers and pay carrier billing rates directly at cost.
 
-## What Nexus does not do
+---
 
-- Resell SMS or email bandwidth
-- Mark up per-message fees
-- Lock you into a single carrier
+## Traditional vs. BYOP Cost Analysis
 
-## Supported provider layers
+Notification volumes often scale rapidly, turning per-message markups into a major overhead:
 
-Configure one or more providers per channel in **Integrations**, then set **traffic weights** (e.g. 70% SendGrid, 30% Resend for email).
+| Metric                     | Traditional Notification SaaS               | Nexus Signal (BYOP)                                        |
+| :------------------------- | :------------------------------------------ | :--------------------------------------------------------- |
+| **Billing Model**          | Subscriptions + per-message volume markup.  | Flat-rate platform subscription only.                      |
+| **Message Markup**         | Frequently marked up by 50% to 200%.        | **0% markup**. You pay the carrier directly at cost.       |
+| **Carrier Redundancy**     | Locked to the platform's selected carrier.  | Weighted routing and instant failover across your vendors. |
+| **Deliverability Control** | Shared IP reputation pools (poor inboxing). | Dedicated IP selection and direct sender configuration.    |
 
-See the full [provider catalog](/docs/platform/integrations/providers).
+---
 
-## Encrypted credentials
+## Secure Vault Encryption
 
-Provider API keys are stored encrypted in your organization's `providerKeys` vault. They are decrypted only at dispatch time inside workers.
+Because you supply your own credentials, protecting your API keys is our highest security priority.
 
-## AI keys are BYOP too
+- **AES-256 Encryption**: Provider credentials are encrypted at the database level inside your workspace `providerKeys` vault.
+- **Decryption Scope**: Keys are decrypted in memory strictly at the time of carrier dispatch inside isolated worker processes.
+- **Zero Log Exposure**: Payload logging automatically sanitizes authentication details and API tokens to prevent keys from leaking in delivery trace logs.
 
-AI content generation uses **your** OpenAI or Anthropic API key (`openai_ai`, `anthropic_ai` integrations). Nexus does not proxy AI calls through a shared key.
+---
 
-## Why this matters
+## Routing & Redundancy
 
-| Traditional platforms | Nexus Signal |
-|----------------------|--------------|
-| Bundled SMS/email with markup | You pay Twilio/SendGrid directly |
-| Hard to switch providers | Weighted routing + failover across vendors |
-| Opaque delivery costs | [Cost analytics](/docs/platform/features/cost-analytics) per workflow |
+With BYOP, you are not dependent on a single carrier. You can configure multiple provider accounts for a single channel (e.g. Email) and allocate traffic dynamically:
 
-## Related
+```mermaid
+flowchart TD
+    Trigger[Email Node Execution] --> Router{Weighted Router}
+    Router -->|70% Traffic| SG[SendGrid Adapter]
+    Router -->|30% Traffic| RS[Resend Adapter]
+    SG -->|Fail / Timeout| Fallback[Failover to Resend]
+```
 
-- [Integrations](/docs/platform/integrations)
-- [Weighted routing](/docs/platform/features/cost-reduction#weighted-provider-routing)
+- **Weighted Routing**: Allocate `70%` of email traffic to SendGrid and `30%` to Resend to maintain warm IP addresses across multiple suppliers.
+- **Instant Failover**: If a SendGrid API call times out or returns a rate limit exception, the worker immediately dispatches the message via Resend.
+
+---
+
+## AI Keys are BYOP Too
+
+Nexus Signal supports visual workflow **AI Nodes** (e.g., for translation verification or dynamic copywriting triggers). These nodes use **your own LLM keys** (OpenAI, Anthropic, or Cohere). Nexus never runs LLM tasks over shared proxy accounts. You maintain complete control over data privacy policies and token usage limits.

@@ -1,130 +1,172 @@
 ---
 title: Quickstart
-description: Send your first notification with Nexus Signal in minutes.
+description: Send your first notification with Nexus Signal in under 5 minutes.
 ---
+
+# Quickstart
+
+This guide walks you through sending your first notification event and checking the real-time delivery logs.
 
 <Steps>
 <Step>
-### Create a workspace
+### Create a Workspace & Retrieve Keys
 
-Sign in at the [dashboard](https://app.nexussignal.dev). You receive **three isolated environments**:
+Log in to the [Nexus Dashboard](https://app.nexussignal.dev). Your workspace comes pre-configured with **three fully isolated environments**:
 
-| Environment | Key prefix            | Use for                 |
-| ----------- | --------------------- | ----------------------- |
-| Development | `pk_dev_` / `sk_dev_` | Local testing + sandbox |
-| Staging     | `pk_stg_` / `sk_stg`  | QA integration          |
-| Production  | `pk_prd_` / `sk_prd_` | Live traffic            |
+| Environment     | Key Prefix            | Purpose                                               |
+| --------------- | --------------------- | ----------------------------------------------------- |
+| **Development** | `pk_dev_` / `sk_dev_` | Local staging, developer sandbox, and mock testing.   |
+| **Staging**     | `pk_stg_` / `sk_stg_` | Internal testing, QA pipelines, and staging branches. |
+| **Production**  | `pk_prd_` / `sk_prd_` | Production traffic and live user notifications.       |
 
-</Step>
-
-<Step>
-### Create a workflow
-
-**Workflows** → create `user.signup` → add Email + In-App channel nodes → publish template to **Production**.
+Navigate to **Settings → API Keys** to copy the keys for your current active environment.
 
 </Step>
 
 <Step>
-### Connect a provider
+### Design Your First Workflow
 
-**Integrations** → add SendGrid or Resend → paste API key (encrypted at rest).
+1. Go to the **Workflows** page in the dashboard.
+2. Click **Create Workflow** and name the event trigger: `user.welcome`.
+3. In the visual canvas, drag and drop an **Email Channel Node** right below the primary trigger.
+4. Click the Email node to configure its subject line (e.g., `Welcome to Acme, {{ data.name }}!`) and standard template layout.
+5. Click **Publish** to deploy the workflow template to your active environment.
 
 </Step>
 
 <Step>
-### Install the Node SDK
+### Connect a Delivery Provider (BYOP)
+
+Nexus requires a delivery gateway to dispatch notifications.
+
+1. Go to the **Integrations** tab in the dashboard.
+2. Select your provider of choice (e.g., **SendGrid**, **Resend**, or **Twilio**).
+3. Enter your provider API credentials. Your credentials are fully encrypted at rest using AES-256 and decrypted only at the moment of execution.
+
+</Step>
+
+<Step>
+### Install the SDKs
+
+Nexus supports both server-side SDKs for workflow triggers and frontend components for real-time in-app feeds:
+
+#### Server-side SDK (Node.js / Express)
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/node ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/node ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/node ```</Tab>
 </Tabs>
+
+#### Client-side SDK (React / Next.js)
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/react lucide-react ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/react lucide-react ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/react lucide-react ```</Tab>
+</Tabs>
+
 </Step>
 
 <Step>
-### Trigger from your server
+### Trigger the Event
+
+Create a script on your backend server to initialize the client and trigger the `user.welcome` workflow:
 
 ```ts title="trigger.ts"
-import { NexusClient } from "@nexus-signal/node";
+import { NexusClient } from '@nexus-signal/node';
 
+// Initialize client with secret key (Server-only)
 const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!,
-  baseUrl: "https://api.nexussignal.dev",
+  secretKey: process.env.NEXUS_SECRET_KEY || 'sk_dev_your_secret_key_here',
 });
 
-const result = await nexus.workflows.trigger({
-  workflowName: "user.signup",
-  recipients: [{ externalId: "user_123", email: "alex@acme.io" }],
-  data: { name: "Alex" },
-});
+async function main() {
+  const response = await nexus.workflows.trigger({
+    workflowName: 'user.welcome',
+    recipients: [
+      {
+        externalId: 'usr_active_99', // The subscriber ID in your database
+        email: 'alex@acme.io', // Required for Email channels
+        phoneNumber: '+15550192834', // Required for SMS/WhatsApp channels
+      },
+    ],
+    data: {
+      name: 'Alex',
+      companyName: 'Acme Corp',
+    },
+  });
+
+  console.log('Trigger accepted status:', response.accepted); // true
+}
+
+main().catch(console.error);
 ```
 
-<Callout type="success">
-A successful call returns **HTTP 202** with `{ accepted: true }`. Check **Audit Logs** or the Development **Sandbox** simulator.
-</Callout>
+Run this file on your server to emit the event trigger.
+
+</Step>
+
+<Step>
+### Verify Logs & Sandbox
+
+A successful API request returns an **HTTP 202 Accepted** payload immediately.
+
+- **Audit Logs**: In the dashboard, click **Audit Logs** to view the live execution trace. You will see steps like `Ingested` → `Queued` → `Compiled` → `Dispatched`.
+- **Sandbox Simulator**: While in the **Development** environment, outbound messages (Email, SMS) do not make external provider API calls. They stream to the dashboard **Sandbox Simulator** so you can view mock emails and messages for free.
+
 </Step>
 </Steps>
 
-## Next steps
+---
+
+## Next Steps
 
 <Cards>
   <Card
     title="Environments"
     href="/docs/platform/getting-started/environments"
-    description="Dev, Staging, Production keys."
+    description="Understand Development, Staging, and Production workspace isolation."
   />
   <Card
-    title="React SDK"
+    title="React SDK Integration"
     href="/docs/sdk/frontend/react"
-    description="Add the in-app bell."
+    description="Embed the real-time notification bell feed directly into your React application UI."
   />
   <Card
-    title="Object fan-out"
+    title="Object Subscriptions"
     href="/docs/platform/guides/object-fanout"
-    description="Notify all watchers of an entity."
+    description="Configure subscribers for collaborative workspaces, channels, and teams."
   />
   <Card
-    title="Workflow-as-code"
+    title="Workflow-as-Code"
     href="/docs/sdk/workflow/workflow-as-code"
-    description="Define workflows in TypeScript."
+    description="Define, commit, and version control your step canvases directly in TypeScript."
   />
 </Cards>
+
+---
 
 ## FAQ
 
 <Accordions type="single">
-  <Accordion title="Do I need all 10 channels?">
-    No. Start with Email or In-App only. Add channels as you connect providers
-    in Integrations.
+  <Accordion title="Do I need to configure all 10 channels to get started?">
+    No. You can start with a single channel (like Email or In-App). Nexus will skip any node channel
+    inside a workflow if no credentials are configured for it.
   </Accordion>
-  <Accordion title="Why 202 Accepted instead of 200?">
-    Nexus is async by design. The API enqueues work and returns immediately —
-    delivery happens in background workers.
+  <Accordion title="Why does the API return 202 Accepted instead of 200 OK?">
+    Nexus is built on an event-driven architecture. The API enqueues the event payload to BullMQ and
+    responds in under 10ms to keep your application fast, while background workers handle templates,
+    provider lookups, and carrier dispatches.
   </Accordion>
-  <Accordion title="Will Development sends cost money?">
-    External channels use the **sandbox simulator** in Development — no real
-    provider API calls. In-App uses live WebSocket.
+  <Accordion title="Do Development API triggers send real emails/SMS?">
+    By default, the **Development** environment operates in **Sandbox Mode**. All outbound
+    dispatches are intercepted and shown in the dashboard's simulated inbox. In-App notifications
+    are still delivered via real-time WebSockets to your local app.
   </Accordion>
-  <Accordion title="Where do I get API keys?">
-    Dashboard → select environment → **Settings → API Keys**. Use `sk_dev_`
-    locally, `sk_prd_` in production.
+  <Accordion title="Where do I locate my API keys?">
+    API keys are scoped per environment. Select your environment from the top-bar dropdown in the
+    dashboard, then go to **Settings → API Keys**. Keep secret keys (`sk_`) on your server and
+    public keys (`pk_`) on the frontend.
   </Accordion>
 </Accordions>
