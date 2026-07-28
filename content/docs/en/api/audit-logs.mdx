@@ -1,0 +1,130 @@
+---
+title: Audit Logs API
+description: Dashboard endpoints to view, search, and trace execution logs and delivery lifecycles.
+---
+
+Audit logs record the history of triggered workflows and delivery steps, letting you track the exact status and payload details of every message.
+
+---
+
+## Authentication & access
+
+- **Base path**: `/v1/audit-logs`
+- **Auth**: Requires a user JWT session token.
+
+---
+
+## Endpoint summary
+
+| Method | Path                                    | Description                                                         |
+| :----- | :-------------------------------------- | :------------------------------------------------------------------ |
+| `GET`  | `/v1/audit-logs?environment=PRODUCTION` | List and filter delivery logs (paginated, searchable).              |
+| `GET`  | `/v1/audit-logs/:id`                    | Get full status, inputs/outputs, and tracer lifecycle step metrics. |
+
+---
+
+## List audit logs
+
+Retrieve chronological logs matching your environment, filters, or search term.
+
+```http
+GET /v1/audit-logs?environment=PRODUCTION&page=1&limit=20&search=alex
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+### Query filters
+
+- `environment`: `DEVELOPMENT`, `STAGING`, or `PRODUCTION` (defaults to `DEVELOPMENT`).
+- `search`: Filter by subscriber email, external ID, log ID, or workflow name (minimum 3 characters).
+- `status`: Filter by execution status (e.g. `DELIVERED`, `FAILED`, `BOUNCED`).
+- `channel`: Filter by delivery channel (e.g. `EMAIL`, `SMS`, `PUSH`, `WEBHOOK`).
+- `timeRange`: Filter using presets: `1h`, `6h`, `24h`, `7d`, `30d`.
+- `dateFrom` / `dateTo`: Custom date range filters (ISO strings).
+- `sortBy`: Fields: `executedAt`, `status`, `channel`, `retryCount`, `workflowName`, `subscriber`.
+- `sortDir`: Sorting order: `asc` or `desc` (defaults to `desc`).
+
+**Response body:**
+
+```json
+{
+  "logs": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "executedAt": "2026-07-28T21:00:00.000Z",
+      "channel": "EMAIL",
+      "status": "DELIVERED",
+      "retryCount": 0,
+      "workflowName": "billing.invoice",
+      "subscriber": {
+        "externalId": "user_42",
+        "email": "alex@example.com"
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "environment": "PRODUCTION",
+  "sortBy": "executedAt",
+  "sortDir": "desc"
+}
+```
+
+---
+
+## Get delivery log detail
+
+Retrieve full debug information, including payload variables and tracer lifecycles.
+
+```http
+GET /v1/audit-logs/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Response body:**
+
+```json
+{
+  "log": {
+    "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "trackingId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "executedAt": "2026-07-28T21:00:00.000Z",
+    "channel": "EMAIL",
+    "status": "DELIVERED",
+    "retryCount": 0,
+    "payloadInput": {
+      "invoiceId": "INV-9901",
+      "amount": 150
+    },
+    "payloadOutput": {
+      "title": "Invoice Paid",
+      "body": "Thank you for paying $150."
+    },
+    "responseMeta": {
+      "messageId": "msg-sg-9812",
+      "provider": "sendgrid",
+      "latencyMs": 142
+    },
+    "lifecycle": [
+      { "step": "INGESTED", "status": "INGESTED", "at": "2026-07-28T21:00:00.000Z" },
+      { "step": "QUEUED", "status": "QUEUED", "at": "2026-07-28T21:00:00.120Z" },
+      { "step": "DELIVERED", "status": "DELIVERED", "at": "2026-07-28T21:00:00.262Z" }
+    ],
+    "subscriber": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "externalId": "user_42",
+      "email": "alex@example.com"
+    },
+    "workflow": {
+      "id": "771e8400-e29b-41d4-a716-446655440000",
+      "name": "billing.invoice",
+      "environment": "PRODUCTION"
+    }
+  }
+}
+```
+
+## Related
+
+- [Management logs API](/docs/api/management#schedules--logs) — secret key logs fetch
+- [Pipeline telemetry concept](/docs/platform/concepts/delivery-pipeline)

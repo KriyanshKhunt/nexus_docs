@@ -61,7 +61,12 @@ Content-Type: application/json
 }
 ```
 
-Object properties are available in templates as `{{ object.name }}`, `{{ object.properties.status }}`.
+<Callout type="info">
+  **Note on variables**: Because objects are resolved and deduped to raw subscriber profiles at
+  trigger time, object-specific properties are not automatically available inside template variable
+  contexts. To display object details (like a project's name or status) in your notifications, pass
+  them in the trigger request's `data` payload.
+</Callout>
 
 ## Manage subscriptions
 

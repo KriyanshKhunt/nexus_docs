@@ -1,65 +1,96 @@
 ---
 title: Translations API
-description: Upsert locale key-value translation files for the {{ t "key" }} template helper.
+description: Server-side and dashboard endpoints to register locale dictionary files for the {{ t "key" }} template helper.
 ---
 
-<SecretKeyAuth />
+Translations are static key-value string tables mapped by language locale and namespace. This allows workflows to interpolate localized strings at trigger time dynamically.
 
-Base path: `/v1/management/translations`
+---
 
-## List translations
+## Access & paths
 
-Fetch all uploaded localization dictionary bundles.
+- **Server-to-Server / SDK (`sk_*` auth)**: Root path is `/v1/management/translations`
+- **Dashboard Frontend (JWT auth)**: Root path is `/v1/translations`
 
-```http
-GET /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+---
 
-Returns locale, namespace, and key count per file:
+## Endpoint summary
 
-```json
-{
-  "translations": [
-    {
-      "id": "trans_123",
-      "locale": "es",
-      "namespace": "default",
-      "keyCount": 3,
-      "createdAt": "2026-07-26T12:00:00Z"
-    }
-  ]
-}
-```
+| Method   | Management Path (`sk_*`)      | Dashboard Path (JWT)   | Description                                      |
+| :------- | :---------------------------- | :--------------------- | :----------------------------------------------- |
+| `GET`    | `/v1/management/translations` | `/v1/translations`     | List all translation bundles in the environment. |
+| `PUT`    | `/v1/management/translations` | `/v1/translations`     | Create or update (upsert) a translation bundle.  |
+| `GET`    | —                             | `/v1/translations/:id` | Retrieve translation details by UUID.            |
+| `DELETE` | —                             | `/v1/translations/:id` | Delete a translation bundle.                     |
 
 ---
 
 ## Upsert translation bundle
 
-Upload a JSON dictionary containing localized strings for a BCP 47 locale.
+Upload or update a translation table.
 
 ```http
 PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
-  "locale": "es",
-  "namespace": "default",
+  "locale": "es-MX",
+  "namespace": "invoice-labels",
   "content": {
-    "welcome_message": "Bienvenido",
-    "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "title.invoice_overdue": "Factura Vencida",
+    "button.pay_now": "Pagar Ahora",
+    "description.amount_due": "El monto total a pagar es {{amount}}."
   }
 }
 ```
 
-Namespace defaults to `default`.
+### Request body fields
+
+- `locale`: string (Required). BCP 47 language code (max 35 chars, e.g., `es-MX`, `ja`, `pt-BR`).
+- `namespace`: string (Optional). Case-sensitive categorizing label (max 64 chars). Lowercase alphanumeric with dashes/underscores (`/^[a-z][a-z0-9_-]*$/`). Defaults to `default`.
+- `content`: object (Required). A flat dictionary of string key-value pairs (max 500 keys).
+  - **Keys**: Must start with a letter and contain alphanumeric characters, dots, underscores, or dashes (`/^[a-zA-Z][a-zA-Z0-9_.-]*$/`, max 128 chars).
+  - **Values**: Raw template strings (max 5,000 characters). Can contain Handlebars variable slots.
 
 ---
 
-## Related Links
+## List translation files
 
-- [Translation files guide](/docs/platform/features/translations)
-- [CLI translations pull/push](/docs/sdk/devtools/cli)
+```http
+GET /v1/management/translations
+Authorization: Bearer sk_prd_your_secret_key
+```
+
+**Response body:**
+
+```json
+{
+  "translations": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "locale": "es-MX",
+      "namespace": "invoice-labels",
+      "keyCount": 3,
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Limits
+
+| Limit                                   | Value            |
+| :-------------------------------------- | :--------------- |
+| Max translation bundles per environment | 50               |
+| Max keys per translation file           | 500              |
+| Key maximum length                      | 128 characters   |
+| Value maximum length                    | 5,000 characters |
+| Namespace maximum length                | 64 characters    |
+
+## Related
+
+- [Translations feature guide](/docs/platform/features/translations)
+- [Multi-language templates](/docs/platform/features/i18n)
+- [CLI translation push/pull](/docs/sdk/devtools/cli)

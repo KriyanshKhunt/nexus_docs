@@ -83,8 +83,8 @@ Or via dashboard: open the broadcast detail → **Send Now**.
 ## Cancel a broadcast
 
 ```http
-POST /v1/management/broadcasts/:id/cancel
-Authorization: Bearer sk_prd_…
+POST /v1/broadcasts/:id/cancel
+Authorization: Bearer <jwt_token>
 ```
 
 Only `SCHEDULED` or `SENDING` broadcasts can be cancelled.

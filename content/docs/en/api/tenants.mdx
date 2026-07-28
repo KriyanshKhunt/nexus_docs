@@ -1,59 +1,98 @@
 ---
 title: Tenants API
-description: Per-customer branding, provider overrides, and preference defaults for B2B SaaS.
+description: B2B white-label branding configurations — create, list, and manage customer tenants.
 ---
 
-<DashboardAuth />
+Tenants represent your B2B SaaS customers. This API allows dashboard administrators or backend scripts to manage per-tenant branding and properties.
 
-Dashboard base path: `/v1/tenants`
+---
 
-Management API (CLI/MCP): `GET|PUT /v1/management/tenants`
+## Access & paths
 
-## List tenants
+- **Management API / Node SDK (`sk_*` key)**: `PUT` / `GET` / `DELETE` requests under `/v1/management/tenants`
+- **Dashboard API (JWT session token)**: Requests under `/v1/tenants`
 
-```http
-GET /v1/tenants
-Authorization: Bearer <jwt>
-```
+---
+
+## Endpoint summary
+
+| Method   | Management Path (`sk_*`)     | Dashboard Path (JWT) | Description                               |
+| :------- | :--------------------------- | :------------------- | :---------------------------------------- |
+| `GET`    | `/v1/management/tenants`     | `/v1/tenants`        | List all tenants (paginated, searchable). |
+| `PUT`    | `/v1/management/tenants`     | `/v1/tenants`        | Create or update (upsert) a tenant.       |
+| `GET`    | `/v1/management/tenants/:id` | `/v1/tenants/:id`    | Retrieve a single tenant profile.         |
+| `PATCH`  | —                            | `/v1/tenants/:id`    | Update individual tenant properties.      |
+| `DELETE` | —                            | `/v1/tenants/:id`    | Delete a tenant.                          |
+
+---
 
 ## Upsert tenant
 
-```http
-PUT /v1/tenants
-Authorization: Bearer <jwt>
-```
+Create a new tenant or update its fields.
 
-```json
+```http
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
   "externalId": "tenant_acme",
   "name": "Acme Corp",
   "branding": {
-    "logoUrl": "https://cdn.acme.io/logo.png",
+    "logo": "https://cdn.acme.io/logo.png",
     "primaryColor": "#2563eb",
-    "footerHtml": "<p>© Acme</p>"
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
   },
-  "providerOverrides": {},
-  "preferenceDefaults": {}
+  "properties": {
+    "planTier": "enterprise"
+  }
 }
 ```
 
-## Get / update / delete
+- `externalId`: string (Required). The unique ID mapping to your SaaS account/tenant (max 128 characters).
+- `name`: string (Required). The human-readable name of the customer company (max 256 characters).
+- `branding`: object (Optional). Custom key-value dictionary containing template branding strings (max 20 keys). Supported keys include `logo`, `primaryColor`, `companyName`, and `footerHtml`.
+- `properties`: object (Optional). Custom key-value metadata query filters (max 50 keys).
+
+---
+
+## List tenants
+
+Retrieve all tenants configured in the active environment.
 
 ```http
-GET    /v1/tenants/:id
-PATCH  /v1/tenants/:id
-DELETE /v1/tenants/:id
+GET /v1/tenants?page=1&limit=25&search=acme
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## Trigger with tenant
+**Response body:**
 
 ```json
 {
-  "workflowName": "invoice.sent",
-  "tenant": "tenant_acme",
-  "recipients": [{ "externalId": "user_42" }],
-  "data": {}
+  "tenants": [
+    {
+      "id": "771e8400-e29b-41d4-a716-446655440000",
+      "externalId": "tenant_acme",
+      "name": "Acme Corp",
+      "branding": {
+        "logo": "https://cdn.acme.io/logo.png",
+        "primaryColor": "#2563eb"
+      },
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
-See [Per-tenant branding](/docs/platform/features/tenants).
+## Related
+
+- [B2B multi-tenant setup](/docs/platform/guides/b2b-multi-tenant)
+- [Tenants feature overview](/docs/platform/features/tenants)
+- [Email layouts](/docs/platform/features/email-layouts)

@@ -1,64 +1,110 @@
 ---
 title: Broadcasts API
-description: Create, schedule, and send one-time audience messages.
+description: Server-side and dashboard endpoints to create, edit, schedule, and cancel one-time audience campaigns.
 ---
 
-<DashboardAuth />
+Broadcasts allow you to send a one-time message (e.g. newsletter, feature release notice) to a specific audience. Unlike transaction triggers, broadcasts run asynchronously across a resolved subset of subscriber profiles.
 
-Dashboard base path: `/v1/broadcasts`
+---
 
-Management API: `GET|POST /v1/management/broadcasts`, `POST /v1/management/broadcasts/:id/send`
+## Access & paths
 
-## List broadcasts
+Different keys map to distinct routing roots:
 
-```http
-GET /v1/broadcasts?status=COMPLETED&page=1
-Authorization: Bearer <jwt>
-```
+- **Server-to-Server / SDK (`sk_*` auth)**: Root path is `/v1/management/broadcasts`
+- **Dashboard Frontend (JWT auth)**: Root path is `/v1/broadcasts`
+
+---
+
+## Endpoint summary
+
+| Method   | Management Path (`sk_*`)             | Dashboard Path (JWT)        | Description                                      |
+| :------- | :----------------------------------- | :-------------------------- | :----------------------------------------------- |
+| `GET`    | `/v1/management/broadcasts`          | `/v1/broadcasts`            | List all broadcasts in the environment.          |
+| `POST`   | `/v1/management/broadcasts`          | `/v1/broadcasts`            | Create a new draft or scheduled broadcast.       |
+| `GET`    | —                                    | `/v1/broadcasts/:id`        | Retrieve a single broadcast profile.             |
+| `PUT`    | —                                    | `/v1/broadcasts/:id`        | Update draft/scheduled broadcast details.        |
+| `DELETE` | —                                    | `/v1/broadcasts/:id`        | Delete a broadcast.                              |
+| `POST`   | `/v1/management/broadcasts/:id/send` | `/v1/broadcasts/:id/send`   | Send a draft or scheduled broadcast immediately. |
+| `POST`   | —                                    | `/v1/broadcasts/:id/cancel` | Cancel a scheduled or sending broadcast.         |
+
+_Note: Cancel (`/cancel`) is only available on dashboard routes._
+
+---
 
 ## Create broadcast
 
-```http
-POST /v1/broadcasts
-Authorization: Bearer <jwt>
-```
+Create a new broadcast campaign.
 
-```json
+```http
+POST /v1/management/broadcasts
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
-  "name": "Q4 Update",
-  "workflowId": "workflow-uuid",
-  "audienceId": "audience-uuid",
-  "scheduledAt": "2026-08-01T09:00:00Z"
+  "name": "Q4 Enterprise Update",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+  "scheduledAt": "2026-11-15T09:00:00.000Z",
+  "data": {
+    "releaseVersion": "v4.2"
+  }
 }
 ```
 
-Omit `scheduledAt` for draft; send manually later.
+- `name`: string (Required). Campaign label in the dashboard (max 256 chars).
+- `workflowId`: string (Required). The target workflow UUID to run for each watcher.
+- `audienceId`: string (Optional). The target audience segment UUID. Required before sending.
+- `scheduledAt`: string (Optional). ISO 8601 datetime string. If omitted, the broadcast is saved as a `DRAFT`.
+- `data`: object (Optional). Static key-value payload context passed to all recipient runs.
+
+---
 
 ## Send immediately
 
-```http
-POST /v1/broadcasts/:id/send
-```
-
-## Cancel
+Bypass scheduled times and launch the broadcast run queue immediately:
 
 ```http
-POST /v1/broadcasts/:id/cancel
+POST /v1/management/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/send
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-## Broadcast statuses
+_Note: The broadcast must have an active audience assigned (`audienceId`) and be in a `DRAFT` or `SCHEDULED` state._
 
-`DRAFT` · `SCHEDULED` · `SENDING` · `COMPLETED` · `FAILED` · `CANCELLED`
+---
 
-## Node SDK
+## Cancel broadcast
 
-```ts
-await nexus.broadcasts.create({
-  name: 'Launch',
-  workflowId: 'workflow-uuid',
-  audienceId: 'audience-uuid',
-});
-await nexus.broadcasts.send(broadcastId);
+Cancel an active or scheduled broadcast campaign:
+
+```http
+POST /v1/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/cancel
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-See [Broadcasts](/docs/platform/features/broadcasts).
+---
+
+## Broadcast lifecycles
+
+Broadcast campaigns progress through the following status states:
+
+- **`DRAFT`**: Created without a scheduled time or waiting for a manual trigger. Editable.
+- **`SCHEDULED`**: Scheduled to send at a future timestamp. A background job polls every 60 seconds and fires the run when due. Editable.
+- **`SENDING`**: Currently processing and pushing jobs into the BullMQ delivery queue. Cannot be edited or deleted.
+- **`COMPLETED`**: Successfully dispatched to all members of the target audience.
+- **`FAILED`**: Encountered a fatal database, Redis, or plan quota error during dispatch.
+- **`CANCELLED`**: Cancelled by an admin before or during execution.
+
+## Limits
+
+| Limit                          | Value          |
+| :----------------------------- | :------------- |
+| Max broadcasts per environment | 200            |
+| Name maximum length            | 256 characters |
+| Schedule poll check interval   | 60 seconds     |
+
+## Related
+
+- [Broadcasts feature overview](/docs/platform/features/broadcasts)
+- [Audiences API](/docs/api/audiences) — defining target recipient groups
+- [Workflows trigger API](/docs/api/workflows)

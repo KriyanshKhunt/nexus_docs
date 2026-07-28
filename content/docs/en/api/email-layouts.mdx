@@ -1,58 +1,103 @@
 ---
 title: Email Layouts API
-description: Shared email frames and reusable HTML partials.
+description: Server-side and dashboard endpoints to manage HTML framing layouts and Handlebars partials.
 ---
 
-<DashboardAuth />
+Email layouts define the header, footer, and outer container frames for your HTML emails, while partials let you reuse snippets (e.g. CTA buttons, standard legal texts) inside template bodies.
 
-Base path: `/v1/email`
+---
 
-## Layouts
+## Access & paths
+
+- **Server / SDK Management (`sk_*` auth)**: `GET` / `POST` requests under `/v1/management/email/layouts`
+- **Dashboard Frontend (JWT auth)**: Requests under `/v1/email`
+
+---
+
+## Endpoint summary
+
+| Method   | Access Scope     | Path                     | Description                                      |
+| :------- | :--------------- | :----------------------- | :----------------------------------------------- |
+| `GET`    | Dashboard / Mgmt | `/v1/email/layouts`      | List all layouts in the environment.             |
+| `POST`   | Dashboard / Mgmt | `/v1/email/layouts`      | Create a new HTML layout.                        |
+| `GET`    | Dashboard        | `/v1/email/layouts/:id`  | Retrieve a layout's HTML body and variables.     |
+| `PUT`    | Dashboard        | `/v1/email/layouts/:id`  | Update an existing HTML layout.                  |
+| `DELETE` | Dashboard        | `/v1/email/layouts/:id`  | Delete an HTML layout.                           |
+| `GET`    | Dashboard        | `/v1/email/partials`     | List all Handlebars partials in the environment. |
+| `POST`   | Dashboard        | `/v1/email/partials`     | Create a reusable Handlebars HTML partial.       |
+| `GET`    | Dashboard        | `/v1/email/partials/:id` | Retrieve a partial's details.                    |
+| `PUT`    | Dashboard        | `/v1/email/partials/:id` | Update a partial.                                |
+| `DELETE` | Dashboard        | `/v1/email/partials/:id` | Delete a partial.                                |
+
+---
+
+## Create layout
+
+Create a new framing layout. The HTML layout must contain the placeholder `{{{content}}}` to compile the inner message templates.
 
 ```http
-GET    /v1/email/layouts
-GET    /v1/email/layouts/:id
-POST   /v1/email/layouts
-PUT    /v1/email/layouts/:id
-DELETE /v1/email/layouts/:id
-```
+POST /v1/email/layouts
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-Create layout body:
-
-```json
 {
-  "name": "Default",
-  "html": "<html><body>{{{ content }}}</body></html>",
-  "isActive": true
+  "name": "corporate-newsletter",
+  "htmlBody": "<html><head><style>body { font-family: sans-serif; }</style></head><body><header><img src=\"{{ logo }}\" /></header><main>{{{content}}}</main><footer>{{{footerHtml}}}</footer></body></html>",
+  "variables": {
+    "defaultFooter": "<p>© 2026 Acme Corp</p>"
+  },
+  "isDefault": true
 }
 ```
 
-## Partials
+### Request body fields
+
+- `name`: string (Required). Lowercase alphanumeric key with dashes/underscores (`/^[a-z][a-z0-9_-]*$/`, max 64 chars).
+- `htmlBody`: string (Required). Raw HTML code containing `{{{content}}}` (max 100 KB).
+- `variables`: object (Optional). Custom key-value pairs representing layout default strings.
+- `isDefault`: boolean (Optional). Set as the default layout for new email templates.
+
+---
+
+## Create partial
+
+Register a reusable sub-template snippet.
 
 ```http
-GET    /v1/email/partials
-GET    /v1/email/partials/:id
-POST   /v1/email/partials
-PUT    /v1/email/partials/:id
-DELETE /v1/email/partials/:id
-```
+POST /v1/email/partials
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-Partial body:
-
-```json
 {
-  "name": "cta-button",
-  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+  "name": "action-button",
+  "description": "Standard green CTA button with tracking URL",
+  "htmlBody": "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" bgcolor=\"#10b981\" style=\"border-radius: 4px;\"><a href=\"{{url}}\" target=\"_blank\" style=\"font-size: 14px; font-family: sans-serif; color: #ffffff; text-decoration: none; padding: 12px 24px; border: 1px solid #10b981; display: inline-block; font-weight: bold;\">{{label}}</a></td></tr></table>"
 }
 ```
 
-Reference in templates: `{{> cta-button url=data.link label="Click here" }}`
+- `name`: string (Required). Lowercase alphanumeric key with dashes/underscores (`/^[a-z][a-z0-9_-]*$/`, max 64 chars).
+- `description`: string (Optional). Internal description of the partial (max 256 chars).
+- `htmlBody`: string (Required). Raw HTML code (max 100 KB).
 
-## Management API
+### Usage in templates
 
-```http
-GET  /v1/management/email/layouts
-POST /v1/management/email/layouts
+Include registered partials inside email templates using the standard Handlebars syntax:
+
+```html
+<p>Click the link below to verify your email address:</p>
+{{> action-button url=data.verificationLink label="Verify Email" }}
 ```
 
-See [Email layouts & partials](/docs/platform/features/email-layouts).
+## Limits
+
+| Limit                             | Value         |
+| :-------------------------------- | :------------ |
+| Max layouts per environment       | 20            |
+| Max partials per environment      | 100           |
+| Max layout/partial HTML body size | 100 KB        |
+| Name maximum length               | 64 characters |
+
+## Related
+
+- [Email layouts feature guide](/docs/platform/features/email-layouts)
+- [B2B multi-tenant setup](/docs/platform/guides/b2b-multi-tenant)

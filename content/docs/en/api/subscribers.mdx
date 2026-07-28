@@ -1,99 +1,192 @@
 ---
 title: Subscribers API
-description: Dashboard endpoints to manage subscribers — create, update, export, and GDPR purge.
+description: Dashboard endpoints to manage subscribers — list, create, update, export, and purge.
 ---
 
-Requires dashboard JWT + workspace context.
+Subscribers are the target profiles who receive your notifications. This API allows dashboard administrators to query, create, update, and manage subscriber data, including their channel connections and delivery history.
 
-## Endpoints
+---
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/v1/subscribers` | List subscribers (paginated, searchable) |
-| POST | `/v1/subscribers` | Create subscriber |
-| GET | `/v1/subscribers/:id` | Get subscriber by ID |
-| PUT | `/v1/subscribers/:id` | Update subscriber |
-| DELETE | `/v1/subscribers/:id` | GDPR purge — delete subscriber and delivery history |
-| GET | `/v1/subscribers/:id/export` | Export subscriber data (GDPR) |
-| GET | `/v1/subscribers/:id/engagement` | Engagement model — smart send-time data |
+## Authentication & access
 
-Roles: create/update/delete require `OWNER`, `ADMIN`, or `DEVELOPER`.
+- **Base path**: `/v1/subscribers`
+- **Auth**: Requires a user JWT session token.
+- **Roles**: Reading is accessible to all workspace users. Creating, updating, deleting, or exporting data requires `OWNER`, `ADMIN`, or `DEVELOPER` roles.
+
+---
+
+## Endpoint summary
+
+| Method   | Path                                     | Description                                          |
+| :------- | :--------------------------------------- | :--------------------------------------------------- |
+| `GET`    | `/v1/subscribers?environment=PRODUCTION` | List subscribers (paginated, searchable).            |
+| `POST`   | `/v1/subscribers`                        | Create a new subscriber.                             |
+| `GET`    | `/v1/subscribers/:id`                    | Get subscriber profile, recent logs, and totals.     |
+| `PUT`    | `/v1/subscribers/:id`                    | Update subscriber profile fields or preferences.     |
+| `DELETE` | `/v1/subscribers/:id`                    | GDPR purge — delete profile, logs, and Redis states. |
+| `GET`    | `/v1/subscribers/:id/export`             | GDPR export — retrieve all stored user data.         |
+| `GET`    | `/v1/subscribers/:id/engagement`         | Retrieve engagement timezone heatmap scores.         |
+
+---
 
 ## List subscribers
 
+Retrieve a list of subscriber profiles in an environment.
+
 ```http
-GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
-Authorization: Bearer <jwt>
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=25&search=alex
+Authorization: Bearer <jwt_dashboard_token>
 ```
+
+- `environment`: `DEVELOPMENT`, `STAGING`, or `PRODUCTION` (defaults to `DEVELOPMENT`).
+- `search`: Filter by name, email, phone number, or external ID.
+- `page`: Page index (defaults to `1`).
+- `limit`: Page size limit (defaults to `25`, max `100`).
+
+**Response body:**
 
 ```json
 {
   "subscribers": [
     {
-      "id": "uuid",
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "locale": "en",
-      "timezone": "America/Los_Angeles",
+      "email": "alex@example.com",
+      "phoneNumber": "+14155552671",
+      "pushTokens": ["fcm_token_123"],
+      "deviceCount": 1,
+      "preferences": {},
       "globalUnsubscribed": false,
-      "deliveryCount": 128
+      "timezone": "America/New_York",
+      "locale": "en-US",
+      "deliveryCount": 128,
+      "createdAt": "2026-07-01T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
     }
   ],
   "total": 1,
   "page": 1,
-  "limit": 50,
+  "limit": 25,
   "environment": "PRODUCTION"
 }
 ```
 
+---
+
 ## Create subscriber
+
+Register a new subscriber in the database.
 
 ```http
 POST /v1/subscribers
+Authorization: Bearer <jwt_dashboard_token>
 Content-Type: application/json
-```
 
-```json
 {
+  "environmentId": "environment-uuid-here",
   "externalId": "user_42",
-  "email": "alex@acme.io",
-  "phoneNumber": "+15551234567",
-  "timezone": "America/Los_Angeles",
-  "locale": "en",
+  "email": "alex@example.com",
+  "phoneNumber": "+14155552671",
+  "pushTokens": ["fcm_token_123"],
+  "timezone": "America/New_York",
+  "locale": "en-US",
   "preferences": {
-    "order.shipped": { "EMAIL": true, "SMS": false }
+    "billing_alerts": { "EMAIL": true, "SMS": false }
+  },
+  "channelConnections": {
+    "slackWebhookUrl": "https://hooks.slack.com/services/...",
+    "discordWebhookUrl": null,
+    "teamsWebhookUrl": null
   }
 }
 ```
 
+- `externalId`: Required. Unique ID mapping to your app's user ID (max 128 characters).
+- `timezone`: Optional. Valid IANA timezone name (e.g., `America/New_York`).
+- `locale`: Optional. Valid BCP 47 language identifier (e.g., `en-US`, `es-MX`).
+- `phoneNumber`: Optional. Must be valid E.164 phone format (e.g., `+14155552671`).
+- `channelConnections`: Optional. Setup direct webhook routing URLs for `slack`, `discord`, and `teams`.
+
+---
+
 ## Update subscriber
 
-```http
-PUT /v1/subscribers/:id
-```
-
-Update `email`, `phoneNumber`, `timezone`, `locale`, `preferences`, or `globalUnsubscribed`.
-
-## GDPR export & purge
+Modify an existing subscriber's profile or preferences.
 
 ```http
-GET /v1/subscribers/:id/export
-DELETE /v1/subscribers/:id
+PUT /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "email": "alex-new@example.com",
+  "globalUnsubscribed": true,
+  "preferences": {
+    "billing_alerts": { "EMAIL": false, "SMS": false }
+  }
+}
 ```
 
-Export returns a JSON bundle of subscriber profile and delivery history. Purge permanently deletes the subscriber, clears Redis presence state, and writes an audit log entry.
+_Note: You cannot modify `externalId` or `environmentId` via update._
 
-## Engagement data
+---
+
+## GDPR Export & Purge
+
+Ensure GDPR compliance by offering data portability and erasure options.
+
+### 1. Export Subscriber Data
 
 ```http
-GET /v1/subscribers/:id/engagement
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/export
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-Returns per-channel engagement scores used by [Smart send-time](/docs/platform/features/smart-send-time).
+Returns a complete JSON bundle of the subscriber's profile, channel connections, preferences matrix, and delivery history logs.
+
+### 2. Purge Subscriber
+
+```http
+DELETE /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+- Permanently deletes the subscriber profile, preferences, and connections.
+- Cascades and deletes all execution logs linked to the user.
+- Scans and deletes Redis keys including presence records (`presence:sub:<subscriberId>`) and cached timing scores (`engagement:scores:<subscriberId>`).
+- Records a purge event in the organization audit log.
+
+---
+
+## Engagement analytics
+
+Retrieve calculated hourly engagement score heatmaps (used by Smart Send-Time):
+
+```http
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/engagement
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Response body:**
+
+```json
+{
+  "subscriberId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+  "timezone": "America/New_York",
+  "totalEvents": 42,
+  "optimalHour": 14,
+  "reason": "optimal",
+  "scores": {
+    "1": [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 1, 0, 5, 8, 2, 0, 1, 0, 0, 0, 0, 0, 0],
+    "2": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 2, 6, 7, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}
+```
+
+The response contains a 24-hour scores array for each day of the week (`1` = Monday, `2` = Tuesday, etc.).
 
 ## Related
 
-- [SDK API](/docs/api/sdk) — browser inbox and preferences
-- [Multi-language templates](/docs/platform/features/i18n) — `locale` field
-- [Node SDK](/docs/sdk/backend/node) — trigger with `locale` override
+- [SDK API reference](/docs/api/sdk) — subscriber inbox feeds and updates
+- [Per-subscriber webhooks](/docs/platform/integrations/messaging-channels)
+- [Smart send-time](/docs/platform/features/smart-send-time)

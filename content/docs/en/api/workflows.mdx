@@ -1,103 +1,173 @@
 ---
 title: Workflows API
-description: POST /v1/workflows/trigger — ingest workflow events from your backend.
+description: Server-side workflow triggers and sync definitions — POST /v1/workflows/trigger and /v1/workflows/sync.
+---
+
+Workflows are the logical maps governing template selection, conditions, cost controls, and delivery routing. These endpoints are secret-key authenticated (`sk_*`) for server-to-server calls.
+
+---
+
+## Endpoint summary
+
+| Method | Path                    | Auth Scope             | Description                                                 |
+| :----- | :---------------------- | :--------------------- | :---------------------------------------------------------- |
+| `POST` | `/v1/workflows/trigger` | Server Secret (`sk_*`) | Ingest trigger events to run a workflow (asynchronous).     |
+| `POST` | `/v1/workflows/sync`    | Server Secret (`sk_*`) | Synchronize workflow schema definitions (Workflow-as-code). |
+
+For dashboard management routes (create, delete, visual editing), use the JWT-authenticated dashboard path `/v1/workflows/dashboard`.
+
 ---
 
 ## Trigger workflow
 
+Ingest a trigger payload to run a workflow for one or more recipients.
+
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 Content-Type: application/json
-Idempotency-Key: optional-unique-key
+Idempotency-Key: opt-idempotency-uuid-here
 ```
 
-### Request body
+### Request body fields
+
+- `workflowName`: string (Required). The machine name of the workflow (e.g. `order.shipped`).
+- `tenant`: string (Optional). The external identifier of the B2B tenant for template branding.
+- `recipients`: array of objects (Required, min 1). The target subscribers to deliver to (see below).
+- `data`: object (Optional). Dynamic key-value payload context to interpolate inside Handlebars templates and conditional steps.
+
+### Recipient schema structure
+
+Unlike user registration, the trigger endpoint **does not** accept direct contact details like `email` or `phoneNumber` inside the recipient object. Recipient entries must reference an existing subscriber already registered in the system:
 
 ```json
 {
-  "workflowName": "order.shipped",
-  "tenant": "tenant_acme",
+  "workflowName": "invoice.sent",
   "recipients": [
     {
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "timezone": "America/Los_Angeles",
-      "locale": "en"
+      "timezone": "America/New_York",
+      "locale": "es-MX",
+      "slackWebhookUrl": "https://hooks.slack.com/services/T0/B0/X"
     }
   ],
   "data": {
-    "orderId": "ORD-9912",
-    "trackingUrl": "https://carrier.com/track/9912"
+    "invoiceId": "INV-1092"
   }
 }
 ```
 
-### Object fan-out recipient
+#### Recipient property fields:
 
-Notify all subscribers of an object with one entry in `recipients`:
+- `externalId`: string. The application user ID matching the subscriber profile.
+- `subscriberId`: string. The database UUID of the subscriber profile (use either `externalId` or `subscriberId`).
+- `timezone`: string (Optional). Valid IANA timezone name. If passed, it updates the subscriber's timezone in the database.
+- `locale`: string (Optional). Valid BCP 47 locale (e.g. `es-MX`). Used as a translation override for this trigger event (does **not** overwrite the subscriber's default profile locale).
+- `slackWebhookUrl` / `discordWebhookUrl` / `teamsWebhookUrl`: string (Optional). Custom chat webhook URLs. If passed, they are auto-saved to the subscriber's connections.
+
+---
+
+## Object fan-out trigger
+
+To notify all subscribers who are currently subscribed to a specific data entity (object), pass the object's `collection` and `id` in the `recipients` field instead:
 
 ```json
 {
-  "workflowName": "project.updated",
-  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
-  "data": { "changeType": "milestone_completed" }
+  "workflowName": "project.milestone",
+  "recipients": [
+    {
+      "collection": "projects",
+      "id": "proj_alpha"
+    }
+  ],
+  "data": {
+    "milestoneName": "API Beta launch"
+  }
 }
 ```
 
-See [Objects API](/docs/api/objects).
+The trigger service expands the object watchers list internally and queues deliveries for each resolved subscriber profile.
 
-### Optional fields
+---
 
-| Field | Description |
-|-------|-------------|
-| `tenant` | Tenant external ID for branding scoping |
-| `data.actor` | `{ name, avatarUrl }` for rich inbox display |
-| `data.actions` | `[{ label, url, style }]` inbox action buttons |
+## Response payloads
 
-### Response — 202 Accepted
+### 202 Accepted (Enqueued successfully)
 
 ```json
 {
   "accepted": true,
-  "workflow": "order.shipped",
+  "workflow": "invoice.sent",
   "environment": "PRODUCTION",
   "results": [
     {
-      "logId": "uuid",
-      "subscriberId": "uuid",
+      "logId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "subscriberId": "550e8400-e29b-41d4-a716-446655440000",
       "status": "queued"
     }
   ],
-  "billing": { "quotaStatus": "ok" }
+  "billing": {
+    "quotaStatus": "ok",
+    "triggerCount": 1284,
+    "limit": 100000
+  }
 }
 ```
 
-### Error codes
+### 400 Bad Request (Validation failed)
 
-| Status | Meaning |
-|--------|---------|
-| 400 | Validation failed |
-| 401 | Invalid or missing secret key |
-| 404 | Workflow not found |
-| 409 | Workflow disabled |
-| 402/429 | Quota exceeded or rate limited |
+If recipient constraints are violated (e.g., neither `externalId` nor `subscriberId` is provided), or if timezone/locale values are invalid:
 
-## Sync workflows (workflow-as-code)
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "fieldErrors": {
+      "recipients": ["Each recipient needs subscriberId or externalId"]
+    }
+  }
+}
+```
+
+### 404 Not Found (Workflow or Subscriber not found)
+
+If the workflow name does not exist:
+
+```json
+{ "error": "Workflow \"invoice.sent\" not found" }
+```
+
+If a recipient is not found in the database, that recipient's slot returns a skipped indicator in the `results` list:
+
+```json
+{
+  "accepted": true,
+  "workflow": "invoice.sent",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "recipient": { "externalId": "non_existent_user" },
+      "status": "skipped",
+      "reason": "subscriber_not_found"
+    }
+  ]
+}
+```
+
+## Sync workflows
+
+Define your workflow structure (nodes, channels, triggers, options) in code and synchronize the layout during deployment:
 
 ```http
 POST /v1/workflows/sync
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 Content-Type: application/json
 ```
 
-Push TypeScript/JSON workflow definitions from code. See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
+See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) for full JSON configurations.
 
-## Dashboard workflow CRUD
+## Related
 
-Authenticated dashboard routes under `/v1/workflows/dashboard` for create, update, delete, test trigger, and A/B stats.
-
-## Node SDK
-
-Prefer [`@nexus-signal/node`](/docs/sdk/backend/node) for typed triggers, object fan-out, tenant context, and circuit breaking.
+- [Subscribers API](/docs/api/subscribers) — registering user profiles first
+- [Objects & Subscriptions API](/docs/api/objects) — managing fan-out groups
+- [Idempotent sends](/docs/platform/getting-started/authentication) — duplicate protection

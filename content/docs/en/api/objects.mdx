@@ -1,85 +1,127 @@
 ---
-title: Objects API
-description: Create objects, manage subscriptions, and trigger fan-out notifications.
+title: Objects & Subscriptions API
+description: Server-side endpoints to register business entities (objects) and manage subscriber watches.
 ---
 
-<SecretKeyAuth />
+Objects represent feed-producing business entities in your application (e.g. `"projects"`, `"documents"`, `"repositories"`). Managing subscriptions allows you to broadcast alerts to all subscribers watching an entity.
 
-Base path: `/v1/objects`
+---
 
-## Set object
+## Access & paths
+
+These endpoints support both dashboard JWT sessions and server secret keys (`sk_*`):
+
+- **Server-to-Server / SDK (`sk_*` auth)**: Root path is `/v1/management/objects`
+- **Dashboard Frontend (JWT auth)**: Root path is `/v1/objects`
+
+---
+
+## Endpoint summary
+
+| Method   | Management Path (`sk_*`)                           | Dashboard Path (JWT)                    | Description                                          |
+| :------- | :------------------------------------------------- | :-------------------------------------- | :--------------------------------------------------- |
+| `PUT`    | `/v1/management/objects/:collection/:externalId`   | `/v1/objects/:collection/:externalId`   | Create or update (upsert) an object.                 |
+| `GET`    | `/v1/management/objects/:collection/:externalId`   | `/v1/objects/:collection/:externalId`   | Retrieve object profile and properties.              |
+| `GET`    | `/v1/management/objects`                           | `/v1/objects`                           | List all objects.                                    |
+| `POST`   | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Add subscribers as watchers to the object (max 100). |
+| `DELETE` | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Remove watchers from the object.                     |
+| `GET`    | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | List all subscribers watching the object.            |
+
+---
+
+## Upsert object
+
+Add or update a business entity.
 
 ```http
-PUT /v1/objects/:collection/:externalId
-Authorization: Bearer sk_prd_…
-```
+PUT /v1/management/objects/projects/proj_alpha
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
   "name": "Project Alpha",
-  "properties": { "status": "active", "team": "eng" }
+  "properties": {
+    "status": "active",
+    "ownerTeam": "engineering"
+  }
 }
 ```
 
-## Get object
+- `:collection`: Must be lowercase alphanumeric with dashes/underscores (`^[a-z][a-z0-9_-]*$`, max 64 chars).
+- `:externalId`: Unique entity string key (max 128 chars).
+- `name`: Human-readable display label (max 256 chars).
+- `properties`: Optional custom key-value metadata object (max 50 keys).
+
+---
+
+## Manage subscriptions
+
+Manage which subscribers watch the object.
+
+### 1. Add subscriptions
+
+Register up to 100 subscribers to watch the object. Recipients must exist in the environment:
 
 ```http
-GET /v1/objects/:collection/:externalId
-```
+POST /v1/management/objects/projects/proj_alpha/subscriptions
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-## List objects
-
-```http
-GET /v1/objects?collection=projects&page=1&limit=50
-```
-
-## Add subscriptions
-
-```http
-POST /v1/objects/:collection/:externalId/subscriptions
-```
-
-```json
 {
-  "recipients": ["user_alice", "user_bob"]
+  "recipients": ["user_alice", "user_bob"],
+  "properties": {
+    "role": "editor"
+  }
 }
 ```
 
-## Remove subscriptions
+- `recipients`: Array of strings (containing subscriber `externalId`s) or objects containing `{ "externalId": "..." }`.
+- `properties`: Optional subscription-specific metadata.
+
+### 2. Remove subscriptions
+
+Unregister watchers from the object:
 
 ```http
-DELETE /v1/objects/:collection/:externalId/subscriptions
-```
+DELETE /v1/management/objects/projects/proj_alpha/subscriptions
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
   "recipients": ["user_bob"]
 }
 ```
 
-## List subscriptions
+- `recipients`: Array of subscriber `externalId` strings.
 
-```http
-GET /v1/objects/:collection/:externalId/subscriptions
-```
+---
 
-## Trigger fan-out
+## Fan-out triggers
 
-Use object recipients in [Workflows trigger](/docs/api/workflows):
+To notify all subscribers currently watching an entity, pass the object as a recipient in your workflow trigger request:
 
 ```json
 {
   "workflowName": "project.updated",
-  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
-  "data": {}
+  "recipients": [
+    {
+      "collection": "projects",
+      "id": "proj_alpha"
+    }
+  ]
 }
 ```
 
-## Node SDK
+## Limits
 
-```ts
-await nexus.objects.set({ collection: 'projects', externalId: 'proj_alpha', name: 'Alpha' });
-await nexus.objects.addSubscriptions('projects', 'proj_alpha', { recipients: ['user_1'] });
-```
+| Limit                                   | Value          |
+| :-------------------------------------- | :------------- |
+| Max objects per environment             | 5,000          |
+| Max watchers (subscriptions) per object | 10,000         |
+| Max add/remove batch size               | 100 recipients |
+| Max custom properties keys              | 50             |
 
-See [Objects & Subscriptions](/docs/platform/features/objects-subscriptions).
+## Related
+
+- [Trigger workflow API](/docs/api/workflows) — triggering fan-outs
+- [Objects & Subscriptions concept](/docs/platform/features/objects-subscriptions)

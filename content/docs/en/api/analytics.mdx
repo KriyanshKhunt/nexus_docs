@@ -1,49 +1,136 @@
 ---
 title: Analytics API
-description: Dashboard analytics — overview, traffic, latency, pipeline health, and cost.
+description: Dashboard analytics endpoints — overview cards, channel traffic, pipeline latency, and spend.
 ---
 
-Requires dashboard JWT + workspace context.
+The Analytics API retrieves aggregated metrics, logs volumes, latency durations, error heatmaps, and provider costs for your environments.
 
-## Endpoints
+---
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/v1/analytics/overview` | Summary cards — triggers, success rate, ROI |
-| GET | `/v1/analytics/overview/traffic` | Channel traffic time series |
-| GET | `/v1/analytics/overview/latency` | Ingestion → delivery latency |
-| GET | `/v1/analytics/overview/pipeline` | Pipeline health flow |
-| GET | `/v1/analytics/overview/heatmap` | Error heatmap by provider |
-| GET | `/v1/analytics/overview/cost` | Provider spend breakdown |
+## Authentication & access
 
-### Query parameters
+- **Base path**: `/v1/analytics`
+- **Auth**: Requires a user JWT session token.
+- **Query parameters**:
+  - `environment`: `DEVELOPMENT`, `STAGING`, or `PRODUCTION` (defaults to `DEVELOPMENT`).
+  - `timeframe`: e.g. `24h`, `7d`, `30d` (supported by time-series endpoints).
 
+---
+
+## Endpoint summary
+
+| Method | Path                              | Description                                                                   |
+| :----- | :-------------------------------- | :---------------------------------------------------------------------------- |
+| `GET`  | `/v1/analytics/overview`          | Core dashboard stats (ingestion counts, delivery success rates, conversions). |
+| `GET`  | `/v1/analytics/overview/traffic`  | Chronological time-series counts grouped by channel.                          |
+| `GET`  | `/v1/analytics/overview/latency`  | End-to-end processing speeds (ingestion to provider receipt).                 |
+| `GET`  | `/v1/analytics/overview/pipeline` | Pipeline state routing success statistics.                                    |
+| `GET`  | `/v1/analytics/overview/heatmap`  | Grid of delivery errors grouped by integration provider.                      |
+| `GET`  | `/v1/analytics/overview/cost`     | Spend analysis grouped by provider layer and workflows.                       |
+
+---
+
+## Overview metrics
+
+Get high-level summary cards.
+
+```http
+GET /v1/analytics/overview?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
 ```
-?environment=PRODUCTION&timeframe=24h
-```
 
-`environment`: `DEVELOPMENT` | `STAGING` | `PRODUCTION`
-
-### Cost response (excerpt)
+**Response body:**
 
 ```json
 {
-  "totalCostUsd": 423.18,
-  "budgetUsd": 500,
-  "budgetUsedPercent": 85,
-  "budgetExceeded": false,
-  "byProvider": [
-    { "providerId": "twilio", "label": "Twilio", "count": 8200, "costUsd": 410 }
-  ],
-  "byWorkflow": [
-    { "workflowName": "auth.otp", "costUsd": 180.5 }
+  "ingestedTriggers": 12542,
+  "deliverySuccessRate": 99.42,
+  "meanLatencyMs": 348.5,
+  "conversionRoi": 8.45,
+  "environment": "PRODUCTION"
+}
+```
+
+---
+
+## Traffic time-series
+
+Fetch hourly trigger volumes.
+
+```http
+GET /v1/analytics/overview/traffic?environment=PRODUCTION&timeframe=24h
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Response body:**
+
+```json
+{
+  "traffic": [
+    { "timestamp": "2026-07-28T12:00:00Z", "email": 120, "sms": 45, "push": 320, "total": 485 },
+    { "timestamp": "2026-07-28T13:00:00Z", "email": 140, "sms": 38, "push": 310, "total": 488 }
   ]
 }
 ```
 
-Configure provider unit costs via `PUT /v1/settings/provider-costs`.
+---
+
+## Error heatmap
+
+Retrieve error rates by provider:
+
+```http
+GET /v1/analytics/overview/heatmap?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Response body:**
+
+```json
+{
+  "heatmap": [
+    { "providerId": "twilio", "errorCount": 12, "lastErrorAt": "2026-07-28T20:45:00Z" },
+    { "providerId": "sendgrid", "errorCount": 2, "lastErrorAt": "2026-07-28T19:30:00Z" }
+  ]
+}
+```
+
+---
+
+## Spend analytics (Cost overview)
+
+Analyze budget usage and channel costs based on your configured provider weights:
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Response body:**
+
+```json
+{
+  "totalCostUsd": 423.18,
+  "budgetUsd": 500.0,
+  "budgetUsedPercent": 84.6,
+  "budgetExceeded": false,
+  "byChannel": [
+    { "channel": "EMAIL", "costUsd": 12.18, "count": 12180 },
+    { "channel": "SMS", "costUsd": 411.0, "count": 27400 }
+  ],
+  "byProvider": [
+    { "providerId": "twilio", "label": "Twilio", "count": 27400, "costUsd": 411.0 },
+    { "providerId": "sendgrid", "label": "SendGrid", "count": 12180, "costUsd": 12.18 }
+  ],
+  "byWorkflow": [
+    { "workflowName": "auth.otp", "costUsd": 411.0 },
+    { "workflowName": "billing.invoice", "costUsd": 12.18 }
+  ]
+}
+```
 
 ## Related
 
-- [Cost analytics feature](/docs/platform/features/cost-analytics)
-- [Audit logs](/docs/platform/concepts/delivery-pipeline) — per-delivery detail
+- [Cost Analytics feature catalog](/docs/platform/features/cost-analytics)
+- [Cost Reduction strategy guide](/docs/platform/features/cost-reduction)
+- [Audit Logs execution logs API](/docs/api/audit-logs)

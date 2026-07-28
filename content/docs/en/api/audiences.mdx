@@ -1,60 +1,122 @@
 ---
 title: Audiences API
-description: Create and manage dynamic subscriber segments with filter rules.
+description: Server-side and dashboard endpoints to manage dynamic subscriber segmentation rules.
 ---
 
-<DashboardAuth />
+Audiences represent dynamic subsets of your subscriber list resolved at trigger time using custom segment rule filters.
 
-Base path: `/v1/audiences`
+---
 
-## List audiences
+## Access & paths
 
-```http
-GET /v1/audiences?page=1&limit=20
-Authorization: Bearer <jwt>
-```
+- **Server-to-Server / SDK (`sk_*` auth)**: `GET` / `POST` requests under `/v1/management/audiences`
+- **Dashboard Frontend (JWT auth)**: Requests under `/v1/audiences`
+
+---
+
+## Endpoint summary
+
+| Method   | Management Path (`sk_*`)   | Dashboard Path (JWT)        | Description                                       |
+| :------- | :------------------------- | :-------------------------- | :------------------------------------------------ |
+| `GET`    | `/v1/management/audiences` | `/v1/audiences`             | List all audience definitions in the environment. |
+| `POST`   | `/v1/management/audiences` | `/v1/audiences`             | Create a new audience definition.                 |
+| `GET`    | —                          | `/v1/audiences/:id`         | Retrieve an audience profile by ID.               |
+| `PUT`    | —                          | `/v1/audiences/:id`         | Update an audience definition or rules.           |
+| `DELETE` | —                          | `/v1/audiences/:id`         | Delete an audience definition.                    |
+| `GET`    | —                          | `/v1/audiences/:id/members` | Retrieve a paginated preview list of members.     |
+
+---
 
 ## Create audience
 
-```http
-POST /v1/audiences
-Authorization: Bearer <jwt>
-```
+Register a segment definition.
 
-```json
+```http
+POST /v1/management/audiences
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
-  "name": "Growth active",
+  "name": "Inactive Spanish Accounts",
+  "description": "Subscribers who preferred Spanish and are globally subscribed.",
   "filters": {
     "logic": "AND",
     "rules": [
-      { "field": "properties.plan", "operator": "equals", "value": "growth" },
-      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+      {
+        "field": "locale",
+        "operator": "starts_with",
+        "value": "es"
+      },
+      {
+        "field": "globalUnsubscribed",
+        "operator": "is_false"
+      }
     ]
   }
 }
 ```
 
-## Get audience
+### Request body fields
+
+- `name`: string (Required). The segment name displayed on the dashboard (max 128 characters).
+- `description`: string (Optional). Internal description (max 256 characters).
+- `filters`: object (Required). Contains logical segment rules:
+  - `logic`: `AND` or `OR` (defaults to `AND`).
+  - `rules`: Array of up to 10 filter rule objects.
+
+#### Allowed rule properties:
+
+- `field`: Must be one of the following 7 validated database fields:
+  - `email`, `phoneNumber`, `locale`, `timezone`, `globalUnsubscribed`, `externalId`, `createdAt`.
+- `operator`: The comparison operation to perform:
+  - `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `is_true`, `is_false`, `greater_than`, `less_than`.
+- `value`: string, number, or boolean (Optional). Required for value-matching operators.
+
+---
+
+## Preview audience members
+
+Evaluate the rules in real-time and return the matching subscriber profiles:
 
 ```http
-GET /v1/audiences/:id
+GET /v1/audiences/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/members?page=1&limit=25
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## Preview members
+**Response body:**
 
-```http
-GET /v1/audiences/:id/members?page=1&limit=50
+```json
+{
+  "members": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "externalId": "user_42",
+      "email": "billing@example.com",
+      "phoneNumber": null,
+      "locale": "es-MX",
+      "timezone": "America/Mexico_City"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
+}
 ```
 
-Returns resolved subscriber list matching current filter rules.
+## Limits
 
-## Update / delete
+| Limit                         | Value          |
+| :---------------------------- | :------------- |
+| Max audiences per environment | 50             |
+| Max filter rules per audience | 10             |
+| Name maximum length           | 128 characters |
+| Description maximum length    | 256 characters |
 
-```http
-PUT    /v1/audiences/:id
-DELETE /v1/audiences/:id
-```
+## Related
 
-Requires `OWNER`, `ADMIN`, or `DEVELOPER` role.
-
-See [Audiences & Segmentation](/docs/platform/features/audiences).
+- [Audiences & Segmentation feature overview](/docs/platform/features/audiences)
+- [Broadcasts API](/docs/api/broadcasts) — dispatching messages to audiences
+- [Subscribers API](/docs/api/subscribers)

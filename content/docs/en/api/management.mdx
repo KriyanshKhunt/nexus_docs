@@ -1,98 +1,120 @@
 ---
 title: Management API
-description: Programmatic resource management for CLI, MCP, and CI/CD — same backend as @nexus-signal/cli.
+description: Server-side and devtool endpoints to manage workflows, schedules, environments, and templates programmatically.
 ---
 
-<ManagementAuth />
+The **Management API** powers CLI sync commands, CI/CD integrations, and MCP service connections. All routes require secret key credentials.
 
-Base path: `/v1/management`
+---
 
-The Management API powers the [CLI](/docs/sdk/devtools/cli) and [MCP server](/docs/sdk/devtools/mcp-server). All routes require `Authorization: Bearer sk_*`.
+## Authentication & access
 
-## Workflows
+- **Base path**: `/v1/management`
+- **Auth**: Pass your environment-specific secret key as a Bearer token:
+  `Authorization: Bearer sk_prd_your_secret_key`
 
-```http
-GET /v1/management/workflows
-GET /v1/management/workflows/:name
-```
+---
 
-## Subscribers
+## Workspace resources
 
-```http
-GET    /v1/management/subscribers
-GET    /v1/management/subscribers/:id
-POST   /v1/management/subscribers
-DELETE /v1/management/subscribers/:id
-```
+### 1. Workflows
 
-## Tenants
+- `GET /v1/management/workflows`: List all workflow keys and nodes configured in the environment.
+- `GET /v1/management/workflows/:name`: Get details of a workflow by its machine name.
 
-```http
-GET /v1/management/tenants
-PUT /v1/management/tenants
-```
+### 2. Subscribers
 
-## Audiences
+- `GET /v1/management/subscribers`: List subscribers profiles (paginated, searchable).
+- `GET /v1/management/subscribers/:id`: Get a subscriber's details by database UUID.
+- `POST /v1/management/subscribers`: Register or identify a subscriber.
+- `DELETE /v1/management/subscribers/:id`: Purge a subscriber (GDPR compliance).
 
-```http
-GET  /v1/management/audiences
-POST /v1/management/audiences
-```
+### 3. B2B Tenants
 
-## Broadcasts
+- `GET /v1/management/tenants`: List B2B tenants.
+- `PUT /v1/management/tenants`: Upsert (create or update) tenant branding configs.
 
-```http
-GET  /v1/management/broadcasts
-POST /v1/management/broadcasts
-POST /v1/management/broadcasts/:id/send
-```
+### 4. Audience Segments
 
-## Guides
+- `GET /v1/management/audiences`: List audience definitions.
+- `POST /v1/management/audiences`: Create segment filters.
 
-```http
-GET  /v1/management/guides
-GET  /v1/management/guides/:id
-POST /v1/management/guides
-PUT  /v1/management/guides/:id
-```
+### 5. Broadcasts
 
-## Objects
+- `GET /v1/management/broadcasts`: List all campaigns.
+- `POST /v1/management/broadcasts`: Create a draft or scheduled broadcast.
+- `POST /v1/management/broadcasts/:id/send`: Trigger immediate dispatch of a broadcast.
 
-```http
-GET    /v1/management/objects
-PUT    /v1/management/objects/:collection/:externalId
-GET    /v1/management/objects/:collection/:externalId
-POST   /v1/management/objects/:collection/:externalId/subscriptions
-DELETE /v1/management/objects/:collection/:externalId/subscriptions
-```
+### 6. In-Product Guides
 
-## Content
+- `GET /v1/management/guides`: List active guide campaigns.
+- `GET /v1/management/guides/:id`: Fetch guide details.
+- `POST /v1/management/guides`: Register a guide campaign.
+- `PUT /v1/management/guides/:id`: Update guide content or targeting.
 
-```http
-GET  /v1/management/email/layouts
-POST /v1/management/email/layouts
-GET  /v1/management/translations
-PUT  /v1/management/translations
-```
+### 7. Entity Objects
 
-## Schedules & logs
+- `GET /v1/management/objects`: List watched objects.
+- `PUT /v1/management/objects/:collection/:externalId`: Upsert a database watch target.
+- `GET /v1/management/objects/:collection/:externalId`: Fetch an object watch target.
+- `POST /v1/management/objects/:collection/:externalId/subscriptions`: Subscribe watchers.
+- `DELETE /v1/management/objects/:collection/:externalId/subscriptions`: Unsubscribe watchers.
 
-```http
-GET /v1/management/schedules
-GET /v1/management/logs/:logId
-```
+### 8. Email Templates & Layouts
 
-## Workflow sync (separate route)
+- `GET /v1/management/email/layouts`: List custom HTML layouts.
+- `POST /v1/management/email/layouts`: Upload a new HTML container layout.
 
-Push code-defined workflows:
+### 9. Translations
+
+- `GET /v1/management/translations`: List uploaded language bundles.
+- `PUT /v1/management/translations`: Upload locale JSON translations mapping.
+
+### 10. Schedules
+
+- `GET /v1/management/schedules`: List all active scheduled tasks.
+
+---
+
+## Delivery logs tracing
+
+Retrieve detailed delivery outcomes and logs for auditing purposes:
 
 ```http
-POST /v1/workflows/sync
-Authorization: Bearer sk_prd_…
+GET /v1/management/logs/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) and [CLI](/docs/sdk/devtools/cli).
+**Response body:**
 
-## Rate limits
+```json
+{
+  "log": {
+    "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "status": "DELIVERED",
+    "channel": "EMAIL",
+    "payloadOutput": {
+      "title": "Welcome to Acme",
+      "body": "Hi there! Welcome aboard."
+    },
+    "responseMeta": {
+      "messageId": "msg-sg-1284",
+      "provider": "sendgrid"
+    },
+    "executedAt": "2026-07-28T21:00:00.000Z",
+    "workflow": {
+      "name": "user.welcome"
+    },
+    "subscriber": {
+      "externalId": "user_42",
+      "email": "user@example.com"
+    }
+  }
+}
+```
 
-Management routes use a dedicated rate limiter per user/key. Use `--json` CLI output for scripting.
+## Related
+
+- [CLI developer tool](/docs/sdk/devtools/cli)
+- [MCP server connection](/docs/sdk/devtools/mcp-server)
+- [Webhook channel integrations](/docs/platform/integrations/webhooks)
