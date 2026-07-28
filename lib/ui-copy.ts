@@ -9,6 +9,8 @@ type CopyKey =
   | 'home.platform'
   | 'home.platformDesc'
   | 'home.sdks'
+  | 'home.cliMcp'
+  | 'home.cliMcpDesc'
   | 'home.api'
   | 'home.apiDesc';
 
@@ -23,6 +25,8 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.platform': 'Platform',
     'home.platformDesc': 'Workflows & features',
     'home.sdks': 'SDKs',
+    'home.cliMcp': 'DevTools',
+    'home.cliMcpDesc': 'CLI & MCP server',
     'home.api': 'API',
     'home.apiDesc': 'REST reference',
   },
@@ -36,6 +40,8 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.platform': 'Plataforma',
     'home.platformDesc': 'Flujos y funciones',
     'home.sdks': 'SDKs',
+    'home.cliMcp': 'DevTools',
+    'home.cliMcpDesc': 'Servidor CLI y MCP',
     'home.api': 'API',
     'home.apiDesc': 'Referencia REST',
   },
@@ -49,6 +55,8 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.platform': 'Plataforma',
     'home.platformDesc': 'Fluxos e recursos',
     'home.sdks': 'SDKs',
+    'home.cliMcp': 'DevTools',
+    'home.cliMcpDesc': 'Servidor CLI e MCP',
     'home.api': 'API',
     'home.apiDesc': 'Referência REST',
   },
@@ -62,6 +70,8 @@ const copy: Record<Locale, Record<CopyKey, string>> = {
     'home.platform': 'プラットフォーム',
     'home.platformDesc': 'ワークフローと機能',
     'home.sdks': 'SDK',
+    'home.cliMcp': 'DevTools',
+    'home.cliMcpDesc': 'CLI と MCP サーバー',
     'home.api': 'API',
     'home.apiDesc': 'REST リファレンス',
   },

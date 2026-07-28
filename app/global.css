@@ -104,3 +104,13 @@ b,
 th {
   font-weight: 600;
 }
+
+.badge-theme {
+  background-color: color-mix(in oklab, var(--color-fd-primary) 5%, transparent);
+  border-color: color-mix(in oklab, var(--color-fd-primary) 20%, transparent);
+  color: var(--color-fd-primary);
+}
+
+.bg-fd-popover\/60 {
+  background-color: var(--color-fd-popover);
+}
