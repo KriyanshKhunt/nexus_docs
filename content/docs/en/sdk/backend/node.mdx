@@ -1,284 +1,321 @@
 ---
 title: Node.js SDK
-description: "@nexus-signal/node — workflow triggers, schedules, and HMAC signatures."
+description: '@nexus-signal/node — workflow triggers, schedules, and HMAC signatures.'
 ---
 
-Server-side SDK for triggering workflows from your API routes, workers, or scripts.
+# Node.js SDK
 
-## Install
+The `@nexus-signal/node` library provides server-side bindings for triggering workflows, managing scheduled tasks, syncing tenants, and secure subscriber validation.
+
+---
+
+## Installation
+
+Add the SDK to your project using your preferred package manager:
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
   <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-```
-
+    ```bash
+    npm install @nexus-signal/node
+    ```
   </Tab>
   <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-```
-
+    ```bash
+    pnpm add @nexus-signal/node
+    ```
   </Tab>
   <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-```
-
+    ```bash
+    yarn add @nexus-signal/node
+    ```
   </Tab>
 </Tabs>
 
-## Initialize
+---
 
-```ts title="nexus.ts"
-import { NexusClient } from "@nexus-signal/node";
+## Client Initialization
 
-const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
-  baseUrl: "https://api.nexussignal.dev",
+Initialize the `NexusClient` on your server. Avoid invoking this constructor inside serverless function scopes repeatedly; instead, export a single instance to leverage keep-alive connections.
+
+```ts title="lib/nexus.ts"
+import { NexusClient } from '@nexus-signal/node';
+
+export const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // e.g., sk_prd_...
+  baseUrl: process.env.NEXUS_BASE_URL || 'https://api.nexussignal.dev',
   timeout: 5000,
 });
 ```
 
-### Client options
+### Configuration Options
 
 <TypeTable
   type={{
     secretKey: {
-      type: "string",
+      type: 'string',
       description:
-        "Your environment secret key (e.g. sk_dev_..., sk_prd_...). Starts with sk_ and must be at least 20 characters (required).",
+        'Your environment secret key (starts with sk_ and must be at least 20 characters). Required.',
     },
     baseUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
-      description: "The Nexus platform API endpoint origin.",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'The target API base URL endpoint origin.',
     },
     timeout: {
-      type: "number",
-      default: "15000",
-      description: "Request timeout limit in milliseconds.",
+      type: 'number',
+      default: '5000',
+      description: 'Request timeout limit in milliseconds.',
     },
     events: {
-      type: "object",
+      type: 'object',
       description:
-        "Optional callbacks for resilience event auditing (onCircuitOpen, onCircuitClose, onBufferOverflow).",
+        'Optional callbacks to audit resilience events like onCircuitOpen, onCircuitClose, and onBufferOverflow.',
     },
   }}
 />
 
-## Trigger a workflow
+---
 
-```ts title="trigger.ts"
-const result = await nexus.workflows.trigger({
-  workflowName: "billing.invoice_overdue",
-  recipients: [
-    {
-      externalId: "cust_8824",
-      email: "billing@enterprise.com",
-      phoneNumber: "+15550198234",
-      timezone: "America/New_York",
-      locale: "en",
-      slackWebhookUrl: "https://hooks.slack.com/services/…",
+## Triggering Workflows
+
+Emits an event trigger to initiate your configured visual workflow paths:
+
+```ts title="routes/order.ts"
+import { nexus } from '../lib/nexus';
+
+export async function handleOrderShipped(orderId: string, userId: string) {
+  const result = await nexus.workflows.trigger({
+    workflowName: 'order.shipped',
+    recipients: [
+      {
+        externalId: userId,
+        email: 'customer@acme.io',
+        phoneNumber: '+15550198234',
+        timezone: 'America/New_York',
+        locale: 'en',
+      },
+    ],
+    data: {
+      orderNumber: orderId,
+      shippingCarrier: 'FedEx',
+      trackingLink: 'https://fedex.com/track/12345',
     },
-  ],
-  data: {
-    invoiceId: "INV-2026-0049",
-    amountDue: "$1,250.00",
-  },
-});
+  });
 
-if (!result.ok) {
-  console.warn(result.error, result.queued ? "(buffered for retry)" : "");
+  if (!result.ok) {
+    console.error('Trigger failed:', result.error);
+    if (result.queued) {
+      console.warn('Payload buffered in memory due to circuit opening.');
+    }
+  }
 }
 ```
 
-### Recipient fields
+### Recipient Parameter Mapping
 
 <TypeTable
   type={{
     externalId: {
-      type: "string",
-      description: "Your user ID (required unless subscriberId is specified).",
+      type: 'string',
+      description:
+        'The unique subscriber ID in your database. Required unless subscriberId is specified.',
     },
     subscriberId: {
-      type: "string (UUID)",
-      description: "The internal unique Nexus subscriber ID.",
+      type: 'string (UUID)',
+      description: 'The system-generated UUID of the subscriber inside the Nexus database.',
     },
     email: {
-      type: "string",
-      description: "Recipient email address for the email channel.",
+      type: 'string',
+      description: 'Destination email address for Email delivery channels.',
     },
     phoneNumber: {
-      type: "string",
+      type: 'string',
       description:
-        "Recipient phone number (E.164 format) for SMS and WhatsApp channels.",
+        'Recipient telephone number in E.164 format (+1...) for SMS or WhatsApp channels.',
     },
     timezone: {
-      type: "string",
-      description:
-        "Recipient timezone (IANA format) to schedule or delay notifications based on local hours.",
+      type: 'string',
+      description: 'IANA timezone identifier (e.g. America/New_York) to control delivery windows.',
     },
     locale: {
-      type: "string",
-      description:
-        "Per-trigger user locale override (BCP 47 format) for localization rendering.",
+      type: 'string',
+      description: 'BCP 47 language identifier override (e.g., es, ja) for dynamic localization.',
     },
     slackWebhookUrl: {
-      type: "string",
-      description:
-        "Custom Slack webhook URL to route message payloads directly to a subscriber channel.",
+      type: 'string',
+      description: 'Slack incoming webhook URL to route chat payloads directly.',
     },
     discordWebhookUrl: {
-      type: "string",
-      description:
-        "Custom Discord webhook URL to route message payloads directly to a subscriber channel.",
+      type: 'string',
+      description: 'Discord incoming webhook URL to route chat payloads directly.',
     },
     teamsWebhookUrl: {
-      type: "string",
-      description:
-        "Custom Microsoft Teams webhook URL to route message payloads directly to a subscriber channel.",
+      type: 'string',
+      description: 'Microsoft Teams incoming webhook URL to route chat payloads directly.',
     },
   }}
 />
 
-## HMAC signatures
+---
 
-```ts title="auth.ts"
-const hmac = nexus.auth.generateHmacSignature("cust_8824");
-// Pass to @nexus-signal/react NexusProvider — never expose secretKey in browser
+## Secure HMAC Generation
+
+Generate a cryptographically secure signature to authenticate websocket notifications:
+
+```ts
+// Returns a 64-character SHA-256 hex signature
+const signature = nexus.auth.generateHmacSignature('user_active_99');
 ```
 
-Also exported standalone (requires passing the `secretKey` explicitly):
+Alternatively, you can compute this without initializing the client:
 
-```ts title="standalone-auth.ts"
+```ts
 import { generateHmacSignature } from '@nexus-signal/node';
 
-const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
+const signature = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'user_active_99');
 ```
 
-## Schedules
+---
 
-```ts title="schedule.ts"
-await nexus.schedules.create({
-  name: "Monday digest",
-  workflowId: "workflow-uuid",
-  cronExpression: "0 9 * * 1",
-  timezone: "UTC",
-  recipients: [{ externalId: "user_1" }],
-  data: {},
-});
+## B2B Tenants & Branding
 
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
-```
-
-## Objects
-
-Fan-out notifications to everyone subscribed to an entity:
+Manage white-labeled email templates, in-app theme styles, and preference defaults for distinct corporate customers:
 
 ```ts
+// Create or update a customer tenant branding override
+const tenantResult = await nexus.tenants.upsert({
+  externalId: 'tenant_acme_corp',
+  name: 'Acme Corporation',
+  branding: {
+    logo: 'https://cdn.acme.io/logos/logo.png', // Strict Type Key: logo
+    primaryColor: '#0070f3',
+    footerHtml: '<p>Sent by Acme Corp, 123 Main St</p>',
+  },
+});
+
+// Trigger a workflow scoped to this tenant branding context
+await nexus.workflows.trigger({
+  workflowName: 'invoice.finalized',
+  tenant: 'tenant_acme_corp',
+  recipients: [{ externalId: 'alex_acme' }],
+  data: { amount: '$450.00' },
+});
+```
+
+---
+
+## Shared Entity Subscriptions (Objects)
+
+Send messages to virtual entities (channels, document boards, projects) and let Nexus resolve watches automatically:
+
+```ts
+// Define the entity
 await nexus.objects.set({
-  collection: 'projects',
-  externalId: 'proj_alpha',
-  name: 'Project Alpha',
+  collection: 'workspaces',
+  externalId: 'ws_eng_team',
+  name: 'Engineering Workspace',
 });
 
-await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
-  recipients: ['user_alice', 'user_bob'],
+// Add subscribers
+await nexus.objects.addSubscriptions('workspaces', 'ws_eng_team', {
+  recipients: ['usr_alice_dev', 'usr_bob_ops'],
 });
 
+// Notify all watchers of the engineering workspace
 await nexus.workflows.trigger({
-  workflowName: 'project.updated',
-  recipients: [{ collection: 'projects', id: 'proj_alpha' }],
-  data: { changeType: 'deploy' },
+  workflowName: 'workspace.announcement',
+  recipients: [{ collection: 'workspaces', id: 'ws_eng_team' }],
+  data: { msg: 'Scheduled database maintanance tonight.' },
 });
 ```
 
-See [Objects & Subscriptions](/docs/platform/features/objects-subscriptions).
+---
 
-## Tenants
+## Broadcast Campaigns
 
-White-label branding per B2B customer:
-
-```ts
-await nexus.tenants.upsert({
-  externalId: 'tenant_acme',
-  name: 'Acme Corp',
-  branding: { logoUrl: 'https://cdn.acme.io/logo.png', primaryColor: '#2563eb' },
-});
-
-await nexus.workflows.trigger({
-  workflowName: 'invoice.sent',
-  tenant: 'tenant_acme',
-  recipients: [{ externalId: 'user_42' }],
-  data: { invoiceId: 'INV-001' },
-});
-```
-
-## Broadcasts
+Schedule and send campaigns to pre-configured subscriber segments:
 
 ```ts
-const created = await nexus.broadcasts.create({
-  name: 'Product launch',
-  workflowId: 'workflow-uuid',
-  audienceId: 'audience-uuid',
-  data: { featureName: 'Analytics v2' },
+const broadcast = await nexus.broadcasts.create({
+  name: 'Platform Feature Update',
+  workflowId: 'wf-uuid-goes-here',
+  audienceId: 'aud-uuid-goes-here',
+  data: { highlight: 'Dynamic Step Conditions are live!' },
 });
 
-if (created.ok) {
-  await nexus.broadcasts.send(created.data!.broadcast.id);
+if (broadcast.ok && broadcast.data?.broadcast?.id) {
+  // Dispatch immediate broadcast execution
+  await nexus.broadcasts.send(broadcast.data.broadcast.id);
 }
 ```
 
-## Workflow sync
+---
 
-Push code-defined workflows:
+## Recurring Schedules
+
+Configure recurring workflow dispatches programmatically:
+
+```ts
+// Create recurring Monday schedule
+await nexus.schedules.create({
+  name: 'Weekly Usage Summary',
+  workflowId: 'wf-uuid-goes-here',
+  cronExpression: '0 9 * * 1', // Every Monday at 9:00 AM
+  timezone: 'America/Los_Angeles',
+  recipients: [{ externalId: 'user_analytics' }],
+  data: { reportScope: 'seven_days' },
+});
+
+// Fetch active schedules
+const list = await nexus.schedules.list({ page: 1, limit: 10 });
+
+// Deactivate or purge schedules
+await nexus.schedules.update('schedule-uuid', { active: false });
+await nexus.schedules.delete('schedule-uuid');
+```
+
+---
+
+## Code-First Workflow Syncing
+
+You can sync your local TypeScript workflow definitions with the Nexus platform:
 
 ```ts
 import { defineWorkflow } from '@nexus-signal/node';
 
-const flow = defineWorkflow('order.shipped')
-  .addChannel('EMAIL')
+const welcomeFlow = defineWorkflow('user.registration')
   .addChannel('IN_APP')
+  .addDelay({ minutes: 15 })
+  .addChannel('EMAIL')
   .toDefinition();
 
-await nexus.workflows.sync(flow);
+const result = await nexus.workflows.sync(welcomeFlow);
 ```
 
-See [Workflow-as-code](/docs/sdk/workflow/workflow-as-code).
+---
 
-## Resilience
+## Client Resilience & Failover
 
-- **Circuit breaker** — opens after 5 failures, auto-recovers after 60s
-- **Retry buffer** — failed requests queued in memory (max 500)
-- **`flushRetries()`** — replay buffered triggers when platform is healthy
+The Node SDK includes a **circuit breaker** and a local **memory buffer** to handle platform outages:
 
-```ts title="resilience.ts"
-const nexus = new NexusClient({
+- **Circuit Breaker**: Trips to `OPEN` state after **5 consecutive failures** or request timeouts. During this period, outgoing triggers are blocked from calling the network and are queued locally. The circuit tries to recover automatically after **60 seconds**.
+- **Memory Buffer**: Retains up to **500 trigger actions** in local memory.
+- **Manual Flush**: If the client recovers, trigger these retries back to the platform using `flushRetries()`.
+
+```ts
+const resilientClient = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!,
   events: {
-    onCircuitOpen: () => console.warn("Nexus circuit open"),
-    onCircuitClose: () => nexus.workflows.flushRetries(),
-    onBufferOverflow: (p) => console.error("Dropped:", p.workflowName),
+    onCircuitOpen: () => {
+      console.warn('Nexus Circuit breaker opened.');
+    },
+    onCircuitClose: async () => {
+      console.info('Nexus Circuit closed. Flushing buffers...');
+      await resilientClient.workflows.flushRetries();
+    },
+    onBufferOverflow: (failedPayload) => {
+      console.error('Local memory buffer full! Dropped payload:', failedPayload.workflowName);
+    },
   },
 });
 ```
-
-## Response shape
-
-```ts
-type NexusResult<T> = {
-  ok: boolean;
-  status: number;
-  data?: T;
-  error?: string;
-  queued?: boolean; // true if buffered locally
-};
-```
-
-Successful triggers return **HTTP 202** with `{ accepted: true, results: [...] }`.

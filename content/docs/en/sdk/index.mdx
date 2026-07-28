@@ -5,99 +5,141 @@ description: Official Nexus Signal packages — Node, React, headless JS, Angula
 
 # Nexus Signal SDKs
 
-Official packages for server triggers, client inbox UI, terminal automation, and AI assistant integration.
+Official libraries, client components, command-line interfaces, and AI toolkits to integrate Nexus Signal into your stack.
 
-## Client & server SDKs
+---
 
-<Cards>
-  <Card title="Node.js SDK" href="/docs/sdk/backend/node" description="Triggers, objects, tenants, broadcasts, schedules." />
-  <Card title="React SDK" href="/docs/sdk/frontend/react" description="Bell, inbox, guides, preference matrix." />
-  <Card title="Headless JS SDK" href="/docs/sdk/frontend/js" description="Vue, Svelte, vanilla JS — no UI bundled." />
-  <Card title="Angular SDK" href="/docs/sdk/frontend/angular" description="Standalone components + signals." />
-</Cards>
+## Client & Server Libraries
 
-## Developer tooling
+Access our primary client-side and server-side libraries to manage triggers, subscribers, and interface states:
 
 <Cards>
-  <Card title="Workflow-as-code" href="/docs/sdk/workflow/workflow-as-code" description="defineWorkflow() + sync to platform." />
-  <Card title="Nexus CLI" href="/docs/sdk/devtools/cli" description="Pull/push resources, CI/CD automation." />
-  <Card title="MCP server" href="/docs/sdk/devtools/mcp-server" description="AI assistant tools for Cursor, Claude Code." />
-  <Card title="API Reference" href="/docs/api" description="Raw REST if you prefer HTTP." />
+  <Card
+    title="Node.js SDK"
+    href="/docs/sdk/backend/node"
+    description="Backend workflow triggers, multi-tenant scopes, schedules, and cryptographic HMAC signatures."
+  />
+  <Card
+    title="React SDK"
+    href="/docs/sdk/frontend/react"
+    description="Drop-in notification bell, full-feed inbox, user preferences matrix, and real-time guides."
+  />
+  <Card
+    title="Headless JS SDK"
+    href="/docs/sdk/frontend/js"
+    description="Framework-agnostic client for Vue, Svelte, or vanilla HTML5 with no bundled styling dependencies."
+  />
+  <Card
+    title="Angular SDK"
+    href="/docs/sdk/frontend/angular"
+    description="Standalone components and native Signals for reactive notification centers (Angular 17+)."
+  />
 </Cards>
 
-## Integration flow
+---
+
+## Developer Tooling
+
+Manage workflow states, CI/CD integrations, and local template bundles:
+
+<Cards>
+  <Card
+    title="Workflow-as-code"
+    href="/docs/sdk/workflow/workflow-as-code"
+    description="Define notification steps in TypeScript and push them programmatically to the dashboard."
+  />
+  <Card
+    title="Nexus CLI"
+    href="/docs/sdk/devtools/cli"
+    description="Pull or push resources, manage subscribers, and sync templates from your terminal or runner."
+  />
+  <Card
+    title="MCP Server"
+    href="/docs/sdk/devtools/mcp-server"
+    description="Connect AI coding assistants like Cursor and Claude to your workspace tools using natural language."
+  />
+  <Card
+    title="API Reference"
+    href="/docs/api"
+    description="Direct REST API endpoints for customized HTTP integrations in any programming language."
+  />
+</Cards>
+
+---
+
+## Integrated Architecture Flow
+
+The following diagram tracks the transaction boundary between server-side dispatches, user-agent sockets, and external provider relays:
 
 ```mermaid
-flowchart LR
-  BE[Your backend] -->|sk_* trigger| API[Nexus API]
-  BE -->|HMAC| FE[Client app]
-  API --> W[Worker]
-  W -->|WebSocket| FE
-  W --> P[Your providers]
-  CLI[CLI / MCP] -->|management| API
+flowchart TD
+  subgraph Server Environment
+    App[Your App Server] -->|1. Initialize SDK with sk_*| SDK[Node.js SDK]
+    SDK -->|2. Trigger Workflow| API[Nexus REST API]
+    SDK -->|3. Generate HMAC| App
+  end
+
+  subgraph Client Environment
+    App -->|4. Pass subscriberId + HMAC| FE[Browser App]
+    FE -->|5. Connect WebSocket with pk_*| WebHost[Socket.IO Gateway]
+  end
+
+  subgraph Background Processing
+    API -->|6. Enqueue Job| Q[(Redis Queue)]
+    Q -->|7. Worker Processing| Workers[Async Workers]
+    Workers -->|8. Push Live Event| WebHost
+    Workers -->|9. Dispatch Carrier Call| Carriers[Providers (Twilio/SendGrid)]
+  end
+
+  WebHost -->|10. Stream to Feed| FE
 ```
 
-1. Backend triggers with **secret key** (`sk_*`) and generates **HMAC** for the logged-in user
-2. Frontend connects via `NexusProvider` (React/Angular) or `NexusClient` (JS) with **public key + HMAC**
-3. In-app notifications stream over WebSocket; guides fetch via REST
-4. CLI/MCP manage workflows and resources from terminal or AI IDE
+---
 
-## Quick trigger
+## Package Support Matrix
 
-```ts
-import { NexusClient } from '@nexus-signal/node';
+Ensure your target runtimes meet the minimal environment prerequisites:
 
-const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!,
-  baseUrl: 'https://api.nexussignal.dev',
-});
+| Package Namespace              | Core Runtime      | Peer Dependencies           | Primary Responsibility                                   |
+| :----------------------------- | :---------------- | :-------------------------- | :------------------------------------------------------- |
+| **`@nexus-signal/node`**       | Node.js >= 18.0.0 | None (Native Fetch)         | Backend triggers, schedules, object sync, workflow sync. |
+| **`@nexus-signal/react`**      | React >= 18.0.0   | `socket.io-client >= 4.8.0` | Pre-styled bells, full-page feeds, preferences.          |
+| **`@nexus-signal/js`**         | ES6 / HTML5       | `socket.io-client >= 4.8.0` | Framework-agnostic store handlers, WebSocket emitters.   |
+| **`@nexus-signal/angular`**    | Angular >= 17.0.0 | `socket.io-client >= 4.8.0` | Reactive Signals, standalone component wrappers.         |
+| **`@nexus-signal/cli`**        | Node.js >= 18.0.0 | None                        | Local schema sync, CI/CD promotion pipelines.            |
+| **`@nexus-signal/mcp-server`** | Node.js >= 18.0.0 | None                        | Natural language tool calls for AI coding assistants.    |
 
-await nexus.workflows.trigger({
-  workflowName: 'order.shipped',
-  recipients: [{ externalId: 'user_42', email: 'alex@acme.io' }],
-  tenant: 'tenant_acme',
-  data: { trackingNumber: '1Z999AA10123456784' },
-});
-```
+---
 
-## Package matrix
+## Installation Quick-Start
 
-| Package | Runtime | Use for |
-|---------|---------|---------|
-| `@nexus-signal/node` | Node.js 18+ | Server triggers, objects, sync |
-| `@nexus-signal/react` | Browser + React 18/19 | Drop-in UI components |
-| `@nexus-signal/js` | Browser (any framework) | Headless inbox + guides |
-| `@nexus-signal/angular` | Browser + Angular 17+ | Standalone components |
-| `@nexus-signal/cli` | Node.js 18+ | Terminal + CI/CD |
-| `@nexus-signal/mcp-server` | Node.js 18+ | AI coding assistants |
+Configure libraries depending on the entry points in your application:
 
-## Install
-
-<Tabs items={['Server', 'React', 'Tooling']}>
-  <Tab value="Server">
-
-```bash
-npm install @nexus-signal/node
-```
-
+<Tabs items={['Server-side', 'React Client', 'Dev Tooling']}>
+  <Tab value="Server-side">
+    To run triggers and sync workflows from your backend routes:
+    ```bash
+    npm install @nexus-signal/node
+    ```
   </Tab>
-  <Tab value="React">
-
-```bash
-npm install @nexus-signal/react socket.io-client
-```
-
+  <Tab value="React Client">
+    To mount in-app notification centers and user settings inside a React tree:
+    ```bash
+    npm install @nexus-signal/react socket.io-client
+    ```
   </Tab>
-  <Tab value="Tooling">
+  <Tab value="Dev Tooling">
+    To access local sync mechanisms or start an MCP instance:
+    ```bash
+    # Install CLI globally
+    npm install -g @nexus-signal/cli
 
-```bash
-npm install -g @nexus-signal/cli
-npx @nexus-signal/mcp-server@latest
-```
-
+    # Run MCP server on-the-fly
+    npx -y @nexus-signal/mcp-server@latest
+    ```
   </Tab>
 </Tabs>
 
 <Callout type="warn">
-Never expose `sk_*` secret keys in browser code. Use `pk_*` public keys for client SDK routes only.
+**Key Exposure Rule**: Never embed secret keys starting with `sk_` in client-side code, Single Page Apps (SPAs), or bundle scripts. Public routes must always utilize public keys (`pk_`) verified against an HMAC signature generated strictly on your server.
 </Callout>

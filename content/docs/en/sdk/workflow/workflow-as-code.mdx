@@ -7,11 +7,11 @@ Define notification workflows alongside your application code, then sync them to
 
 ## Why workflow-as-code
 
-| Dashboard-only | Workflow-as-code |
-|----------------|------------------|
-| Manual canvas edits | Git-tracked TypeScript definitions |
-| Hard to review in PRs | Diff workflow changes like any code |
-| No compile-time checks | IDE autocomplete on step types |
+| Dashboard-only         | Workflow-as-code                    |
+| ---------------------- | ----------------------------------- |
+| Manual canvas edits    | Git-tracked TypeScript definitions  |
+| Hard to review in PRs  | Diff workflow changes like any code |
+| No compile-time checks | IDE autocomplete on step types      |
 
 ## Define a workflow
 
@@ -56,14 +56,14 @@ Authorization: Bearer sk_prd_…
 
 ## Available step builders
 
-| Method | Maps to canvas node |
-|--------|---------------------|
-| `addChannel(kind, opts?)` | Channel (EMAIL, SMS, IN_APP, etc.) |
-| `addDelay({ hours, minutes })` | Delay |
-| `addDigest({ windowMinutes })` | Digest |
-| `addThrottle({ maxCount, windowSeconds })` | Throttle |
-| `addHttpFetch({ url, method, responseKey })` | HTTP Fetch |
-| `addAiNode({ prompt, responseKey })` | AI Node |
+| Method                                       | Maps to canvas node                |
+| -------------------------------------------- | ---------------------------------- |
+| `addChannel(kind, opts?)`                    | Channel (EMAIL, SMS, IN_APP, etc.) |
+| `addDelay({ hours, minutes })`               | Delay                              |
+| `addDigest({ windowMinutes })`               | Digest                             |
+| `addThrottle({ maxCount, windowSeconds })`   | Throttle                           |
+| `addHttpFetch({ url, method, responseKey })` | HTTP Fetch                         |
+| `addAiNode({ prompt, responseKey })`         | AI Node                            |
 
 All step methods accept optional `conditions` — see [Step conditions](/docs/platform/features/step-conditions).
 
@@ -77,7 +77,8 @@ export const escalation = defineWorkflow('payment.overdue')
     responseKey: 'invoice',
   })
   .addAiNode({
-    prompt: 'Classify urgency for invoice {{ invoice.amount }} due {{ invoice.dueDate }}. Return: low, medium, or high.',
+    prompt:
+      'Classify urgency for invoice {{ data.invoice.amount }} due {{ data.invoice.dueDate }}. Return: low, medium, or high.',
     responseKey: 'urgency',
   })
   .addChannel('EMAIL')

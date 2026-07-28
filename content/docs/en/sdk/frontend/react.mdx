@@ -1,48 +1,50 @@
 ---
 title: React SDK
-description: "@nexus-signal/react — notification bell, inbox, and preference matrix."
+description: '@nexus-signal/react — notification bell, inbox, and preference matrix.'
 ---
 
-Drop-in React components for in-app notifications and subscriber preferences.
+# React SDK
 
-## Install
+The `@nexus-signal/react` package provides drop-in UI components and react hooks to embed notification centers, preference menus, and toast prompts into your React app.
+
+---
+
+## Installation
+
+Install the React SDK along with its peer dependencies:
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
   <Tab value="npm">
-
-```bash
-npm install @nexus-signal/react socket.io-client
-```
-
+    ```bash
+    npm install @nexus-signal/react socket.io-client
+    ```
   </Tab>
   <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/react socket.io-client
-```
-
+    ```bash
+    pnpm add @nexus-signal/react socket.io-client
+    ```
   </Tab>
   <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/react socket.io-client
-```
-
+    ```bash
+    yarn add @nexus-signal/react socket.io-client
+    ```
   </Tab>
 </Tabs>
 
+---
+
 ## NexusProvider
 
-Wrap your app (or authenticated layout):
+Wrap your React tree with `NexusProvider` to configure your workspace context. Place this wrapper below authentication layouts to ensure keys are populated.
 
 ```tsx title="app/layout.tsx"
-import { NexusProvider } from "@nexus-signal/react";
+import { NexusProvider } from '@nexus-signal/react';
 
-export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+export function RootLayout({ children, user, hmac }: RootProps) {
   return (
     <NexusProvider
-      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
-      subscriberId={user.id}
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!} // pk_dev_... or pk_prd_...
+      subscriberId={user.externalId}
       hmacSignature={hmac}
       backendUrl="https://api.nexussignal.dev"
     >
@@ -52,163 +54,237 @@ export function AppShell({ user, hmac }: { user: User; hmac: string }) {
 }
 ```
 
+### Provider Configuration
+
 <TypeTable
   type={{
     publicKey: {
-      type: "string",
-      description:
-        "Environment public key (starts with pk_dev_, pk_prd_, etc.). Required.",
+      type: 'string',
+      description: 'Your environment public key (starts with pk_dev_, pk_prd_, etc.). Required.',
     },
     subscriberId: {
-      type: "string",
+      type: 'string',
       description:
-        "Same unique subscriber externalId used in your workflow triggers. Required.",
+        'The unique recipient ID matching your backend workflow trigger payloads. Required.',
     },
     hmacSignature: {
-      type: "string",
+      type: 'string',
       description:
-        "The HMAC signature generated on your backend for security. Required.",
+        'HMAC-SHA256 hex signature computed server-side to prevent ID spoofing. Required.',
     },
     backendUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
-      description:
-        "The Nexus platform API base URL endpoint origin (can also be mapped via apiBaseUrl property).",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'The Nexus platform endpoint origin. Can be overridden for local sandboxing.',
     },
   }}
 />
 
-## Notification bell
+---
+
+## Component Suite
+
+Mount pre-styled Radix-based components in your layout:
+
+### 1. Notification Center Bell
+
+Renders a standard notification bell with real-time WebSocket listeners, a pulsing count badge, and a popover feed list.
 
 ```tsx title="components/header.tsx"
-import { NotificationCenterBell } from "@nexus-signal/react";
+import { NotificationCenterBell } from '@nexus-signal/react';
 
-<header>
-  <NotificationCenterBell position="bottom-end" variant="ghost" />
-</header>;
+export function Header() {
+  return (
+    <header className="flex justify-between items-center px-4 py-2 border-b">
+      <h3>My Dashboard</h3>
+      <NotificationCenterBell position="bottom-end" variant="ghost" />
+    </header>
+  );
+}
 ```
 
-- Live WebSocket updates with unread badge
-- Mark as read, archive actions
-- Cross-device read sync
+### 2. Full-Page Inbox
 
-## Notification inbox
-
-Full-page feed with date grouping and infinite scroll:
+A complete feed layout with date headers, read/archive actions, and infinite scroll:
 
 ```tsx title="pages/notifications.tsx"
-import { NotificationInbox } from "@nexus-signal/react";
+import { NotificationInbox } from '@nexus-signal/react';
 
-<NotificationInbox />;
+export default function NotificationsPage() {
+  return (
+    <main className="max-w-2xl mx-auto py-8">
+      <h2>Your Notifications</h2>
+      <NotificationInbox />
+    </main>
+  );
+}
 ```
 
-Uses `GET /v1/sdk/notifications` with pagination. Filter by topic tag with the `tag` prop — see [Rich inbox](/docs/platform/features/rich-inbox).
+To limit messages to specific topic tags (e.g., invoice statements, alerts):
 
 ```tsx
-<NotificationInbox tag="billing" />
+<NotificationInbox tag="billing" maxItems={50} />
 ```
 
-## In-product guides
+### 3. Preferences Matrix
 
-Fetch and render dashboard-managed banners and modals:
+Exposes opt-in/opt-out toggles for subscribers to control their notification channels by topic:
+
+```tsx title="pages/settings.tsx"
+import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
+
+export default function Settings() {
+  return (
+    <section className="p-6 bg-card rounded-md">
+      <h4>Notification Channels</h4>
+      <SubscriberPreferenceMatrix variant="borderless" />
+    </section>
+  );
+}
+```
+
+---
+
+## Custom Layout Hook (`useNotifications`)
+
+For custom layouts, use the headless state hook:
+
+```tsx title="components/custom-inbox.tsx"
+import { useNotifications } from '@nexus-signal/react';
+
+export function CustomInbox() {
+  const { items, unread, status, loadMore, hasMore, markRead } = useNotifications();
+
+  return (
+    <div>
+      <p>
+        Unread: {unread} | Connection: {status}
+      </p>
+      <div className="space-y-2">
+        {items.map((msg) => (
+          <div
+            key={msg.logId}
+            className={`p-3 border rounded ${msg.read ? 'bg-muted' : 'font-bold'}`}
+            onClick={() => msg.logId && markRead(msg.logId)}
+          >
+            <h5>{msg.title}</h5>
+            <p>{msg.body}</p>
+          </div>
+        ))}
+      </div>
+      {hasMore && <button onClick={loadMore}>Load More</button>}
+    </div>
+  );
+}
+```
+
+### Hook Properties
+
+<TypeTable
+  type={{
+    items: {
+      type: 'InAppNotification[]',
+      description: 'Reactive array of in-app notification records.',
+    },
+    unread: {
+      type: 'number',
+      description: 'The number of unread, unarchived messages.',
+    },
+    status: {
+      type: "'connected' | 'disconnected'",
+      description: 'Current real-time WebSocket connection state.',
+    },
+    hasMore: {
+      type: 'boolean',
+      description: 'Indicates if additional historic records exist in the database.',
+    },
+    loadingMore: {
+      type: 'boolean',
+      description: 'True if a pagination query is currently in progress.',
+    },
+    loadMore: {
+      type: '() => Promise<void>',
+      description: 'Asynchronously fetches and appends the next page of notifications.',
+    },
+    markRead: {
+      type: '(logId: string) => Promise<void>',
+      description: 'Marks a specific notification as read, syncing state cross-device.',
+    },
+    markAllRead: {
+      type: '() => Promise<void>',
+      description: 'Marks all current notifications as read.',
+    },
+    archive: {
+      type: '(logId: string) => Promise<void>',
+      description: 'Hides the notification from the unread list and moves it to the archive.',
+    },
+    remove: {
+      type: '(logId: string) => Promise<void>',
+      description: 'Permanently deletes the notification record from the database.',
+    },
+  }}
+/>
+
+---
+
+## Guide Interceptions Hook (`useGuides`)
+
+Manage banner triggers and tooltips inside your React application dynamically:
 
 ```tsx
 import { useGuides } from '@nexus-signal/react';
 
-function GuideSlot() {
+export function AppGuideSlots() {
   const { guides, markSeen, dismiss } = useGuides({
     pathname: window.location.pathname,
   });
 
-  return guides.map((g) => (
-    <div key={g.id} role="banner">
-      <strong>{g.content.title}</strong>
-      <p>{g.content.body}</p>
-      <button onClick={() => markSeen(g.id)}>Got it</button>
-      <button onClick={() => dismiss(g.id)}>Dismiss</button>
+  return guides.map((guide) => (
+    <div key={guide.id} className="p-4 border border-blue-200 bg-blue-50 rounded">
+      <h6>{guide.content.title}</h6>
+      <p>{guide.content.body}</p>
+      <button onClick={() => markSeen(guide.id)}>Got it</button>
+      <button onClick={() => dismiss(guide.id)}>Dismiss</button>
     </div>
   ));
 }
 ```
 
-See [In-product guides](/docs/platform/features/guides).
+---
 
-## Preference matrix
+## Styling & Theme Customization
 
-```tsx title="pages/settings.tsx"
-import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
+Components use inline CSS variables compatible with custom styles and dark-mode toggles. Override them in your global CSS stylesheet:
 
-<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
+```css title="styles/global.css"
+:root {
+  /* Panel backgrounds */
+  --nexus-theme-panel: #ffffff;
+  --nexus-theme-panel-muted: #f9fafb;
+
+  /* Typography */
+  --nexus-theme-text: #111827;
+  --nexus-theme-muted: #6b7280;
+
+  /* Borders & lines */
+  --nexus-theme-border: #e5e7eb;
+  --nexus-theme-border-subtle: #f3f4f6;
+
+  /* Accent highlights (Unread dots, active checkboxes) */
+  --nexus-theme-accent: #2563eb;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #f9fafb;
+}
+
+[data-theme='dark'] {
+  --nexus-theme-panel: #1f2937;
+  --nexus-theme-panel-muted: #111827;
+  --nexus-theme-text: #f9fafb;
+  --nexus-theme-muted: #9ca3af;
+  --nexus-theme-border: #374151;
+  --nexus-theme-border-subtle: #1f2937;
+  --nexus-theme-accent: #3b82f6;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #111827;
+}
 ```
-
-Renders workflow events or **topics** against channel checkboxes. Changes persist via SDK preferences API.
-
-## useNotifications hook
-
-```tsx title="components/notification-list.tsx"
-import { useNotifications } from "@nexus-signal/react";
-
-const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
-  useNotifications();
-```
-
-<TypeTable
-  type={{
-    items: {
-      type: "InAppNotification[]",
-      description: "Array of currently fetched in-app notification objects.",
-    },
-    unread: {
-      type: "number",
-      description: "Counter of unread and unarchived notifications.",
-    },
-    status: {
-      type: "'connected' | 'disconnected'",
-      description: "Current real-time WebSocket connection status.",
-    },
-    hasMore: {
-      type: "boolean",
-      description:
-        "Indicates if there are more historic notifications to load.",
-    },
-    loadingMore: {
-      type: "boolean",
-      description:
-        "Flag indicating whether a page fetching request is currently in flight.",
-    },
-    loadMore: {
-      type: "() => Promise<void>",
-      description:
-        "Fetches the next page of notifications and appends them to the items feed.",
-    },
-    markRead: {
-      type: "(logId: string) => Promise<void>",
-      description: "Marks a specific notification as read.",
-    },
-    markAllRead: {
-      type: "() => Promise<void>",
-      description: "Marks all current notifications as read.",
-    },
-    archive: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "Archives a specific notification, marking it as read and removing it from active unread list.",
-    },
-    remove: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "Deletes a notification entirely from the database and feed.",
-    },
-  }}
-/>
-
-## Theming
-
-Components use CSS variables (`--nexus-theme-*`) compatible with Tailwind. Override in your global CSS to match your brand.
-
-## Security
-
-<Callout type="error">
-  Generate `hmacSignature` on your server for every session. Never put
-  `secretKey` in frontend code.
-</Callout>
