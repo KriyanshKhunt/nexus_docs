@@ -1,61 +1,130 @@
 ---
 title: Per-Tenant Branding
-description: White-label notifications for B2B SaaS — each of your customers gets isolated branding, preferences, and optional provider overrides.
+description: White-label notifications for B2B SaaS — each of your customers gets isolated branding, preferences, and notification feeds.
 ---
 
-**Tenants** represent *your* customers inside Nexus (distinct from Nexus **Organizations**, which are *your* workspace). Use tenants when your product serves multiple companies that need branded emails, scoped in-app feeds, and isolated settings.
+**Tenants** represent _your customers_ inside Nexus (distinct from your Nexus **Organization**, which is your workspace). Use tenants when your product serves multiple companies that need branded emails, scoped in-app feeds, and isolated notification preferences.
+
+<Callout type="info">
+  Tenants are a **B2B** feature. If your app is consumer-facing with a single brand, you don't need
+  tenants.
+</Callout>
 
 ## Tenant model
 
-Each tenant (per environment) has:
+| Field                   | Type   | Description                                   |
+| :---------------------- | :----- | :-------------------------------------------- |
+| `externalId`            | string | Your customer's ID (e.g., `"tenant_acme"`)    |
+| `name`                  | string | Display name                                  |
+| `branding.logo`         | string | Logo URL                                      |
+| `branding.primaryColor` | string | Hex color for accent elements                 |
+| `branding.footerHtml`   | string | Custom HTML footer in email layouts           |
+| `properties`            | object | Free-form key-value pairs for custom metadata |
 
-| Field | Purpose |
-|-------|---------|
-| `externalId` | Your customer ID (e.g. `tenant_acme`) |
-| `name` | Display name |
-| `branding` | Logo URL, primary color, footer HTML |
-| `providerOverrides` | Optional per-tenant SendGrid/Twilio keys |
-| `preferenceDefaults` | Default opt-in/out matrix for new subscribers |
+## Create or update a tenant
 
-## Create a tenant
+Tenants are upserted — calling `upsert` with an existing `externalId` updates its fields.
 
-Dashboard: **Tenants** page, or SDK:
+**Node SDK:**
 
 ```ts
 await nexus.tenants.upsert({
   externalId: 'tenant_acme',
   name: 'Acme Corp',
   branding: {
-    logoUrl: 'https://cdn.acme.io/logo.png',
+    logo: 'https://cdn.acme.io/logo.png',
     primaryColor: '#2563eb',
-    footerHtml: '<p>© Acme Corp</p>',
+    footerHtml: '<p>© 2026 Acme Corp. All rights reserved.</p>',
   },
+  properties: { tier: 'enterprise', region: 'us-east' },
 });
 ```
 
+**Management API (`sk_*` key):**
+
+```http
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+
+{
+  "externalId": "tenant_acme",
+  "name": "Acme Corp",
+  "branding": {
+    "logo": "https://cdn.acme.io/logo.png",
+    "primaryColor": "#2563eb",
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
+  }
+}
+```
+
 ## Trigger with tenant context
+
+Pass `tenant` as the `externalId` string on any workflow trigger:
 
 ```ts
 await nexus.workflows.trigger({
   workflowName: 'invoice.sent',
   tenant: 'tenant_acme',
   recipients: [{ externalId: 'user_42', email: 'billing@acme.io' }],
-  data: { invoiceId: 'INV-001' },
+  data: { invoiceId: 'INV-001', amount: 4900 },
 });
 ```
 
-Template compilation applies tenant branding to email layouts. Filter in-app notifications by tenant via the SDK query parameter `tenantId`.
+When a `tenant` is set on the trigger:
 
-## SDK inbox scoping
+- Email layouts compile with the tenant's branding variables (`{{ logo }}`, `{{ primaryColor }}`, etc.)
+- In-app notifications are scoped to the tenant's feed
 
-```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+## How branding injects into email layouts
+
+Tenant branding fields are spread directly into the Handlebars template context when compiling email layouts. Reference them by their field names — **without** a `branding.` prefix:
+
+```html
+<!-- In your email layout HTML -->
+<img src="{{ logo }}" alt="{{ name }} logo" />
+<div style="background-color: {{ primaryColor }};">{{{ content }}}</div>
+{{{ footerHtml }}}
 ```
 
-See [SDK API](/docs/api/sdk) for client-side tenant filtering.
+<Callout type="info">
+`{{{ content }}}` (triple braces) renders the compiled email template body as raw HTML inside the layout. `{{ logo }}`, `{{ primaryColor }}`, and `{{ footerHtml }}` are injected from the tenant's branding object.
+</Callout>
+
+## Scoped in-app notification feed
+
+If you query the raw SDK API directly, you can filter notifications by the tenant's database UUID:
+
+**SDK API:**
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_database_uuid
+```
+
+<Callout type="warn">
+  The SDK query parameter `tenantId` requires the tenant's **internal database UUID**, not their
+  external ID. The frontend SDK components (React, Angular, JS) do not support scoping feeds by
+  tenant out of the box. Use workflow topic tags if you need simple category-scoped inbox feeds in
+  the UI.
+</Callout>
+
+## List tenants
+
+```ts
+const { data } = await nexus.tenants.list({ page: 1, limit: 25 });
+```
+
+## Limits
+
+| Limit                       | Value |
+| :-------------------------- | :---- |
+| Max tenants per environment | 1,000 |
+| Max branding fields         | 20    |
+| Max `properties` keys       | 50    |
 
 ## Related
 
 - [B2B multi-tenant guide](/docs/platform/guides/b2b-multi-tenant)
 - [Tenants API](/docs/api/tenants)
 - [Email layouts](/docs/platform/features/email-layouts)
+- [Node SDK](/docs/sdk/backend/node)

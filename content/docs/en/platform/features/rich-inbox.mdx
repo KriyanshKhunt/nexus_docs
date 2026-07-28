@@ -1,84 +1,151 @@
 ---
-title: Rich Inbox
-description: Tabs, action buttons, actors, and tag filtering — a full notification feed beyond the basic bell.
+title: Rich In-App Inbox
+description: Action buttons, actor avatars, redirects, and tag filtering — a full notification feed beyond the basic bell.
 ---
 
-The inbox SDK components support categorized feeds, per-notification CTAs, actor avatars, and tag-based filtering.
+The in-app inbox supports a rich notification payload including action buttons, actor avatars, click-through redirects, and topic-based tag filtering — all configured at trigger time via special `_`-prefixed keys in the `data` field.
 
-## Tag filtering
+## Actor (who caused the notification)
 
-Filter by workflow topic tag using the `tag` prop:
-
-```tsx
-<NotificationInbox tag="billing" />
-```
-
-Build custom tab UI by rendering multiple feeds or switching the `tag` prop:
-
-```tsx
-const [tab, setTab] = useState<string | undefined>(undefined);
-
-<button onClick={() => setTab(undefined)}>All</button>
-<button onClick={() => setTab('billing')}>Billing</button>
-<NotificationInbox tag={tab} />
-```
-
-Assign tags on workflows in the dashboard or via [workflow-as-code](/docs/sdk/workflow/workflow-as-code). Filters map to `GET /v1/sdk/notifications?tag=...`.
-
-## Action buttons
-
-Include actions in trigger `data` or workflow template output:
-
-```json
-{
-  "actions": [
-    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
-    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
-  ]
-}
-```
-
-Actions render as clickable buttons in the inbox item. URLs can be relative (your app handles routing) or absolute API endpoints.
-
-## Actor support
-
-Pass actor metadata on trigger to show who caused the notification:
+Pass actor metadata using the `_actor` key in trigger `data` to show who initiated the event:
 
 ```ts
 await nexus.workflows.trigger({
   workflowName: 'comment.added',
   recipients: [{ externalId: 'user_42' }],
   data: {
-    actor: {
+    _actor: {
       name: 'Sarah Chen',
-      avatarUrl: 'https://cdn.example.com/sarah.jpg',
+      avatar: 'https://cdn.example.com/avatars/sarah.jpg',
+      id: 'user_sarah',
     },
     commentPreview: 'Looks good to me!',
   },
 });
 ```
 
-Renders as "Sarah Chen commented…" with avatar in the feed.
+The actor renders as a named avatar in the inbox feed ("Sarah Chen commented…"). All three actor fields are optional.
 
-## Notification lifecycle
+| `_actor` field | Type   | Description                                |
+| :------------- | :----- | :----------------------------------------- |
+| `name`         | string | Display name shown beside the notification |
+| `avatar`       | string | URL to the avatar image                    |
+| `id`           | string | Actor's external ID (for linking)          |
 
-| State | Meaning |
-|-------|---------|
-| Unread | Delivered, not opened |
-| Read | User clicked or marked read |
-| Archived | Hidden from active feed |
-| Seen | (SDK) scrolled past in feed |
+## Action buttons
 
-Cross-device sync: marking read on one device clears badges everywhere via WebSocket.
-
-## Headless access (JS SDK)
+Include up to **2 action buttons** using `_actions` in trigger `data`:
 
 ```ts
-await nexus.notifications.refetch({ tags: ['billing'] });
-await nexus.notifications.loadMore({ tags: ['mention'] });
+await nexus.workflows.trigger({
+  workflowName: 'approval.requested',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _actions: [
+      { label: 'Approve', url: '/api/approve/req_123', variant: 'primary' },
+      { label: 'Decline', url: '/api/decline/req_123', variant: 'secondary' },
+    ],
+    requestId: 'req_123',
+  },
+});
 ```
 
-Build fully custom UI with [`@nexus-signal/js`](/docs/sdk/frontend/js) while Nexus handles WebSocket + API state.
+| `_actions` field | Type                         | Description                                  |
+| :--------------- | :--------------------------- | :------------------------------------------- |
+| `label`          | string                       | Button text (max 50 characters)              |
+| `url`            | string                       | Action URL — relative (your app) or absolute |
+| `variant`        | `'primary'` \| `'secondary'` | Button style (defaults to `'primary'`)       |
+
+<Callout type="info">
+  Only the first 2 actions are rendered — additional items are silently ignored.
+</Callout>
+
+## Click-through redirect
+
+Control where the notification navigates when clicked using `_redirect`:
+
+```ts
+data: {
+  _redirect: {
+    url: '/orders/ord_789',
+    target: '_self',   // '_self' (default) or '_blank'
+  },
+}
+```
+
+Or as a plain string for simple navigation:
+
+```ts
+data: {
+  _redirect: '/orders/ord_789',
+}
+```
+
+## Tag filtering
+
+Tags come from the **workflow's topic name** — assign a topic to a workflow in the dashboard, and all notifications from that workflow carry that topic as a tag.
+
+### React SDK tag filtering
+
+In the React SDK, the `NotificationInbox` component filters notifications client-side using the `tag` prop:
+
+```tsx
+<NotificationInbox tag="billing" />
+```
+
+Build a custom tab UI by passing a state value to the `tag` prop:
+
+```tsx
+const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
+
+<>
+  <button onClick={() => setActiveTag(undefined)}>All</button>
+  <button onClick={() => setActiveTag('billing')}>Billing</button>
+  <button onClick={() => setActiveTag('mentions')}>Mentions</button>
+  <NotificationInbox tag={activeTag} />
+</>;
+```
+
+### Raw SDK API & Headless JS SDK filtering
+
+For custom headless integrations, tags can be filtered on the server side:
+
+- **Raw SDK API**: Query the endpoint with the `tag` or `tags` query parameter:
+  ```http
+  GET /v1/sdk/notifications?subscriberExternalId=user_42&tag=billing
+  ```
+- **Headless JS SDK**: Pass the `tags` array option:
+  ```ts
+  await nexus.notifications.refetch({ tags: ['billing'] });
+  ```
+
+## Notification lifecycle states
+
+| State        | Meaning                                                   |
+| :----------- | :-------------------------------------------------------- |
+| **Unread**   | Delivered, not opened — increments the unread badge count |
+| **Read**     | User clicked or explicitly marked read                    |
+| **Archived** | Hidden from the active feed — still retrievable           |
+| **Seen**     | SDK has rendered the item in the viewport                 |
+
+Cross-device sync: marking a notification read on one device clears the badge everywhere via WebSocket broadcast.
+
+## Headless SDK access
+
+```ts
+// Fetch with tag filter
+await nexus.notifications.refetch({ tags: ['billing'] });
+
+// Load next page
+await nexus.notifications.loadMore({ tags: ['mentions'] });
+
+// Mark actions
+await nexus.notifications.markRead(notificationId);
+await nexus.notifications.markAllRead();
+await nexus.notifications.archive(notificationId);
+```
+
+Build fully custom UI with [`@nexus-signal/js`](/docs/sdk/frontend/js) while Nexus handles WebSocket state management.
 
 ## Related
 

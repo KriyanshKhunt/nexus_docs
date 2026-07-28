@@ -15,12 +15,12 @@ All routes require header: `x-nexus-public-key: pk_prd_…` and subscriber ident
 GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=unread
 ```
 
-| Query | Values |
-|-------|--------|
-| `filter` | `unread`, `read`, `archived` |
-| `tag` / `tags` | Comma-separated workflow topic tags |
-| `tenantId` | Filter by tenant external ID |
-| `dateFrom` / `dateTo` | ISO timestamps |
+| Query                 | Values                                    |
+| --------------------- | ----------------------------------------- |
+| `filter`              | `unread`, `read`, `archived`              |
+| `tag` / `tags`        | Comma-separated workflow topic tags       |
+| `tenantId`            | Filter by tenant's internal database UUID |
+| `dateFrom` / `dateTo` | ISO timestamps                            |
 
 ```json
 {
@@ -33,8 +33,8 @@ GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=un
       "archived": false,
       "at": "2026-07-02T14:00:00.000Z",
       "workflowName": "order.shipped",
-      "actor": { "name": "Sarah Chen", "avatarUrl": "https://..." },
-      "actions": [{ "label": "View order", "url": "/orders/9912", "style": "primary" }],
+      "actor": { "name": "Sarah Chen", "avatar": "https://..." },
+      "actions": [{ "label": "View order", "url": "/orders/9912", "variant": "primary" }],
       "tags": ["orders"]
     }
   ],
@@ -88,7 +88,7 @@ POST /v1/sdk/guides/:guideId/events
 { "subscriberExternalId": "user_42", "event": "seen" }
 ```
 
-Events: `seen`, `interacted`, `dismissed`
+Events: `seen`, `interacted`, `archived`
 
 ## Preferences
 
@@ -115,10 +115,10 @@ GET /v1/sdk/topics
 
 ## Client SDKs
 
-| SDK | Docs |
-|-----|------|
-| React | [`@nexus-signal/react`](/docs/sdk/frontend/react) |
-| Angular | [`@nexus-signal/angular`](/docs/sdk/frontend/angular) |
-| Headless JS | [`@nexus-signal/js`](/docs/sdk/frontend/js) |
+| SDK         | Docs                                                  |
+| ----------- | ----------------------------------------------------- |
+| React       | [`@nexus-signal/react`](/docs/sdk/frontend/react)     |
+| Angular     | [`@nexus-signal/angular`](/docs/sdk/frontend/angular) |
+| Headless JS | [`@nexus-signal/js`](/docs/sdk/frontend/js)           |
 
 See also [Rich inbox](/docs/platform/features/rich-inbox) and [Guides](/docs/platform/features/guides).

@@ -3,52 +3,96 @@ title: Email Layouts & Partials
 description: Shared email frames and reusable HTML snippets — change branding once, update every template.
 ---
 
-**Email layouts** wrap all email templates in a shared HTML frame (header, footer, styles). **Partials** are reusable Handlebars snippets referenced across templates.
+**Email layouts** wrap all email templates in a shared HTML frame (header, footer, styles). **Partials** are reusable Handlebars snippets that can be referenced across multiple templates. Together they let you maintain a consistent brand without duplicating HTML.
 
-## Layouts
+## Email layouts
 
-Layouts define the outer shell with a content slot:
+A layout defines the outer HTML shell. The compiled template body is injected at `{{{ content }}}`:
 
 ```html
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* your base styles */
+    </style>
+  </head>
   <body>
-    <img src="{{ branding.logoUrl }}" alt="Logo" />
-    <div class="content">{{{ content }}}</div>
-    <footer>{{ branding.footerHtml }}</footer>
+    <header>
+      <img src="{{ logo }}" alt="{{ name }}" style="max-height: 40px;" />
+    </header>
+    <main>{{{ content }}}</main>
+    <footer>{{{ footerHtml }}}</footer>
   </body>
 </html>
 ```
 
-Dashboard: **Templates → Layouts**. One layout can be marked active per environment. Tenant branding variables inject automatically when a tenant context is set.
+<Callout type="info">
+Use triple braces `{{{ content }}}` and `{{{ footerHtml }}}` to render HTML without escaping. Use double braces `{{ logo }}` for URL strings and other scalar values.
+</Callout>
+
+### Tenant branding variables in layouts
+
+When a workflow trigger includes a `tenant` value, the tenant's branding fields are injected directly into the layout context by their field names:
+
+| Layout variable      | Source                         |
+| :------------------- | :----------------------------- |
+| `{{ logo }}`         | `tenant.branding.logo`         |
+| `{{ primaryColor }}` | `tenant.branding.primaryColor` |
+| `{{{ footerHtml }}}` | `tenant.branding.footerHtml`   |
+| `{{ name }}`         | `tenant.name`                  |
+
+If no tenant is set on the trigger, these variables are empty and your layout should include sensible fallbacks.
+
+### Layout variables
+
+Beyond tenant branding, you can define **custom static variables** on a layout itself (key-value pairs in the dashboard). These are merged into the context alongside tenant branding and subscriber data.
 
 ## Partials
 
-Create reusable blocks in **Templates → Partials**:
+Partials are reusable HTML snippets registered by name. Create them in **Templates → Partials**:
 
 ```html
-<!-- partial: cta-button -->
-<a href="{{ url }}" class="btn btn-primary">{{ label }}</a>
+<!-- partial name: cta-button -->
+<a
+  href="{{ url }}"
+  style="display:inline-block; padding:12px 24px;
+   background-color:{{ primaryColor }}; color:#fff; text-decoration:none;
+   border-radius:4px;"
+  >{{ label }}</a
+>
 ```
 
-Reference in any email template:
+Reference in any email template or layout with:
 
 ```html
 {{> cta-button url=data.checkoutUrl label="Complete purchase" }}
 ```
 
-Change the partial once — every template using it updates on next send.
+Change the partial once — every template using it updates on the next send.
 
 ## Compilation order
 
 ```mermaid
 flowchart TD
-  T[Template HTML] --> P[Resolve partials]
-  P --> L[Wrap in active layout]
-  L --> B[Apply tenant branding]
-  B --> H[Handlebars compile]
-  H --> Out[Final HTML]
+  T[Email template HTML] --> P[Resolve partials]
+  P --> C[Compile Handlebars — subscriber + trigger data]
+  C --> L[Wrap in active layout HTML]
+  L --> B[Inject tenant branding variables]
+  B --> H[Compile layout Handlebars]
+  H --> Out[Final HTML sent to email provider]
 ```
+
+## Assigning a layout to a workflow
+
+In the dashboard **Workflow canvas**:
+
+1. Open workflow settings
+2. Select **Email Layout** — choose from layouts in the current environment
+3. Save — the layout applies to all email channel steps in that workflow
+
+A single layout can be active across multiple workflows. Changing the layout HTML updates all workflows using it on their next send.
 
 ## Related
 

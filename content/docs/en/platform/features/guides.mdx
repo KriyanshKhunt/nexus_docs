@@ -1,31 +1,60 @@
 ---
 title: In-Product Guides
-description: Targeted banners, modals, and tooltips managed from the dashboard — not workflow-triggered notifications.
+description: Targeted banners, modals, cards, and tooltips managed from the dashboard — not workflow-triggered notifications.
 ---
 
-**Guides** deliver in-product UI surfaces (banners, modals, tooltips, badges) controlled from the dashboard. Engineers define the slot once; PMs manage content, targeting, and activation.
+**Guides** deliver in-product UI surfaces controlled entirely from the dashboard. Engineers integrate the SDK hook once; product managers control content, targeting, scheduling, and activation without code changes.
 
 ## Guide types
 
-| Type | Use case |
-|------|----------|
-| `banner` | Top-of-page announcements |
-| `modal` | Feature launches, upgrade nudges |
-| `tooltip` | Contextual onboarding hints |
-| `badge` | Highlight new UI elements |
+| Type      | Best for                                            |
+| :-------- | :-------------------------------------------------- |
+| `BANNER`  | Top-of-page announcements, maintenance notices      |
+| `MODAL`   | Feature launches, upgrade prompts, onboarding flows |
+| `CARD`    | Inline feature callouts and contextual tips         |
+| `TOOLTIP` | Contextual hints anchored to specific UI elements   |
 
-## Targeting rules
+## Guide content schema
 
-Guides match subscribers based on:
+Each guide has a structured content object:
 
-- User segment / audience
-- Page URL or pathname pattern
-- Feature flags or custom context passed from your app
-- Activation schedule (start/end dates)
+| Field          | Type                                                     | Description                                       |
+| :------------- | :------------------------------------------------------- | :------------------------------------------------ |
+| `title`        | string                                                   | Headline text (max 256 characters)                |
+| `body`         | string                                                   | Main body text (max 5,000 characters)             |
+| `cta`          | `{ label, url, action }`                                 | Primary call-to-action button                     |
+| `secondaryCta` | `{ label, url }`                                         | Secondary button (e.g., "Maybe later")            |
+| `media`        | `{ url, alt }`                                           | Optional image                                    |
+| `dismissible`  | boolean                                                  | Whether user can close the guide (default `true`) |
+| `theme`        | `info` \| `success` \| `warning` \| `error` \| `neutral` | Visual style variant                              |
+
+## Targeting
+
+Guides can target subscribers based on:
+
+- **Audience**: Link to an existing [Audience](/docs/platform/features/audiences) segment
+- **Custom rules**: Additional `rules` array filtered on subscriber fields (same format as audiences)
+- **Logic**: `AND` / `OR` across rules
+
+## Activation
+
+Control _when and where_ a guide appears using the `activation` object:
+
+| Field        | Options                                           | Description                                                    |
+| :----------- | :------------------------------------------------ | :------------------------------------------------------------- |
+| `urlPattern` | string                                            | Page URL pattern to match                                      |
+| `pageMatch`  | `exact` \| `starts_with` \| `contains` \| `regex` | How to match the URL (default: `starts_with`)                  |
+| `frequency`  | `once` \| `once_per_session` \| `always`          | How often to show the guide per user                           |
+| `delay`      | number (ms)                                       | Milliseconds to wait after page load before showing (0–60,000) |
+
+## Priority & scheduling
+
+- **Priority** (0–100): Higher priority guides surface first when multiple guides match the same user/page
+- **startAt / endAt**: Optional ISO 8601 datetime — guides are only active within this window
 
 ## SDK integration
 
-Guides are fetched client-side — not pushed via WebSocket like in-app notifications.
+Guides are fetched client-side via a polling/on-demand API call, not pushed via WebSocket.
 
 <Tabs items={['React', 'Headless JS']}>
   <Tab value="React">
@@ -34,13 +63,20 @@ Guides are fetched client-side — not pushed via WebSocket like in-app notifica
 import { useGuides } from '@nexus-signal/react';
 
 function GuideRenderer() {
-  const { guides, markSeen, dismiss } = useGuides({
+  const { guides, markSeen, markInteracted, dismiss } = useGuides({
     pathname: window.location.pathname,
   });
 
   return guides.map((guide) => (
-    <div key={guide.id} onClick={() => markSeen(guide.id)}>
-      {guide.content.title}
+    <div key={guide.id}>
+      <h3>{guide.content.title}</h3>
+      <p>{guide.content.body}</p>
+      {guide.content.cta && (
+        <a href={guide.content.cta.url} onClick={() => markInteracted(guide.id)}>
+          {guide.content.cta.label}
+        </a>
+      )}
+      {guide.content.dismissible && <button onClick={() => dismiss(guide.id)}>Dismiss</button>}
     </div>
   ));
 }
@@ -50,22 +86,54 @@ function GuideRenderer() {
   <Tab value="Headless JS">
 
 ```ts
+// Fetch guides for the current page context
 await nexus.guides.fetch({ pathname: '/dashboard' });
+
+// Mark that the user saw the guide
 nexus.guides.markSeen(guideId);
+
+// Mark that the user interacted (clicked CTA)
+nexus.guides.markInteracted(guideId);
+
+// Dismiss the guide permanently
 nexus.guides.dismiss(guideId);
 ```
 
   </Tab>
 </Tabs>
 
-SDK route: `GET /v1/sdk/guides` — returns active guides for the current user + context.
+**SDK route**: `GET /v1/sdk/guides?pathname=/dashboard` — returns active, matching guides for the authenticated subscriber.
 
-## Analytics
+## Guide lifecycle events
 
-Track impressions, interactions, and dismissals via `POST /v1/sdk/guides/:guideId/events`.
+| Event        | SDK method           | Meaning                                       |
+| :----------- | :------------------- | :-------------------------------------------- |
+| `seen`       | `markSeen(id)`       | User saw (scrolled past / rendered) the guide |
+| `interacted` | `markInteracted(id)` | User clicked the primary CTA                  |
+| `archived`   | `dismiss(id)`        | User explicitly dismissed the guide           |
+
+Events are posted to `POST /v1/sdk/guides/:guideId/events` and feed into analytics.
+
+## Guide statuses
+
+| Status     | Meaning                                                           |
+| :--------- | :---------------------------------------------------------------- |
+| `DRAFT`    | Not visible to users                                              |
+| `ACTIVE`   | Served to matching users (up to 20 active guides per environment) |
+| `PAUSED`   | Temporarily hidden without deletion                               |
+| `ARCHIVED` | Permanently retired                                               |
+
+## Limits
+
+| Limit                             | Value |
+| :-------------------------------- | :---- |
+| Max guides per environment        | 50    |
+| Max active guides per environment | 20    |
+| Max targeting rules per guide     | 10    |
 
 ## Related
 
 - [Guides API](/docs/api/guides)
+- [Audiences](/docs/platform/features/audiences)
 - [React SDK](/docs/sdk/frontend/react)
 - [Headless JS SDK](/docs/sdk/frontend/js)

@@ -3,32 +3,44 @@ title: Translation Files
 description: Centralized locale key-value stores with {{ t "key" }} Handlebars helper — reusable strings across all templates.
 ---
 
-**Translation files** store shared locale strings per environment. Reference them in any template with `{{ t "welcome_message" }}` instead of duplicating full template copies per language.
+**Translation files** store shared locale strings per environment. Reference them in any email, SMS, or push template with `{{ t "key" }}` instead of duplicating full template copies per language.
 
 <Callout type="info">
-  This complements [Multi-language templates](/docs/platform/features/i18n),
-  which store full locale variants inside `contentTemplates`. Use translation
-  files for shared strings; use locale templates for channel-specific layout
-  differences.
+  This complements [Multi-language templates](/docs/platform/features/i18n), which store full locale
+  variants inside `contentTemplates`. Use **translation files** for shared reusable strings; use
+  **locale templates** for full channel-specific layout differences.
 </Callout>
+
+## How the `t` helper works
+
+At template compile time, the `{{ t "key" }}` Handlebars helper:
+
+1. Resolves the subscriber's current locale (from `_locale` override → subscriber `locale` field → default `en`)
+2. Looks up the key in the translation file for that locale
+3. Falls back to the base locale (e.g., `"en"` from `"en-US"`)
+4. Falls back to English if no match found
+5. Returns the raw key string if no translation exists in any locale
 
 ## Upload translations
 
-Dashboard: **Templates → Translations**, or API:
+**Dashboard**: **Templates → Translations** → select locale → paste or upload JSON.
 
-Dashboard / Browser API:
+**Management API (`sk_*` key — for scripts and CI/CD):**
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+**Dashboard API (JWT auth — for browser integrations):**
 
 ```http
 PUT /v1/translations
 Authorization: Bearer <jwt_token>
 ```
 
-Management / Server-side API (CLI/Scripts):
-
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+**Payload:**
 
 ```json
 {
@@ -37,10 +49,13 @@ Authorization: Bearer sk_prd_…
   "content": {
     "welcome_message": "Bienvenido",
     "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "cta_view_order": "Ver pedido",
+    "invoice_due": "Factura vencida"
   }
 }
 ```
+
+The `namespace` field is a label for organizing your keys in the dashboard. Keys from all namespaces are available to the `t` helper regardless of namespace — the key lookup is flat across the entire locale's content.
 
 ## Use in templates
 
@@ -50,27 +65,69 @@ Authorization: Bearer sk_prd_…
 <a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
 ```
 
-## Locale resolution chain
+When the subscriber locale is `es`, this renders:
 
-1. Subscriber `locale` field
-2. Per-trigger `_locale` override
-3. Tenant default locale (if tenant context set)
-4. Environment default (`en`)
-5. Raw key if no translation found
+```html
+<h1>Bienvenido</h1>
+<p>Tu pedido ha sido enviado — ORD-12345</p>
+<a href="https://track.example.com/xyz">Ver pedido</a>
+```
 
-## Namespaces
+## Locale resolution order
 
-Organize strings by feature area:
+When a notification is sent, the locale is resolved in this priority order:
+
+1. `_locale` field in the trigger `data` payload (per-trigger override)
+2. Subscriber `locale` field (e.g., `"es"`, `"ja"`)
+3. Fallback to `"en"` (environment default)
+
+**Override locale on a specific trigger:**
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _locale: 'es',
+    orderId: 'ORD-12345',
+  },
+});
+```
+
+## Organizing keys with namespaces
+
+Namespaces are an optional organizational tool to group related strings in the dashboard. They do **not** affect how keys are referenced in templates.
+
+**Best practice**: Use a key naming convention that implies the namespace, such as `billing_invoice_due` or `auth_login_prompt`:
 
 ```json
 {
   "locale": "ja",
   "namespace": "billing",
-  "content": { "invoice_due": "請求書の支払期限" }
+  "content": {
+    "billing_invoice_due": "請求書の支払期限",
+    "billing_pay_now": "今すぐ支払う"
+  }
 }
 ```
 
-Reference: `{{ t "billing.invoice_due" }}` (namespace-aware lookup).
+In templates: `{{ t "billing_invoice_due" }}` (plain flat key lookup).
+
+## CLI workflow
+
+Manage translation files from the command line:
+
+```bash
+# Pull all current translations to local JSON files
+nexus translations pull --locale es --output ./translations/es.json
+
+# Push updated translations
+nexus translations push --locale es --input ./translations/es.json
+```
+
+## Supported locales
+
+Any BCP 47 locale string is supported (e.g., `en`, `en-US`, `es`, `es-MX`, `ja`, `pt`, `pt-BR`, `fr`, `de`, `zh-CN`). The `t` helper strips the region suffix and falls back to the base locale if a region-specific file is not found.
 
 ## Related
 
