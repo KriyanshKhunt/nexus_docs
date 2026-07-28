@@ -1,47 +1,77 @@
 ---
-title: Smart Send-Time
-description: AI-powered delivery timing — reach each user at their peak engagement hour.
+title: Smart Send-Time (AI Timing)
+description: AI-powered delivery timing — delay dispatches to land in each subscriber's peak local engagement hour.
 ---
 
-**Smart send-time** learns when each subscriber opens, reads, or clicks notifications, then delays delivery to their **peak local hour**.
+**Smart Send-Time** is a machine learning feature that learns when each subscriber is most likely to read or open messages. It automatically delays delivery until the subscriber's peak local hour, increasing read rates and minimizing notification fatigue.
 
-## Enable on a channel node
+---
 
-In the workflow canvas, toggle **AI Send Time** on any channel node (Email, SMS, Push, etc.).
+## How it works
 
-Excluded automatically: In-App, Webhook, scheduled triggers, and workflows with a Delivery Window node.
+1. **Track Engagement**: Nexus monitors `READ` and `OPENED` events in execution logs for each subscriber (using a 60-day lookback window).
+2. **Compute Score Matrix**: A background scoring service recalculates an hourly engagement matrix (24 hours × 7 days) in the subscriber's local timezone every **6 hours**.
+3. **Save to Redis**: The calculated peak engagement hour is cached in Redis under `engagement:scores:<subscriberId>`.
+4. **Evaluate at Send**: When a channel step runs with smart timing enabled:
+   - If the current hour is already the optimal hour, execution continues immediately, logging `SMART_TIMING_PASS` with `reason: "already_optimal"`.
+   - If it is not the optimal hour, Nexus calculates the milliseconds delay until the next occurrence of that hour, schedules a delayed BullMQ job `smartTiming:<logId>:<nodeId>`, updates log status to `QUEUED`, and logs `SMART_TIMING_HOLD`.
 
-## How the model works
-
-1. Nexus tracks `OPENED`, `READ`, and `CLICKED` events per subscriber (60-day lookback)
-2. Builds an hourly engagement score grid (day-of-week × hour) in **subscriber local timezone**
-3. Stores scores in Redis (refreshed every 6 hours via cron)
-4. On delivery, worker delays until the next occurrence of the optimal hour
-
-If insufficient data exists, fallback hour is **10:00 local time**.
-
-## Dashboard visibility
-
-Open a subscriber profile in the dashboard to view the **engagement heatmap** — a 24×7 grid showing when they interact.
-
-## Example
-
-| Subscriber | Timezone | Peak hour | Behavior |
-|------------|----------|-----------|----------|
-| Alex | `America/New_York` | 2 PM Tue | Order confirmation delayed until Tuesday 2 PM ET |
-| Yuki | `Asia/Tokyo` | 8 PM | Marketing email waits until 8 PM JST |
-
-Pass timezone on trigger to keep scores accurate:
-
-```ts
-recipients: [{ externalId: 'user_1', timezone: 'America/Chicago' }]
+```mermaid
+flowchart TD
+  Trigger[Trigger Workflow] --> Channel{Channel step has smartTiming: true?}
+  Channel -->|No| Send[Dispatch Immediately]
+  Channel -->|Yes| CheckExclusions{Check Exclusions}
+  CheckExclusions -->|Match Excluded| Send
+  CheckExclusions -->|Eligible| Optimal{Current hour == optimal hour?}
+  Optimal -->|Yes| Send
+  Optimal -->|No| Delay[Calculate delay in ms]
+  Delay --> Queue[Queue delayed job & status: QUEUED]
+  Queue -->|Optimal hour opens| Send
 ```
 
-## Lifecycle logging
+---
 
-Delayed sends record `SMART_TIMING_HOLD` in the audit lifecycle with `optimalHour`, `delayMs`, and `timezone`.
+## Exclusions & fallbacks
+
+### Fallback hour
+
+If a subscriber has insufficient engagement history (less than **5 logged events**), the timing model falls back to a default value of **10:00 AM local time** (using `reason: "fallback"`).
+
+### Execution exclusions
+
+Smart timing is automatically disabled for:
+
+- **Excluded channels**: In-App (`IN_APP`) and Webhook (`WEBHOOK`) steps are delivered immediately.
+- **Workflow structures**: Any workflow containing a [Delivery Window](/docs/platform/features/delivery-windows) node anywhere in its graph is excluded from timing optimization.
+- **Scheduled triggers**: Workflows initiated via scheduled cron templates.
+- **Applied flag**: If smart timing was already applied earlier in the same workflow execution.
+
+---
+
+## Canvas setup
+
+To enable smart timing:
+
+1. Click on any channel node (Email, SMS, Push, WhatsApp, Chat) in the workflow canvas.
+2. In the right sidebar, toggle **AI Send Time** to active.
+3. Save the workflow.
+
+## Workflow-as-code
+
+In your typescript definitions, pass `smartTiming: true` in the channel configuration:
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('marketing.newsletter')
+  .addChannel('EMAIL', {
+    smartTiming: true,
+  })
+  .toDefinition();
+```
 
 ## Related
 
-- [Delivery windows](/docs/platform/features/delivery-windows) — hard time bounds (smart timing defers if both exist)
-- [Cost reduction](/docs/platform/features/cost-reduction) — combine timing + suppression for max ROI
+- [Delivery windows](/docs/platform/features/delivery-windows) — static quiet hours (delivery windows take precedence if both are defined in a workflow)
+- [Cost reduction](/docs/platform/features/cost-reduction) — combine timing with presence suppression
+- [Subscribers API](/docs/api/subscribers) — setting subscriber timezones

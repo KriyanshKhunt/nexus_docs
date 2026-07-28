@@ -1,51 +1,93 @@
 ---
-title: Multi-Language Templates
-description: Locale-aware templates — one workflow, content in every language.
+title: Multi-Language Templates (i18n)
+description: Localized message templates — run a single workflow and automatically deliver copy in the subscriber's language.
 ---
 
-Ship to global users without duplicating workflows.
+Nexus includes native support for internationalization (i18n). Instead of duplicating workflows for different languages, you store locale-specific copy directly within each channel node in the workflow template.
+
+---
 
 ## Template structure
 
-Store locale variants in `contentTemplates`:
+In the workflow template definition, the `contentTemplates` object contains channel keys (e.g. `email`, `sms`). If a channel is localized, its value maps locale codes (`en`, `es`, `ja`) to their respective channel templates.
+
+### Example localized content schema
 
 ```json
 {
-  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
-  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" },
-  "fr": { "email_subject": "Votre commande est expédiée", "sms_body": "Expédié !" }
+  "email": {
+    "en": {
+      "subject": "Your order has shipped!",
+      "html": "<p>Hi {{ subscriber.first_name }}, your order is on its way.</p>"
+    },
+    "es": {
+      "subject": "¡Tu pedido ha sido enviado!",
+      "html": "<p>Hola {{ subscriber.first_name }}, tu pedido está en camino.</p>"
+    }
+  },
+  "sms": {
+    "en": {
+      "body": "Hi {{ subscriber.first_name }}, your order has shipped."
+    },
+    "es": {
+      "body": "Hola {{ subscriber.first_name }}, tu pedido ha sido enviado."
+    }
+  }
 }
 ```
 
-## Locale resolution order
+The compiler checks if the channel object is localized by testing its keys against `LOCALE_KEY_REGEX = /^[a-z]{2,3}$/`. If it matches, it extracts the segment matching the resolved locale, falling back to English (`en`) if not found.
 
-1. Per-trigger `_locale` override (from recipient on trigger)
-2. Subscriber `locale` field
-3. Fallback to `en`
+---
 
-## Set locale on trigger
+## Locale resolution chain
 
-```ts
-recipients: [{ externalId: 'user_1', locale: 'es' }]
-```
+For every delivery, Nexus determines the target language in this strict priority order:
 
-## Supported locales
+1. **Trigger override**: The `_locale` property passed in the trigger `data` object:
+   ```ts
+   data: {
+     _locale: 'es';
+   }
+   ```
+2. **Subscriber property**: The `locale` field on the subscriber's profile:
+   ```ts
+   recipients: [{ externalId: 'user_42', locale: 'es-MX' }];
+   ```
+3. **Environment default**: Falls back to **`en`**.
 
-`en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `ko`, `zh`, `ar`, `hi`, `nl`, `pl` — validated as BCP 47 tags.
+### Validation rules
 
-## Template editor
+- Subscriber locale strings are validated using a BCP 47 pattern (`/^[a-z]{2,3}(-[a-zA-Z0-9]{1,8})*$/`). This supports regional locales like `en-US`, `es-MX`, and `pt-BR`.
+- When matching keys in `contentTemplates`, the compiler strips regional suffixes (e.g., `es-MX` resolves to the base key `es`).
 
-Use **locale tabs** in the dashboard template studio to add/remove languages. The device emulator previews each locale.
+---
 
-## AI generation
+## Supported base locales
 
-AI content generation accepts a `locale` parameter to produce translated copy in one step.
+Nexus has built-in localization support for the following base languages:
 
-## Translation files
+| Code | Language  | Code | Language   |
+| :--- | :-------- | :--- | :--------- |
+| `en` | English   | `nl` | Nederlands |
+| `es` | Español   | `tr` | Türkçe     |
+| `fr` | Français  | `hi` | हिन्दी     |
+| `de` | Deutsch   | `ar` | العربية    |
+| `pt` | Português | `ja` | 日本語     |
+| `it` | Italiano  | `zh` | 中文       |
+| `ko` | 한국어    |      |            |
 
-For shared strings across templates, use [translation files](/docs/platform/features/translations) with the `{{ t "key_name" }}` Handlebars helper instead of duplicating full templates per language.
+---
+
+## Translation files vs Localized templates
+
+For optimal organization, combine translation files and localized templates:
+
+- **Use localized templates** (this feature) for channel-specific structural layouts, rich email content, or layout differences between languages.
+- **Use [Translation Files](/docs/platform/features/translations)** with the `{{ t "key" }}` helper for shared key-value strings (e.g., footers, button labels, support links) referenced in multiple workflows.
 
 ## Related
 
 - [Workflows](/docs/platform/concepts/workflows)
-- [Topics](/docs/platform/features/topics)
+- [Translation files](/docs/platform/features/translations)
+- [AI Content generation](/docs/platform/features/ai-content)

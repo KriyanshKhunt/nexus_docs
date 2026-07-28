@@ -1,47 +1,94 @@
 ---
 title: Scheduled Triggers
-description: Cron and one-time scheduled notifications without building your own job runner.
+description: Cron and one-time scheduled workflows without setting up your own task runner or cron daemon.
 ---
 
-Schedule workflow fires from the dashboard or Node SDK — no external cron required.
+Nexus includes built-in scheduling capabilities. You can define recurring timers (Cron) or queue one-time future deliveries directly from the dashboard or via the Node SDK.
 
-## Types
+---
 
-| Type | Field | Example |
-|------|-------|---------|
-| **Recurring** | `cronExpression` | `0 9 * * 1` (Mondays 9 AM) |
-| **One-time** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+## Types of schedules
 
-Both support a `timezone` (default UTC) and static `recipients` + `data` payload.
+| Type          | Timing configuration | Description                                                      |
+| :------------ | :------------------- | :--------------------------------------------------------------- |
+| **Recurring** | `cronExpression`     | A standard cron pattern (e.g. `0 9 * * 1` for Monday at 9:00 AM) |
+| **One-time**  | `scheduledAt`        | An ISO 8601 datetime string (e.g. `2026-08-01T10:00:00Z`)        |
 
-## Dashboard
+Both schedules accept a `timezone` parameter (defaults to `'UTC'`) to resolve execution times in the subscriber's local frame.
 
-**Schedules** page — create, pause, edit, delete. View `nextFireAt` and `lastFiredAt`.
+---
 
-## Node SDK
+## API endpoints
+
+Depending on the client context, Nexus isolates schedule management into two endpoints:
+
+### 1. SDK API (Server-side scripts / SDK, `sk_*` key)
+
+The Node SDK interacts with this endpoint to register programmatically created schedules:
+
+```http
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+### 2. Dashboard API (Dashboard Frontend, JWT auth)
+
+The web console manages schedules using standard session tokens:
+
+```http
+POST /v1/schedules
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+---
+
+## Node SDK usage
+
+Create, edit, list, and delete schedules programmatically:
 
 ```ts
-await nexus.schedules.create({
-  name: 'Weekly digest',
-  workflowId: 'wf_uuid',
-  cronExpression: '0 9 * * 1',
+// Create a recurring weekly digest schedule
+const result = await nexus.schedules.create({
+  name: 'Weekly Digest',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  cronExpression: '0 9 * * 1', // Mondays at 9 AM
   timezone: 'America/New_York',
-  recipients: [{ externalId: 'user_1' }],
-  data: { week: '2026-W27' },
+  recipients: [{ externalId: 'user_42' }, { externalId: 'user_109' }],
+  data: { scope: 'weekly_summary' },
+  active: true,
 });
+
+// Update schedule active state or data
+await nexus.schedules.update(scheduleId, {
+  active: false,
+});
+
+// Delete schedule
+await nexus.schedules.delete(scheduleId);
 ```
 
-```ts
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
-```
+### Schedule types & structure
 
-## Execution
+The `recipients` array takes objects containing either `subscriberId` (database UUID) or `externalId` (your user ID).
 
-A worker cron evaluates due schedules every **60 seconds** (max 100 active schedules per environment).
+---
+
+## Execution mechanics
+
+- A cron scheduler in the workflow worker scans the database every **60 seconds** to find active schedules that are due for delivery.
+- When due, it triggers a workflow run using the specified `workflowId`, `recipients`, and `data` payload.
+- In the dashboard, you can track history, see `lastFiredAt`, and preview `nextFireAt`.
+
+## Limits
+
+| Limit                         | Value      |
+| :---------------------------- | :--------- |
+| Max schedules per environment | 100        |
+| Job poll check interval       | 60 seconds |
 
 ## Related
 
-- [API Reference — Schedules](/docs/api/schedules)
-- [Node SDK](/docs/sdk/backend/node)
+- [Schedules API reference](/docs/api/schedules)
+- [Node SDK client](/docs/sdk/backend/node)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

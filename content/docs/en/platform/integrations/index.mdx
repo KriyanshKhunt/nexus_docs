@@ -1,39 +1,54 @@
 ---
 title: Integrations
-description: Connect your email, SMS, push, messaging, and AI providers to Nexus Signal.
+description: Connect your own email, SMS, push, webhook, chat, and AI providers to Nexus Signal.
 ---
 
-Nexus Signal integrates with **your existing provider accounts**. Configure keys once in the dashboard **Integrations** hub.
+Nexus acts as a routing controller that sits in front of **your own provider accounts**. Configure API credentials once in the dashboard **Integrations** hub, and Nexus handles routing, failover, templates, and delivery tracking.
 
-<Cards>
-  <Card title="Provider catalog" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend, and more." />
-  <Card title="Messaging channels" href="/docs/platform/integrations/messaging-channels" description="Slack, Discord, Teams per-subscriber webhooks." />
-  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Custom HTTP endpoints for any payload." />
-</Cards>
+---
 
-## Integration layers
+## Integration layers & providers
 
-| Layer | Examples |
-|-------|----------|
-| Email | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
-| SMS | Twilio, Vonage, Plivo, Sinch |
-| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
-| Push | Firebase FCM, Apple APNs |
-| Messaging | Slack, Discord, Microsoft Teams |
-| Webhook | Custom HTTP endpoints |
-| AI | OpenAI, Anthropic (content generation) |
+| Layer        | Key                                | Supported providers                             | Description                            |
+| :----------- | :--------------------------------- | :---------------------------------------------- | :------------------------------------- |
+| **Email**    | `email`                            | SendGrid, Resend, Amazon SES, Postmark, Mailgun | Transactional and marketing emails     |
+| **SMS**      | `sms`                              | Twilio, Vonage, Plivo, Sinch                    | Fast SMS alerts and OTPs               |
+| **WhatsApp** | `whatsapp`                         | Meta Cloud API, Twilio WhatsApp, Infobip        | Rich B2C chat communications           |
+| **Push**     | `push`                             | Firebase Cloud Messaging (FCM), Apple APNs      | Web and mobile push notifications      |
+| **Chat**     | `slack` \| `discord` \| `ms_teams` | Slack, Discord, Microsoft Teams                 | Direct chat workspace updates          |
+| **Webhooks** | `webhook`                          | Custom HTTP fetch targets                       | Direct backend-to-backend webhooks     |
+| **AI**       | `openai_ai` \| `anthropic_ai`      | OpenAI, Anthropic                               | Content generation & runtime LLM nodes |
 
-## Weight configuration
+---
 
-When multiple providers exist for one layer, set traffic weights (must sum to 100):
+## Weight configuration (A/B Routing)
+
+If you configure multiple integrations for a single layer, you can divide traffic between them by setting custom weights:
 
 ```http
 PUT /v1/integrations/weights/email
-{ "sendgrid": 70, "resend": 30 }
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "weights": {
+    "sendgrid": 70,
+    "resend": 30
+  }
+}
 ```
 
-Layers: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+- **Supported layers**: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`.
+- **Validation**: All weights inside a layer must sum to exactly **100**.
 
-<Callout type="info">
-See [BYOP](/docs/platform/concepts/byop) for why Nexus never marks up provider costs.
-</Callout>
+---
+
+## Security
+
+All provider API keys, tokens, and client secrets are encrypted on the server side using AES-256-GCM before writing to the database. Decryption occurs only at the memory level in the worker threads when dispatching outbound deliveries.
+
+## Related
+
+- [BYOP (Concepts)](/docs/platform/concepts/byop) — zero-markup pricing details
+- [Provider credentials catalog](/docs/platform/integrations/providers)
+- [Webhooks setup](/docs/platform/integrations/webhooks)

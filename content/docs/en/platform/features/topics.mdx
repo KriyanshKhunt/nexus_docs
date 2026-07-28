@@ -1,43 +1,106 @@
 ---
-title: Topics
-description: Category-based notification subscriptions — Marketing, Security, Product Updates.
+title: Notification Topics
+description: Category-based notification preferences — let subscribers opt in/out of entire groups like Marketing or Billing instead of raw workflow names.
 ---
 
-**Topics** let users opt in/out of **categories** instead of individual workflow event names.
+**Topics** represent categories of notifications (e.g., `"Billing"`, `"Product Updates"`, `"Marketing"`). Instead of exposing raw backend workflow event names to subscribers, you assign workflows to a topic. Subscribers then manage their preferences at the topic level.
 
-## Model
+---
 
-| Field | Description |
-|-------|-------------|
-| `name` | Machine key (e.g. `marketing`) |
-| `displayName` | UI label |
-| `defaultStatus` | `OPTED_IN`, `OPTED_OUT`, or `REQUIRED` |
-| `sortOrder` | Preference matrix ordering |
+## Topic model
 
-Max **50 topics** per environment.
+| Field           | Type   | Required | Description                                                                                                                                     |
+| :-------------- | :----- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | string | ✅       | Unique machine identifier (e.g. `billing_alerts`). Must be lowercase alphanumeric with dashes/underscores (`^[a-z][a-z0-9_-]*$`, max 64 chars). |
+| `displayName`   | string | ✅       | User-facing display name in the preference menu (max 128 chars).                                                                                |
+| `description`   | string | —        | Brief user-facing summary of what this topic contains (max 256 chars).                                                                          |
+| `defaultStatus` | enum   | ✅       | Initial subscription state for new subscribers: `OPTED_IN`, `OPTED_OUT`, or `REQUIRED`.                                                         |
+| `sortOrder`     | number | —        | Integer defining row display order in preference tables.                                                                                        |
 
-## Assign workflows
+### Default statuses explained
 
-Link a workflow to a topic via `topicId`. Preference evaluation checks `topic:{name}` keys on the subscriber profile.
+- **`OPTED_IN`**: Subscribers are subscribed by default but can explicitly opt out.
+- **`OPTED_OUT`**: Subscribers are unsubscribed by default but can explicitly opt in.
+- **`REQUIRED`**: Subscribers are permanently subscribed. These represent critical alerts (e.g., password resets, billing failure warnings) that cannot be turned off.
 
-## Dashboard
+---
 
-Manage topics under **Settings → Topics**. Assign workflows from the workflow editor dropdown.
+## How preferences are evaluated
 
-## SDK
+When a workflow is triggered:
+
+1. Nexus checks if the workflow is linked to a `topicId`. If not, it executes the channel steps.
+2. If linked, the engine checks the subscriber's preference matrix for keys structured as `topic:<name>`.
+3. If an explicit preference exists for the channel (e.g. `{ "topic:marketing": { "EMAIL": false } }`), the step is bypassed, logging `PREFERENCE_GATE` in the lifecycle.
+4. If no explicit preference is set, the engine falls back to the topic's `defaultStatus` configuration.
+
+---
+
+## SDK Integration
+
+### Fetch active topics
+
+The subscriber client can fetch the list of configured topics in the environment to render custom menus:
 
 ```http
 GET /v1/sdk/topics
 x-nexus-public-key: pk_prd_…
 ```
 
-Also included in `GET /v1/sdk/notification-events` for the preference matrix.
+**Response body:**
 
-## React SDK
+```json
+{
+  "topics": [
+    {
+      "id": "topic-uuid",
+      "name": "billing",
+      "displayName": "Billing & Invoices",
+      "defaultStatus": "REQUIRED"
+    },
+    {
+      "id": "topic-uuid-2",
+      "name": "marketing",
+      "displayName": "Marketing & Promotions",
+      "defaultStatus": "OPTED_OUT"
+    }
+  ]
+}
+```
 
-`<SubscriberPreferenceMatrix groupByTopic />` renders topics as rows with channel checkboxes.
+This endpoint is also included in `GET /v1/sdk/notification-events` along with active channels.
+
+---
+
+## React SDK components
+
+The React SDK provides a drop-in component that automatically loads, groups, and updates preferences by topic:
+
+```tsx
+import { PreferenceMatrix } from '@nexus-signal/react';
+
+function UserSettings() {
+  return (
+    <div className="settings-panel">
+      <h2>Notification Preferences</h2>
+      <PreferenceMatrix />
+    </div>
+  );
+}
+```
+
+The component renders topics as rows and available channels (Email, SMS, Push) as columns. When a user toggles a checkbox, the client updates the subscriber profile (`PUT /v1/sdk/subscribers/:externalId/preferences`) automatically.
+
+## Limits
+
+| Limit                       | Value          |
+| :-------------------------- | :------------- |
+| Max topics per environment  | 50             |
+| Machine name maximum length | 64 characters  |
+| Display name maximum length | 128 characters |
 
 ## Related
 
-- [React SDK](/docs/sdk/frontend/react)
-- [SDK API](/docs/api/sdk)
+- [React SDK components](/docs/sdk/frontend/react)
+- [SDK API reference](/docs/api/sdk)
+- [Subscriber Preferences Matrix](/docs/platform/features/rich-inbox)

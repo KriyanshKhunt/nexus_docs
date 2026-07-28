@@ -1,55 +1,102 @@
 ---
 title: AI Content Generation
-description: Generate channel-optimized notification copy from a single prompt using your own AI key.
+description: Generate channel-optimized notification copy from a single prompt using your own AI provider keys.
 ---
 
-The template editor includes **AI Assist** — describe what the notification should say and get copy optimized for each channel's character limits.
+The template editor in the dashboard includes **AI Assist**. Describe what the notification should say in plain English, and get copywriting variations optimized for each channel's character limits.
 
-## BYOP AI keys
+## BYOP (Bring Your Own Provider) AI keys
 
-Connect your own key in **Integrations**:
+Nexus does not mark up AI token usage. You connect your own API key under **Settings → Integrations** in the dashboard:
 
 - **OpenAI** (`openai_ai`) — uses `gpt-4o-mini`
-- **Anthropic** (`anthropic_ai`) — uses `claude-3-haiku`
+- **Anthropic** (`anthropic_ai`) — uses `claude-3-haiku-20240307`
 
-Nexus does not charge for AI tokens — you pay your provider directly.
+Provider calls are executed on the server side using a JSON format constraint. If no provider key is active, the generator returns a `400` validation error.
 
-## API
+## Dashboard API endpoint
+
+The dashboard UI generates copy by invoking the templates endpoint:
 
 ```http
 POST /v1/templates/ai-generate
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 ```
+
+**Request body:**
 
 ```json
 {
-  "prompt": "Order shipped notification with tracking link",
-  "tone": "friendly",
-  "locale": "en",
-  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+  "prompt": "Order #4092 shipped with carrier DHL. Include tracking number.",
+  "tone": "casual",
+  "locale": "en"
 }
 ```
 
-Returns structured content per channel with limits enforced:
+- `prompt`: Plain text description of the message goal (max 1,000 characters).
+- `tone`: Visual style tone. Must be `professional`, `casual`, `urgent`, or `friendly`. Defaults to `professional`.
+- `locale`: Optional target language. If specified, the LLM translates and adapts the copy to that language.
 
-| Channel | Limit |
-|---------|-------|
-| Email subject | 80 chars |
-| SMS body | 160 chars |
-| Push title / body | 50 / 120 chars |
-| WhatsApp body | 1024 chars |
+**Response body:**
 
-**Tones:** `professional`, `casual`, `urgent`, `friendly`
+```json
+{
+  "generated": {
+    "email": {
+      "subject": "Your order has shipped! 📦",
+      "html": "Good news! Order #4092 is on its way. You can track your package with DHL..."
+    },
+    "sms": {
+      "body": "Hi! Order #4092 has shipped via DHL. Track it here!"
+    },
+    "push": {
+      "title": "Order Shipped!",
+      "body": "Your order #4092 is on its way via DHL."
+    },
+    "whatsapp": {
+      "body": "Good news! Order #4092 has shipped with DHL."
+    },
+    "slack": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "discord": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "ms_teams": {
+      "body": "Order #4092 has shipped with DHL."
+    }
+  },
+  "locale": "en",
+  "message": "Content generated"
+}
+```
 
-## Workflow
+## Channel limits enforced
 
-1. Open **Templates** in the dashboard
-2. Click **AI Assist** panel
-3. Enter prompt and select channels
-4. Preview generated copy per channel
-5. Accept into your template draft
+All generated outputs are automatically truncated at the server level to match the maximum size limits of each messaging channel:
+
+| Channel       | Limit            | Generated field           |
+| :------------ | :--------------- | :------------------------ |
+| Email subject | 80 characters    | `generated.email.subject` |
+| SMS body      | 160 characters   | `generated.sms.body`      |
+| Push title    | 50 characters    | `generated.push.title`    |
+| Push body     | 120 characters   | `generated.push.body`     |
+| WhatsApp body | 1,024 characters | `generated.whatsapp.body` |
+| Slack body    | 2,000 characters | `generated.slack.body`    |
+| Discord body  | 2,000 characters | `generated.discord.body`  |
+| MS Teams body | 2,000 characters | `generated.ms_teams.body` |
+
+## Template builder workflow
+
+1. Go to **Templates** in the dashboard and create or open a draft.
+2. Click the **AI Assist** tab in the sidebar.
+3. Enter your prompt, select your preferred tone, and select the channels you want to populate.
+4. Click **Generate** — the draft contents will preview.
+5. Click **Apply to Draft** to merge the generated strings directly into the editor slots.
 
 ## Related
 
-- [i18n templates](/docs/platform/features/i18n) — generate per locale
+- [i18n templates](/docs/platform/features/i18n) — localizing variants per channel
 - [First workflow guide](/docs/platform/guides/first-workflow)
+- [AI workflow node](/docs/platform/features/ai-workflow-node) — runtime LLM execution

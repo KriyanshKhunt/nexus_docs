@@ -1,65 +1,74 @@
 ---
-title: Provider Catalog
-description: Full list of supported BYOP providers per channel layer.
+title: Provider Credentials Catalog
+description: Complete list of supported BYOP (Bring Your Own Provider) channels, provider IDs, and required credentials.
 ---
 
-## Email
+Nexus Signal runs on your own carrier connections. Connect any of the supported providers below in **Settings → Integrations** on the dashboard. All keys are encrypted at rest using AES-256-GCM.
 
-| ID | Provider |
-|----|----------|
-| `sendgrid` | SendGrid |
-| `resend` | Resend |
-| `amazon_ses` | Amazon SES |
-| `postmark` | Postmark |
-| `mailgun` | Mailgun |
+---
 
-## SMS
+## Email integration layer
 
-| ID | Provider |
-|----|----------|
-| `twilio` | Twilio |
-| `vonage` | Vonage |
-| `plivo` | Plivo |
-| `sinch` | Sinch |
+| Provider ID | Provider label | Required credentials                                | Telemetry webhooks |
+| :---------- | :------------- | :-------------------------------------------------- | :----------------- |
+| `sendgrid`  | SendGrid       | `apiKey` (Secret)                                   | ✅ Supported       |
+| `resend`    | Resend         | `apiKey` (Secret)                                   | ✅ Supported       |
+| `ses`       | Amazon SES     | `accessKeyId`, `secretAccessKey` (Secret), `region` | —                  |
+| `postmark`  | Postmark       | `serverToken` (Secret)                              | ✅ Supported       |
+| `mailgun`   | Mailgun        | `apiKey` (Secret), `domain`                         | —                  |
 
-## WhatsApp
+---
 
-| ID | Provider |
-|----|----------|
-| `meta_whatsapp` | Meta Cloud Business API |
-| `twilio_whatsapp` | Twilio WhatsApp Gateway |
-| `infobip_whatsapp` | Infobip |
+## SMS integration layer
 
-## Push
+| Provider ID | Provider label | Required credentials                 | Telemetry webhooks |
+| :---------- | :------------- | :----------------------------------- | :----------------- |
+| `twilio`    | Twilio         | `accountSid`, `authToken` (Secret)   | ✅ Supported       |
+| `vonage`    | Vonage         | `apiKey`, `apiSecret` (Secret)       | —                  |
+| `plivo`     | Plivo          | `authId`, `authToken` (Secret)       | —                  |
+| `sinch`     | Sinch          | `servicePlanId`, `apiToken` (Secret) | —                  |
 
-| ID | Provider |
-|----|----------|
-| `fcm` | Firebase Cloud Messaging |
-| `apns` | Apple Push Notification Service |
+---
 
-## Messaging
+## WhatsApp integration layer
 
-| ID | Provider |
-|----|----------|
-| `slack` | Slack Incoming Webhook |
-| `discord` | Discord Webhook |
-| `ms_teams` | Microsoft Teams Incoming Webhook |
+| Provider ID       | Provider label          | Required credentials                    | Telemetry webhooks |
+| :---------------- | :---------------------- | :-------------------------------------- | :----------------- |
+| `meta_whatsapp`   | Meta Cloud Business API | `phoneNumberId`, `accessToken` (Secret) | ✅ Supported       |
+| `twilio_whatsapp` | Twilio WhatsApp Gateway | `accountSid`, `authToken` (Secret)      | ✅ Supported       |
+| `infobip`         | Infobip WhatsApp        | `baseUrl`, `apiKey` (Secret), `sender`  | —                  |
 
-## Webhook
+---
 
-| ID | Provider |
-|----|----------|
-| `webhook_custom` | Custom HTTP endpoint |
+## Push notification layer
 
-## AI (content generation)
+| Provider ID | Provider label                 | Required credentials                                                       |
+| :---------- | :----------------------------- | :------------------------------------------------------------------------- |
+| `fcm`       | Firebase Cloud Messaging       | `projectId`, `clientEmail`, `privateKey` (Secret)                          |
+| `apns`      | Apple Push Notification (APNs) | `keyId`, `teamId`, `privateKey` (Secret, `.p8` format), `bundleId` (Topic) |
 
-| ID | Provider |
-|----|----------|
-| `openai_ai` | OpenAI |
-| `anthropic_ai` | Anthropic |
+---
 
-## Configuration
+## Chat & webhook layer
 
-Each provider accepts credentials via the Integrations modal (API keys, webhook URLs, sender IDs). Keys are encrypted at rest.
+| Provider ID      | Provider label   | Required credentials                                                                               | Description            |
+| :--------------- | :--------------- | :------------------------------------------------------------------------------------------------- | :--------------------- |
+| `slack`          | Slack Webhook    | `webhookUrl` (Secret)                                                                              | Target channel webhook |
+| `discord`        | Discord Webhook  | `webhookUrl` (Secret)                                                                              | Target channel webhook |
+| `ms_teams`       | MS Teams Webhook | `webhookUrl` (Secret)                                                                              | Target channel webhook |
+| `webhook_custom` | Custom Webhook   | `url`, `authType`, `authToken` (Secret), `username`, `password` (Secret), `signingSecret` (Secret) | Target HTTP endpoints  |
 
-Set per-message cost for [cost analytics](/docs/platform/features/cost-analytics) in **Settings → Provider costs**.
+---
+
+## AI (content generation & workflows)
+
+| Provider ID    | Provider label     | Required credentials | Supported models          |
+| :------------- | :----------------- | :------------------- | :------------------------ |
+| `openai_ai`    | OpenAI             | `apiKey` (Secret)    | `gpt-4o-mini`             |
+| `anthropic_ai` | Anthropic (Claude) | `apiKey` (Secret)    | `claude-3-haiku-20240307` |
+
+## Related
+
+- [Weighted routing](/docs/platform/integrations#weight-configuration) — split traffic across multiple providers
+- [Cost analytics](/docs/platform/features/cost-analytics) — assign unit costs to providers
+- [Delivery webhooks](/docs/platform/integrations/webhooks) — verify delivery status

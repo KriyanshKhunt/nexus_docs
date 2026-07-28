@@ -1,43 +1,79 @@
 ---
 title: Delivery Windows
-description: Timezone-aware delivery — only send between allowed hours in the subscriber's local time.
+description: Timezone-aware quiet hours — hold notifications in the queue until the subscriber's local allowed window opens.
 ---
 
-**Delivery Window** nodes ensure notifications never arrive at inappropriate hours (e.g. 9 AM–9 PM in the user's timezone).
+The **Delivery Window** step checks the subscriber's local time before dispatching downstream notifications. If the current time is outside the allowed window (e.g., in the middle of the night), Nexus pauses execution and schedules a delayed job to resume when the window opens.
 
-## Canvas setup
-
-Add a **Delivery Window** node with:
-
-- `windowStart` — `"09:00"`
-- `windowEnd` — `"21:00"`
-- `urgent` — bypass window for critical alerts (optional)
-
-## Subscriber timezone
-
-Set on the subscriber profile or pass per trigger:
-
-```ts
-recipients: [{ externalId: 'user_1', timezone: 'Europe/London' }]
+```mermaid
+flowchart TD
+  Trigger[Trigger notification] --> Check{Is local time within window?}
+  Check -->|Yes| Deliver[Deliver immediately]
+  Check -->|No| Delay[Calculate delay in ms]
+  Delay --> Queue[Schedule BullMQ delayed job]
+  Queue -->|Window opens| Deliver
 ```
 
-Uses IANA timezone identifiers. Falls back to UTC if unset.
+## Configuration
 
-## Behavior
+When defining a Delivery Window node in the canvas or via workflow-as-code, specify the following parameters:
 
-| Situation | Action |
-|-----------|--------|
-| Inside window | Continue immediately |
-| Outside window | Hold in queue; BullMQ delayed job resumes at next window open |
-| `urgent: true` | Deliver immediately regardless |
+| Field         | Type    | Required | Description                                                                               |
+| :------------ | :------ | :------- | :---------------------------------------------------------------------------------------- |
+| `windowStart` | string  | ✅       | Start time in `HH:MM` format (24-hour, e.g., `"09:00"`)                                   |
+| `windowEnd`   | string  | ✅       | End time in `HH:MM` format (24-hour, e.g., `"21:00"`)                                     |
+| `urgent`      | boolean | —        | Set `true` to completely bypass the window check for critical alerts. Defaults to `false` |
 
-## Use cases
+## How subscriber timezone is resolved
 
-- Marketing emails — business hours only
-- Push notifications — avoid sleep hours
-- SMS — compliance-friendly quiet hours
+The subscriber's local time is determined in the following priority order:
+
+1. The `timezone` property passed on the subscriber object at trigger time:
+   ```ts
+   recipients: [{ externalId: 'user_42', timezone: 'America/New_York' }];
+   ```
+2. The `timezone` stored on the subscriber's profile in the database.
+3. Fallback to **`UTC`** if no timezone is resolved or if the provided string is not a valid IANA identifier.
+
+## Execution states & lifecycle
+
+The delivery window step logs the following lifecycle events in the execution log tree:
+
+### 1. Delivery window hold (`DELIVERY_WINDOW_HOLD`)
+
+If the user's local time is outside the allowed window:
+
+- Status changes to `QUEUED`.
+- BullMQ schedules a delayed job with `jobId: "deliveryWindow:<logId>:<nodeId>"` and a custom millisecond delay.
+- Logs metadata showing:
+  - `subscriberLocalTime`
+  - `delayMs` (milliseconds until the window opens)
+  - `resumeNodeId` (the next step in the flow)
+
+### 2. Delivery window pass (`DELIVERY_WINDOW_PASS`)
+
+If the user's local time is inside the allowed window, or if `urgent` is set to `true`:
+
+- Status remains `PROCESSING` (runs immediately).
+- Logs `reason: "within_window"` or `reason: "urgent_bypass"`.
+
+## Workflow-as-code example
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('invoice.overdue')
+  .addDeliveryWindow({
+    windowStart: '09:00',
+    windowEnd: '18:00',
+    urgent: false,
+  })
+  .addChannel('SMS')
+  .toDefinition();
+```
 
 ## Related
 
-- [Smart send-time](/docs/platform/features/smart-send-time) — optimizes *which* hour; delivery window sets *allowed* hours
-- [Subscribers API](/docs/api/sdk)
+- [Smart send-time](/docs/platform/features/smart-send-time) — optimizes _which_ hour; delivery window sets _allowed_ hours
+- [Subscribers API](/docs/api/subscribers) — setting user timezones
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
