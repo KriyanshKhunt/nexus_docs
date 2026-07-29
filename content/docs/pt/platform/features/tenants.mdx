@@ -1,61 +1,132 @@
 ---
-title: Marca Multi-Tenant
-description: Notificações de marca branca para B2B SaaS — cada um de seus clientes obtém marca, preferências e substituições de provedores opcionais isoladas.
+title: Marca por Tenant
+description: Notificações white-label para SaaS B2B — cada um dos seus clientes obtém marca, preferências e feeds de notificação isolados.
 ---
 
-Os **tenants** representam os _seus_ clientes dentro do Nexus (diferente das **organizações** do Nexus, que são o _seu_ workspace). Use tenants quando seu produto atender a várias empresas que precisam de emails com marca própria, feeds in-app delimitados e configurações isoladas.
+# Marca por Tenant
 
-## Modelo de tenant
+Os **Tenants** (inquilinos) representam os _seus clientes_ dentro do Nexus (diferente da sua **Organização** do Nexus, que é o seu espaço de trabalho). Use tenants quando seu produto atender a várias empresas que precisam de e-mails com marca própria, feeds in-app delimitados e preferências de notificação isoladas.
 
-Cada tenant (por ambiente) tem:
+<Callout type="info">
+  Os tenants são um recurso **B2B**. Se sua aplicação for voltada ao consumidor final com uma marca
+  única, você não precisará usar tenants.
+</Callout>
 
-| Campo                | Propósito                                           |
-| -------------------- | --------------------------------------------------- |
-| `externalId`         | Seu ID de cliente (por exemplo, `tenant_acme`)      |
-| `name`               | Nome de exibição                                    |
-| `branding`           | URL do logotipo, cor primária, HTML do rodapé       |
-| `providerOverrides`  | Chaves SendGrid/Twilio opcionais por tenant         |
-| `preferenceDefaults` | Matriz de preferências padrão para novos assinantes |
+## Modelo do Tenant
 
-## Criar um tenant
+| Campo                   | Tipo   | Descrição                                                 |
+| :---------------------- | :----- | :-------------------------------------------------------- |
+| `externalId`            | string | ID do seu cliente (por exemplo, `"tenant_acme"`)          |
+| `name`                  | string | Nome de exibição                                          |
+| `branding.logo`         | string | URL do logotipo                                           |
+| `branding.primaryColor` | string | Cor hexadecimal para elementos de destaque                |
+| `branding.footerHtml`   | string | HTML personalizado de rodapé em layouts de e-mail         |
+| `properties`            | object | Pares de chave-valor livres para metadados personalizados |
 
-Painel: página **Tenants**, ou SDK:
+## Criar ou Atualizar um Tenant
+
+Os tenants passam por upsert — chamar `upsert` usando um `externalId` existente atualizará seus campos.
+
+**Node SDK:**
 
 ```ts
 await nexus.tenants.upsert({
-  externalId: "tenant_acme",
-  name: "Acme Corp",
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
   branding: {
-    logoUrl: "https://cdn.acme.io/logo.png",
-    primaryColor: "#2563eb",
-    footerHtml: "<p>© Acme Corp</p>",
+    logo: 'https://cdn.acme.io/logo.png',
+    primaryColor: '#2563eb',
+    footerHtml: '<p>© 2026 Acme Corp. Todos os direitos reservados.</p>',
   },
+  properties: { tier: 'enterprise', region: 'us-east' },
 });
 ```
 
-## Disparar com contexto de tenant
+**API de Gerenciamento (chave `sk_*`):**
+
+```http
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+
+{
+  "externalId": "tenant_acme",
+  "name": "Acme Corp",
+  "branding": {
+    "logo": "https://cdn.acme.io/logo.png",
+    "primaryColor": "#2563eb",
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
+  }
+}
+```
+
+## Disparar com Contexto de Tenant
+
+Passe o `tenant` como uma string de `externalId` em qualquer disparo de workflow:
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "invoice.sent",
-  tenant: "tenant_acme",
-  recipients: [{ externalId: "user_42", email: "billing@acme.io" }],
-  data: { invoiceId: "INV-001" },
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: 'user_42', email: 'billing@acme.io' }],
+  data: { invoiceId: 'INV-001', amount: 4900 },
 });
 ```
 
-La compilação do template aplica a marca do tenant aos layouts de email. Filtre notificações in-app por tenant via parâmetro de consulta `tenantId` do SDK.
+Quando um `tenant` é definido no gatilho:
 
-## Escopo do inbox no SDK
+- Os layouts de e-mail são compilados com as variáveis de marca do tenant (`{{ logo }}`, `{{ primaryColor }}`, etc.)
+- As notificações in-app são delimitadas ao feed do tenant
 
-```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+## Como a Marca é Injetada nos Layouts de E-mail
+
+Os campos de marca (branding) do tenant são propagados diretamente no contexto do modelo do Handlebars ao compilar os layouts de e-mail. Referencie-os por seus nomes de campos — **sem** o prefixo `branding.`:
+
+```html
+<!-- Em seu HTML de layout de e-mail -->
+<img src="{{ logo }}" alt="{{ name }} logo" />
+<div style="background-color: {{ primaryColor }};">{{{ content }}}</div>
+{{{ footerHtml }}}
 ```
 
-Veja a [API de SDK](/docs/api/sdk) para filtragem de tenant no lado do cliente.
+<Callout type="info">
+`{{{ content }}}` (chaves triplas) renderiza o corpo do modelo de e-mail compilado como HTML puro dentro do layout. `{{ logo }}`, `{{ primaryColor }}` e `{{ footerHtml }}` são injetados a partir do objeto de branding do tenant.
+</Callout>
+
+## Feed de Notificação In-App Delimitado
+
+Se você consultar a API bruta do SDK diretamente, poderá filtrar as notificações pelo UUID do banco de dados do tenant:
+
+**API do SDK:**
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_database_uuid
+```
+
+<Callout type="warn">
+  O parâmetro de consulta `tenantId` do SDK exige o **UUID do banco de dados interno** do tenant, e
+  não seu ID externo. Os componentes do SDK de frontend (React, Angular, JS) não oferecem suporte
+  nativo para delimitar feeds por tenant. Use tags de tópicos do workflow se precisar de feeds de
+  inbox delimitados por categorias simples na interface.
+</Callout>
+
+## Listar Tenants
+
+```ts
+const { data } = await nexus.tenants.list({ page: 1, limit: 25 });
+```
+
+## Limites
+
+| Limite                           | Valor |
+| :------------------------------- | :---- |
+| Máximo de tenants por ambiente   | 1.000 |
+| Máximo de campos de marca        | 20    |
+| Máximo de chaves em `properties` | 50    |
 
 ## Relacionado
 
-- [Guia de configuração B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)
+- [Guia B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)
 - [API de Tenants](/docs/api/tenants)
-- [Layouts de Email](/docs/platform/features/email-layouts)
+- [Layouts de e-mail](/docs/platform/features/email-layouts)
+- [Node SDK](/docs/sdk/backend/node)

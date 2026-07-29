@@ -1,39 +1,73 @@
 ---
-title: Ambientes
-description: Desenvolvimento, Homologação e Produção — chaves, dados e comportamentos isolados.
+title: Ambientes e Escopos
+description: Development, Staging e Production — gerencie workspaces isolados, pipelines de promoção e o ambiente de sandbox local.
 ---
 
-Cada espaço de trabalho do Nexus inclui **três ambientes**. Cada um é um escopo totalmente isolado para fluxos de trabalho, inscritos, modelos, agendamentos e tópicos.
+# Ambientes e Escopos
 
-## Matriz de ambientes
+Cada espaço de trabalho (workspace) do Nexus Signal é dividido em **três ambientes completamente isolados**: **Development**, **Staging** e **Production**.
 
-| | Desenvolvimento | Homologação | Produção |
-|---|-------------|---------|------------|
-| **Chave pública** | `pk_dev_*` | `pk_stg_*` | `pk_prd_*` |
-| **Chave secreta** | `sk_dev_*` | `sk_stg_*` | `sk_prd_*` |
-| **Modo Sandbox** | Sim — entrega simulada | Não | Não |
-| **Modo Caos** | Opcional — testar failover | Não | Não |
-| **Provedores Reais** | Apenas se desativar o sandbox | Sim | Sim |
+Cada ambiente opera como uma partição lógica independente de banco de dados, o que significa que os workflows, modelos, inscritos, preferências, tópicos e configurações de tenants **não cruzam essas fronteiras**.
 
-## Sandbox (Apenas em Desenvolvimento)
+---
 
-Em **Desenvolvimento**, os canais de saída (exceto in-app) são direcionados através de um **sandbox virtual** em vez de APIs de operadoras reais. Os payloads são transmitidos via WebSocket para o simulador do painel — teste fluxos de trabalho complexos **sem consumir créditos de provedores**.
+## Matriz de Ambientes
 
-Consulte [Modo Sandbox](/docs/platform/features/sandbox) para mais detalhes.
+| Recurso                      | Development                                                 | Staging                                                 | Production                                         |
+| :--------------------------- | :---------------------------------------------------------- | :------------------------------------------------------ | :------------------------------------------------- |
+| **Chaves de API**            | `pk_dev_*` / `sk_dev_*`                                     | `pk_stg_*` / `sk_stg_*`                                 | `pk_prd_*` / `sk_prd_*`                            |
+| **Envio de Saída**           | **Interceptação do Sandbox** (APIs de operadoras simuladas) | Envio por operadoras reais (Postmark, Twilio, SendGrid) | Envio por operadoras reais (Usuários reais)        |
+| **Entrega In-App**           | WebSockets ao vivo para sessões ativas de clientes          | WebSockets ao vivo para sessões ativas de clientes      | WebSockets ao vivo para sessões ativas de clientes |
+| **Escopo do Banco de Dados** | Isolado                                                     | Isolado                                                 | Isolado                                            |
+| **Modo Caos (Failover)**     | Habilitado (Permite simular indisponibilidade do provedor)  | Desabilitado                                            | Desabilitado                                       |
 
-## Alternando ambientes
+---
 
-Use o menu suspenso de ambientes na barra superior do painel. Todas as chamadas de API devem usar a chave secreta correspondente a esse ambiente.
+## Modo de Desenvolvimento e Sandbox
 
-<Callout type="warn">
-Nunca use chaves de Produção em arquivos locais `.env` confirmados no git. Use chaves de Desenvolvimento para o trabalho local.
-</Callout>
+O ambiente de **Development** foi projetado para integrações locais e testes automatizados.
 
-## Inscritos são isolados por ambiente
+Para economizar créditos de operadoras e evitar o envio acidental de mensagens para usuários reais durante o desenvolvimento, os nós de saída (E-mail, SMS, Push, WhatsApp, plataformas de Chat) são direcionados diretamente para um **sandbox virtual** em vez de realizar chamadas para as APIs externas dos provedores.
 
-Um inscrito com `externalId: user_123` em Desenvolvimento é um **registro diferente** do mesmo ID em Produção. Sincronize ou migre inscritos ao promover integrações.
+```mermaid
+flowchart LR
+    Trigger[Gatilho de Dev] --> Worker[Worker]
+    Worker --> Channel{Tipo de Canal}
+    Channel -->|In-App| WebSocket[Sino WebSocket Real]
+    Channel -->|Email / SMS / Push| Sandbox[Interceptador do Sandbox]
+    Sandbox -->|Transmitir payload| UI[Simulador de Inbox do Painel]
+```
 
-## Relacionado
+- **Simulador de Inbox**: No painel de controle, você pode visualizar o HTML completamente compilado, o texto do SMS ou o payload JSON como apareceriam para o usuário.
+- **Ignorar o Sandbox**: Se precisar testar uma entrega real em Desenvolvimento (por exemplo, testar um layout de e-mail real no seu cliente), ative a opção **Integrations → Development Integrations → Bypass Sandbox** para esse provedor.
 
-- [Autenticação](/docs/platform/getting-started/authentication) — qual chave usar em cada local
-- [Lista de verificação de produção](/docs/platform/guides/production-checklist) — antes de entrar no ar
+---
+
+## Fluxo de Promoção do Workspace
+
+Para implantar alterações do ambiente de Desenvolvimento para a Produção, use nosso pipeline de promoção em vez de replicar os layouts manualmente:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Development : Projetar e Testar Workflows
+    Development --> Staging : Implantar em QA via CLI/API
+    Staging --> Production : Enviar para Workspace em Produção
+```
+
+### Promovendo Workflows como Código (Recomendado)
+
+Ao definir suas árvores de etapas dentro do seu repositório, seu pipeline de promoção é gerenciado automaticamente por meio de ramificações do git:
+
+1. **Branch de Dev**: Execute `npx nexus-signal sync --env dev` no seu workspace local.
+2. **Branch Principal (Main)**: Dispare `npx nexus-signal sync --env prd` a partir do seu pipeline de CI/CD após a mesclagem (merge).
+
+Para mais detalhes, consulte a documentação de [Workflow-as-Code](/docs/sdk/workflow/workflow-as-code).
+
+---
+
+## Separação de Inscritos
+
+Os inscritos são totalmente isolados em sandbox. Um inscrito criado com `externalId: usr_99` usando a chave `sk_dev_*` **não existe** no ambiente `sk_prd_*`.
+
+- Certifique-se de que o gatilho de integração do seu servidor crie ou registre o perfil do inscrito sempre que alternar entre ambientes.
+- Teste as preferências e tópicos de forma independente em cada etapa.

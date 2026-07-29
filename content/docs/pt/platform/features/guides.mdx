@@ -1,46 +1,84 @@
 ---
 title: Guias no Produto
-description: Banners, modais e tooltips direcionados e gerenciados a partir do painel — não notificações disparadas por workflow.
+description: Banners, modais, cards e tooltips direcionados e gerenciados a partir do painel de controle — não são notificações disparadas por workflow.
 ---
 
-As **guias** fornecem superfícies de interface do usuário no produto (banners, modais, tooltips, badges) controladas a partir do painel. Os engenheiros definem o slot uma vez; os PMs gerenciam o conteúdo, direcionamento e ativação.
+# Guias no Produto
 
-## Tipos de guias
+Os **Guias** entregam superfícies de interface do usuário (UI) no produto controladas inteiramente a partir do painel de controle. Os desenvolvedores integram o hook do SDK uma única vez; os gerentes de produto controlam o conteúdo, o direcionamento (targeting), o agendamento e a ativação sem alterações de código.
 
-| Tipo      | Caso de uso                                   |
-| --------- | --------------------------------------------- |
-| `banner`  | Anúncios no topo da página                    |
-| `modal`   | Lançamento de recursos, avisos de atualização |
-| `tooltip` | Dicas de integração de onboarding contextual  |
-| `badge`   | Destacar novos elementos de UI                |
+## Tipos de Guias
 
-## Regras de direcionamento (Targeting)
+| Tipo      | Recomendado para                                                                   |
+| :-------- | :--------------------------------------------------------------------------------- |
+| `BANNER`  | Anúncios no topo da página, avisos de manutenção                                   |
+| `MODAL`   | Lançamento de recursos, solicitações de atualização de plano, fluxos de onboarding |
+| `CARD`    | Destaques de recursos em linha e dicas contextuais                                 |
+| `TOOLTIP` | Dicas contextuais ancoradas a elementos específicos da interface                   |
 
-As guías correspondem a assinantes com base em:
+## Esquema de Conteúdo do Guia
 
-- Segmento de usuário / audiência
-- URL da página ou padrão de rota (pathname)
-- Feature flags ou contexto personalizado passado do seu aplicativo
-- Cronograma de ativação (datas de início/fim)
+Cada guia possui um objeto de conteúdo estruturado:
+
+| Campo          | Tipo                                                     | Descrição                                               |
+| :------------- | :------------------------------------------------------- | :------------------------------------------------------ |
+| `title`        | string                                                   | Texto de título (máx. 256 caracteres)                   |
+| `body`         | string                                                   | Corpo do texto principal (máx. 5.000 caracteres)        |
+| `cta`          | `{ label, url, action }`                                 | Botão de chamada para ação (CTA) principal              |
+| `secondaryCta` | `{ label, url }`                                         | Botão secundário (por exemplo, "Talvez mais tarde")     |
+| `media`        | `{ url, alt }`                                           | Imagem opcional                                         |
+| `dismissible`  | boolean                                                  | Define se o usuário pode fechar o guia (padrão: `true`) |
+| `theme`        | `info` \| `success` \| `warning` \| `error` \| `neutral` | Variante de estilo visual                               |
+
+## Direcionamento (Targeting)
+
+Os guias podem segmentar inscritos com base em:
+
+- **Audiência**: Link para um segmento de [Audiência](/docs/platform/features/audiences) existente
+- **Regras personalizadas**: Array `rules` adicional filtrado em campos do inscrito (mesmo formato das audiências)
+- **Lógica**: Operadores `AND` / `OR` entre as regras
+
+## Ativação
+
+Controle _quando e onde_ um guia é exibido usando o objeto `activation`:
+
+| Campo        | Opções                                            | Descrição                                                                         |
+| :----------- | :------------------------------------------------ | :-------------------------------------------------------------------------------- |
+| `urlPattern` | string                                            | Padrão de URL da página para correspondência                                      |
+| `pageMatch`  | `exact` \| `starts_with` \| `contains` \| `regex` | Como verificar a URL (padrão: `starts_with`)                                      |
+| `frequency`  | `once` \| `once_per_session` \| `always`          | Frequência de exibição do guia por usuário                                        |
+| `delay`      | number (ms)                                       | Milissegundos a aguardar após o carregamento da página antes de exibir (0–60.000) |
+
+## Prioridade e Agendamento
+
+- **Prioridade** (0–100): Guias de maior prioridade são exibidos primeiro quando múltiplos guias correspondem ao mesmo usuário/página
+- **startAt / endAt**: Data e hora ISO 8601 opcionais — os guias ficam ativos apenas dentro desta janela de tempo
 
 ## Integração com o SDK
 
-As guias são buscadas no lado do cliente (client-side) — não são enviadas via WebSocket como as notificações in-app.
+Os guias são buscados no lado do cliente (client-side) por meio de uma chamada de API sob demanda/pooling, não sendo enviados via WebSocket.
 
 <Tabs items={['React', 'Headless JS']}>
   <Tab value="React">
 
 ```tsx
-import { useGuides } from "@nexus-signal/react";
+import { useGuides } from '@nexus-signal/react';
 
 function GuideRenderer() {
-  const { guides, markSeen, dismiss } = useGuides({
+  const { guides, markSeen, markInteracted, dismiss } = useGuides({
     pathname: window.location.pathname,
   });
 
   return guides.map((guide) => (
-    <div key={guide.id} onClick={() => markSeen(guide.id)}>
-      {guide.content.title}
+    <div key={guide.id}>
+      <h3>{guide.content.title}</h3>
+      <p>{guide.content.body}</p>
+      {guide.content.cta && (
+        <a href={guide.content.cta.url} onClick={() => markInteracted(guide.id)}>
+          {guide.content.cta.label}
+        </a>
+      )}
+      {guide.content.dismissible && <button onClick={() => dismiss(guide.id)}>Dismiss</button>}
     </div>
   ));
 }
@@ -50,22 +88,54 @@ function GuideRenderer() {
   <Tab value="Headless JS">
 
 ```ts
-await nexus.guides.fetch({ pathname: "/dashboard" });
+// Buscar guias para o contexto de página atual
+await nexus.guides.fetch({ pathname: '/dashboard' });
+
+// Registrar que o usuário visualizou o guia
 nexus.guides.markSeen(guideId);
+
+// Registrar que o usuário interagiu (clicou no CTA)
+nexus.guides.markInteracted(guideId);
+
+// Dispensar o guia permanentemente
 nexus.guides.dismiss(guideId);
 ```
 
   </Tab>
 </Tabs>
 
-Rota do SDK: `GET /v1/sdk/guides` — retorna guias ativas para o usuário atual + contexto.
+**Rota do SDK**: `GET /v1/sdk/guides?pathname=/dashboard` — retorna guias ativas e correspondentes para o inscrito autenticado.
 
-## Analytics
+## Eventos do Ciclo de Vida do Guia
 
-Acompanhe impressões, interações e descartes via `POST /v1/sdk/guides/:guideId/events`.
+| Evento       | Método do SDK        | Significado                                               |
+| :----------- | :------------------- | :-------------------------------------------------------- |
+| `seen`       | `markSeen(id)`       | O usuário visualizou o guia (passou a tela / renderizado) |
+| `interacted` | `markInteracted(id)` | O usuário clicou no CTA principal                         |
+| `archived`   | `dismiss(id)`        | O usuário dispensou o guia explicitamente                 |
+
+Os eventos são publicados em `POST /v1/sdk/guides/:guideId/events` e alimentam os painéis de analytics.
+
+## Status dos Guias
+
+| Status     | Significado                                                                 |
+| :--------- | :-------------------------------------------------------------------------- |
+| `DRAFT`    | Não visível para os usuários                                                |
+| `ACTIVE`   | Exibido para os usuários correspondentes (até 20 guias ativos por ambiente) |
+| `PAUSED`   | Temporariamente ocultado sem exclusão                                       |
+| `ARCHIVED` | Permanentemente retirado de circulação                                      |
+
+## Limites
+
+| Limite                                      | Valor |
+| :------------------------------------------ | :---- |
+| Máximo de guias por ambiente                | 50    |
+| Máximo de guias ativos por ambiente         | 20    |
+| Máximo de regras de direcionamento por guia | 10    |
 
 ## Relacionado
 
 - [API de Guias](/docs/api/guides)
+- [Audiências](/docs/platform/features/audiences)
 - [React SDK](/docs/sdk/frontend/react)
-- [Headless JS SDK](/docs/sdk/frontend/js)
+- [SDK JS Headless](/docs/sdk/frontend/js)

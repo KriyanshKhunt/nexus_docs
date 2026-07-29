@@ -1,46 +1,56 @@
 ---
 title: Traga Seu Próprio Provedor (BYOP)
-description: Use suas próprias chaves do SendGrid, Twilio e Resend — taxa zero por mensagem da Nexus.
+description: Conecte suas credenciais do SendGrid, Twilio e Resend — zero taxas adicionais por mensagem, sem aprisionamento tecnológico.
 ---
 
-**BYOP (Bring Your Own Provider)** é a base do Nexus Signal. Nós orquestramos a entrega; **você** gerencia o relacionamento com as operadoras de envio e as paga diretamente.
+# Traga Seu Próprio Provedor (BYOP)
 
-## O que o Nexus faz
+**BYOP (Bring Your Own Provider)** é a base do Nexus Signal. Ao contrário das plataformas de notificação tradicionais que atuam como intermediárias e cobram uma taxa adicional sobre cada e-mail ou SMS, o Nexus atua puramente como a camada de software de orquestração.
 
-- Construtor visual de fluxos e motor de modelos (templates)
-- Roteamento inteligente, failover e disjuntores em **suas** contas de provedores
-- Preferências de inscritos, tópicos e APIs de inbox
-- Análises, logs de auditoria e controle de custos
+Você insere **suas próprias chaves de API** dos provedores e paga as tarifas de consumo diretamente a eles.
 
-## O que o Nexus não faz
+---
 
-- Revende largura de banda de e-mail ou SMS
-- Adiciona taxas ou sobretaxas por mensagem
-- Bloqueia você em uma única operadora (vendor lock-in)
+## Análise de Custo: Tradicional vs. BYOP
 
-## Camadas de provedores suportadas
+Os volumes de notificações costumam aumentar rapidamente, transformando as taxas adicionais por mensagem em uma grande despesa operacional:
 
-Configure um ou mais provedores por canal em **Integrations (Integrações)**, e defina **pesos de tráfego** (ex: 70% SendGrid, 30% Resend para e-mail).
+| Métrica                         | SaaS de Notificação Tradicional                          | Nexus Signal (BYOP)                                                             |
+| :------------------------------ | :------------------------------------------------------- | :------------------------------------------------------------------------------ |
+| **Modelo de Cobrança**          | Assinatura + taxa de volume por mensagem.                | Assinatura de valor fixo da plataforma.                                         |
+| **Markup (Margem de Lucro)**    | Frequentemente inflacionado de 50% a 200%.               | **0% de markup**. Você paga a operadora diretamente pelo custo real de consumo. |
+| **Redundância de Operadoras**   | Preso à operadora selecionada pela plataforma.           | Roteamento ponderado e failover instantâneo entre seus provedores.              |
+| **Controle de Entregabilidade** | Pools de reputação de IP compartilhados (pior inboxing). | Seleção de IP dedicado e configuração direta de remetente.                      |
 
-Veja o [catálogo de provedores](/docs/platform/integrations/providers) completo.
+---
 
-## Credenciais criptografadas
+## Criptografia Segura no Cofre (Vault)
 
-As chaves de API dos provedores são armazenadas criptografadas no cofre `providerKeys` da sua organização. Elas são descriptografadas apenas no momento do envio dentro dos workers.
+Como você fornece suas próprias credenciais, proteger suas chaves de API é nossa prioridade máxima de segurança.
 
-## Chaves de IA também são BYOP
+- **Criptografia AES-256**: As credenciais dos provedores são criptografadas no nível do banco de dados dentro do cofre `providerKeys` do seu workspace.
+- **Escopo de Decodificação**: As chaves são decifradas em memória estritamente no momento do despacho para a operadora, dentro de processos isolados dos workers.
+- **Exposição Zero nos Logs**: O registro de logs de payloads limpa automaticamente os detalhes de autenticação e tokens de API para evitar o vazamento de chaves nos logs de rastreamento de entrega.
 
-A geração de conteúdo por IA usa **sua** própria chave de API da OpenAI ou Anthropic (integrações `openai_ai` e `anthropic_ai`). O Nexus não realiza chamadas de IA intermediadas por uma chave compartilhada.
+---
 
-## Por que isso importa
+## Roteamento e Redundância
 
-| Plataformas Tradicionais | Nexus Signal |
-|----------------------|--------------|
-| E-mail/SMS embutido com sobretaxa | Você paga à Twilio/SendGrid diretamente |
-| Difícil de alternar provedores | Roteamento ponderado + failover entre fornecedores |
-| Custos de entrega opacos | [Análise de custos](/docs/platform/features/cost-analytics) por fluxo de trabalho |
+Com o BYOP, você não depende de uma única operadora. Você pode configurar várias contas de provedores para um único canal (por exemplo, E-mail) e alocar o tráfego dinamicamente:
 
-## Relacionado
+```mermaid
+flowchart TD
+    Trigger[Execução do Nó de E-mail] --> Router{Roteador Ponderado}
+    Router -->|70% Tráfego| SG[Adaptador do SendGrid]
+    Router -->|30% Tráfego| RS[Adaptador do Resend]
+    SG -->|Falha / Timeout| Fallback[Failover para o Resend]
+```
 
-- [Integrações](/docs/platform/integrations)
-- [Roteamento ponderado](/docs/platform/features/cost-reduction#weighted-provider-routing)
+- **Roteamento Ponderado**: Aloque `70%` do tráfego de e-mail para o SendGrid e `30%` para o Resend para manter seus endereços de IP aquecidos (warm IPs) em múltiplos fornecedores.
+- **Failover Instantâneo**: Se uma chamada de API do SendGrid expirar (timeout) ou retornar um erro de limite de taxa, o worker despacha a mensagem imediatamente através do Resend.
+
+---
+
+## Chaves de IA Também São BYOP
+
+O Nexus Signal suporta **Nós de IA** no workflow visual (por exemplo, para verificação de traduções ou criação dinâmica de textos). Esses nós usam **suas próprias chaves de LLM** (OpenAI, Anthropic ou Cohere). O Nexus nunca executa tarefas de LLM em contas proxy compartilhadas. Você mantém o controle total sobre as políticas de privacidade de dados e limites de uso de tokens.

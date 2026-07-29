@@ -1,96 +1,176 @@
 ---
-title: Notificações Fan-Out de Objetos
-description: Notifique todos que observam um projeto, issue ou documento com uma única chamada API — sem necessidade de lista de destinatários.
+title: Notificações de Envio em Leque de Objetos
+description: Notifique todos que estão acompanhando um projeto, problema (issue) ou documento com uma única chamada de disparo — sem necessidade de lista de destinatários.
 ---
 
-Este guia orienta sobre **objetos e assinaturas** de ponta a ponta: crie um objeto, inscreva usuários, dispare o envio em leque (fan-out) e use propriedades de objeto em templates.
+# Notificações de Envio em Leque de Objetos
+
+Este guia descreve o fluxo completo de **Objetos e Suscrições**: registrar uma entidade, inscrever usuários nela e disparar notificações em leque (fan-out) para todos os observadores com uma única chamada de disparo.
+
+---
+
+## O Problema que Isso Resolve
+
+Sem os objetos, seu backend precisa:
+
+1. Consultar uma tabela de `watchers` (observadores) para obter a lista de inscritos.
+2. Fazer um loop e disparar o workflow para cada usuário individualmente.
+
+Com os Objetos, o Nexus gerencia a lista de observadores para você. Você faz o disparo apenas uma vez informando a referência do objeto, e o Nexus resolve + entrega as mensagens para todos os inscritos automaticamente.
+
+---
 
 ## Cenário
 
-Seu aplicativo tem projetos. Quando um projeto é atualizado, todos os membros da equipe que o observam devem ser notificados — sem que seu backend consulte uma tabela de `watchers`.
+Sua aplicação possui projetos. Quando o marco (milestone) de um projeto é concluído, todos os membros da equipe que o estão acompanhando devem ser notificados instantaneamente — sem que seu backend precise consultar a tabela de observadores.
 
-## Etapa 1 — Criar o objeto
+---
 
-Painel: **Objects** → criar coleção `projects`, ID `proj_alpha`.
+## Passo 1 — Registrar o Objeto
 
-Ou via Node SDK:
+Quando um novo projeto é criado em sua aplicação, realize o upsert dele no Nexus:
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
 await nexus.objects.set({
-  collection: "projects",
-  externalId: "proj_alpha",
-  name: "Project Alpha",
-  properties: { status: "active", repo: "acme/alpha" },
+  collection: 'projects',
+  externalId: 'proj_alpha',
+  name: 'Project Alpha',
+  properties: {
+    status: 'active',
+    repo: 'acme/alpha',
+    priority: 'high',
+  },
 });
 ```
 
-## Etapa 2 — Inscrever usuários
+- `collection`: Alfanumérico em letras minúsculas com hífen/sublinhado (por exemplo, `projects`, `issues`, `orders`). Isso fará parte do caminho da API.
+- `externalId`: O ID interno da entidade em sua aplicação (máx. 128 caracteres).
+- `properties`: Qualquer metadados personalizados em formato de chave-valor — acessíveis nos modelos como `{{ object.properties.key }}`.
 
-Quando um usuário clica em "Observar projeto" no seu aplicativo:
+---
+
+## Passo 2 — Inscrever Usuários
+
+Quando um usuário clica em **Acompanhar (Watch)** em sua interface:
 
 ```ts
-await nexus.objects.addSubscriptions("projects", "proj_alpha", {
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
   recipients: [user.externalId],
+  properties: { role: 'watcher' }, // metadados opcionais por assinatura
 });
 ```
 
-Para cancelar a inscrição:
+- `recipients`: Array contendo strings de `externalId` dos inscritos. Os inscritos já devem existir no ambiente.
+- `properties`: Metadados de chave-valor opcionais salvos na assinatura (por exemplo, `role`, `notificationLevel`).
+
+Quando um usuário clica em **Deixar de Acompanhar (Unwatch)**:
 
 ```ts
-await nexus.objects.removeSubscriptions("projects", "proj_alpha", [
-  user.externalId,
-]);
+await nexus.objects.removeSubscriptions('projects', 'proj_alpha', [user.externalId]);
 ```
 
-## Etapa 3 — Criar um workflow
+---
 
-Crie `project.updated` no painel com canais In-App + Email. Use propriedades de objetos em templates:
+## Passo 3 — Criar o Workflow
+
+No painel de controle, crie um workflow chamado `project.updated` com os nós de canal **In-App** e **Email**.
+
+Use as variáveis de contexto do objeto nos modelos:
+
+**Modelo In-App:**
+
+```json
+{
+  "title": "{{ object.name }} was updated",
+  "body": "Status changed to {{ object.properties.status }}",
+  "redirect": "/projects/{{ object.externalId }}"
+}
+```
+
+**Modelo de E-mail (HTML):**
 
 ```html
-<p>Project <strong>{{ object.name }}</strong> was updated.</p>
-<p>Status: {{ object.properties.status }}</p>
+<h2>Update: {{ object.name }}</h2>
+<p>The project status is now <strong>{{ object.properties.status }}</strong>.</p>
+<p>Milestone reached: {{ data.milestone }}</p>
 ```
 
-## Etapa 4 — Disparar com destinatário do objeto
+Variáveis de contexto de objeto disponíveis:
+
+- `{{ object.name }}` — o nome de exibição do objeto
+- `{{ object.externalId }}` — o ID externo do objeto
+- `{{ object.collection }}` — o nome da coleção
+- `{{ object.properties.key }}` — qualquer propriedade personalizada
+
+---
+
+## Passo 4 — Disparar com o Objeto como Destinatário
+
+Quando o marco do projeto for concluído, dispare o trigger utilizando a referência do objeto em vez de passar uma lista de inscritos:
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "project.updated",
-  recipients: [{ collection: "projects", id: "proj_alpha" }],
-  data: { changeType: "milestone_completed", milestone: "v1.0" },
+  workflowName: 'project.updated',
+  recipients: [{ collection: 'projects', id: 'proj_alpha' }],
+  data: {
+    changeType: 'milestone_completed',
+    milestone: 'v1.0 Launch',
+  },
 });
 ```
 
-O Nexus resolve todos os assinantes e executa o fluxo de trabalho para cada usuário individualmente.
+O Nexus resolverá todos os inscritos ativos que estão acompanhando `projects/proj_alpha` e criará jobs de entrega individuais para cada um deles.
 
 ```mermaid
 sequenceDiagram
-  participant App
-  participant Nexus
-  participant Worker
-  participant Users
+  participant App as Seu Backend
+  participant Nexus as API do Nexus
+  participant Worker as Worker do BullMQ
+  participant Users as Inscritos
 
   App->>Nexus: trigger(project.updated, object: proj_alpha)
-  Nexus->>Nexus: resolve subscriptions
-  loop each subscriber
-    Nexus->>Worker: enqueue job
-    Worker->>Users: deliver channels
+  Nexus->>Nexus: Resolver suscrições para proj_alpha
+  Nexus-->>App: Retornar 202 Accepted
+  loop Para cada inscrito
+    Nexus->>Worker: Enfileirar job de entrega
+    Worker->>Users: Entregar (In-App + E-mail)
   end
-  Nexus-->>App: 202 Accepted
 ```
 
-## Etapa 5 — Verificar a entrega
+---
 
-Verifique os **Audit Logs** no painel. Cada assinante recebe uma linha de log de execução separada.
+## Passo 5 — Verificar a Entrega
+
+No painel de controle, abra os **Audit Logs**. Cada observador recebe uma linha de log separada exibindo seu status de entrega individual e o conteúdo do canal.
+
+---
 
 ## Dicas
 
-- Use nomes de `collection` significativos (`issues`, `orders`, `channels`) — eles aparecem nos caminhos da API
-- Propriedades de objeto podem direcionar [condições de etapa](/docs/platform/features/step-conditions): `object.properties.priority`
-- Combine com [tópicos](/docs/platform/features/topics) para controle de preferência do usuário
+- **Inscrição em lote na importação**: Use o método `addSubscriptions` com um array de até 100 destinatários de uma só vez ao migrar dados existentes.
+- **Propriedades do objeto controlam condições de etapas**: Use `{{ object.properties.priority }}` em [condições de etapas](/docs/platform/features/step-conditions) para enviar e-mails apenas para objetos de alta prioridade.
+- **Combine com tópicos**: Adicione o workflow a um [tópico](/docs/platform/features/topics) para que os usuários possam desativar as notificações de projetos nas configurações de preferências.
+- **Limpeza na exclusão**: Chame `nexus.objects.delete('projects', 'proj_alpha')` quando o projeto for excluído para remover todas as assinaturas associadas de forma automática.
+
+---
+
+## Limites
+
+| Limite                                          | Valor  |
+| :---------------------------------------------- | :----- |
+| Máximo de objetos por ambiente                  | 5.000  |
+| Máximo de observadores por objeto               | 10.000 |
+| Tamanho máximo do lote de adição/remoção        | 100    |
+| Máximo de chaves de propriedades personalizadas | 50     |
+
+---
 
 ## Relacionado
 
-- [Objetos e Assinaturas](/docs/platform/features/objects-subscriptions)
-- [API de Objetos](/docs/api/objects)
-- [API de Workflows](/docs/api/workflows)
+- [Visão geral do recurso de Objetos e Suscrições](/docs/platform/features/objects-subscriptions)
+- [Referência da API de Objetos](/docs/api/objects)
+- [Condições de etapa](/docs/platform/features/step-conditions) — ramificação baseada em propriedades

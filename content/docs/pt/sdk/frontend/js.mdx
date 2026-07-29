@@ -1,88 +1,226 @@
 ---
-title: SDK de JS Headless
-description: "@nexus-signal/js — notificações, guias e preferências agnósticas de framework para Vue, Svelte ou JS puro."
+title: SDK JS Headless
+description: '@nexus-signal/js — notificações, guias e preferências agnósticas de framework para Vue, Svelte ou JS puro.'
 ---
 
-Use **`@nexus-signal/js`** quando não estiver usando React ou Angular. A mesma stack WebSocket + REST do React SDK, sem componentes de interface do usuário — crie seu próprio feed.
+# SDK JS Headless
+
+A biblioteca `@nexus-signal/js` é um wrapper de cliente agnóstico de framework para notificações in-app, preferências e guias. Ela utiliza ambientes de execução de navegadores puros (raw browser), tornando-a ideal para aplicações em **Vue 3**, **Svelte**, **SolidJS** ou **Vanilla JS** sem restrições de estilos de UI embutidos.
+
+---
 
 ## Instalação
 
-```bash
-npm install @nexus-signal/js
-```
+Instale o pacote juntamente com sua dependência de parceria do socket.io:
 
-## Início rápido
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/js socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/js socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/js socket.io-client ```</Tab>
+</Tabs>
+
+---
+
+## Opções de Inicialização
+
+Crie uma nova instância do cliente no carregamento do cliente:
 
 ```ts
-import { NexusClient } from "@nexus-signal/js";
+import { NexusClient } from '@nexus-signal/js';
 
 const nexus = new NexusClient({
-  publicKey: "pk_prd_...",
-  subscriberId: "user-123",
-  hmacSignature: hmacFromYourBackend,
-  onNotification: (n) => console.log(n.title),
+  publicKey: 'pk_prd_your_public_key', // pk_dev_... ou pk_prd_...
+  subscriberId: 'user_active_99',
+  hmacSignature: 'computed_hmac_hex_signature',
+  apiBaseUrl: 'https://api.nexussignal.dev',
 });
 
+// Iniciar transporte WebSocket e buscar estados iniciais
 await nexus.connect();
-console.log(nexus.notifications.unread);
 ```
 
-## Sub-clientes
+### Opções do Construtor
 
-| Cliente               | Propósito                                                  |
-| --------------------- | ---------------------------------------------------------- |
-| `nexus.notifications` | Lista de inbox, marcar como lida, arquivar, filtros de tag |
-| `nexus.guides`        | Buscar e acompanhar guias no produto                       |
-| `nexus.preferences`   | Alternadores de preferência de tópicos/canais              |
-| `nexus.events`        | Histórico de eventos de entrega                            |
+<TypeTable
+  type={{
+    publicKey: {
+      type: 'string',
+      description: 'Sua chave pública de ambiente (começa com pk_dev_ ou pk_prd_). Obrigatório.',
+    },
+    subscriberId: {
+      type: 'string',
+      description:
+        'O ID exclusivo do inscrito que corresponde aos payloads do gatilho do seu backend. Obrigatório.',
+    },
+    hmacSignature: {
+      type: 'string',
+      description: 'Assinatura HMAC-SHA256 gerada no seu backend para segurança. Obrigatório.',
+    },
+    apiBaseUrl: {
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'A origem do endpoint da URL base da API de destino.',
+    },
+    onNotification: {
+      type: '(notification: Notification) => void',
+      description: 'Callback opcional acionado ao receber notificações em tempo real.',
+    },
+  }}
+/>
 
-## Filtragem por tag
+---
+
+## Eventos do Emissor
+
+Registre callbacks de listener para alterações de estado em tempo real. O método `.on()` retorna uma função de limpeza para cancelar a assinatura (un-subscription).
 
 ```ts
-await nexus.notifications.refetch({ tags: ["billing"] });
-await nexus.notifications.loadMore({ tags: ["mention"] });
+// Ouvir novas mensagens
+const unsubscribe = nexus.on('notification.received', (notification) => {
+  console.log('Nova notificação recebida:', notification.title);
+  alert(`Alerta: ${notification.body}`);
+});
+
+// Desvincular listeners ao destruir o componente
+unsubscribe();
 ```
 
-## Eventos
+### Registro de Eventos
+
+<TypeTable
+  type={{
+    'notification.received': {
+      type: '(notification: Notification) => void',
+      description: 'Acionado quando uma nova mensagem em tempo real chega via WebSocket.',
+    },
+    'notification.read': {
+      type: '(logId: string) => void',
+      description:
+        'Disparado quando uma mensagem específica é marcada como lida (sincronizada entre sessões).',
+    },
+    'notification.archived': {
+      type: '(logId: string) => void',
+      description: 'Disparado quando uma mensagem é movida para os arquivos.',
+    },
+    'notifications.count_changed': {
+      type: '(unreadCount: number) => void',
+      description:
+        'Emite o valor atualizado do emblema (badge) de contagem de notificações não lidas.',
+    },
+    'connection.connected': {
+      type: '() => void',
+      description: 'Disparado quando a conexão WebSocket é estabelecida.',
+    },
+    'connection.disconnected': {
+      type: '() => void',
+      description: 'Disparado quando a conexão WebSocket cai ou se desconecta.',
+    },
+  }}
+/>
+
+---
+
+## Instâncias de Sub-Clientes
+
+O `NexusClient` hospeda namespaces dedicados para gerenciar estruturas subjacentes:
+
+### 1. Inboxes (`nexus.notifications`)
+
+Gerencia listas, estados de leitura e filtros de tags:
 
 ```ts
-const unsub = nexus.on("notification.received", (n) => {
-  /* ... */
-});
-nexus.on("notifications.count_changed", (count) => {
-  /* badge */
-});
-unsub();
+// Buscar notificações ativas
+const list = nexus.notifications.items; // Array de notificações atuais
+const count = nexus.notifications.unread; // Contagem de não lidas
+
+// Atualizar estados
+await nexus.notifications.markRead('log-uuid-here');
+await nexus.notifications.markAllRead();
+await nexus.notifications.archive('log-uuid-here');
+
+// Filtrar feed por tags
+await nexus.notifications.refetch({ tags: ['billing'] });
 ```
 
-## Exemplo do Vue 3
+### 2. Guias (`nexus.guides`)
 
-```vue
+Busque e dispense banners ou modais do painel:
+
+```ts
+// Buscar guias limitados ao caminho atual
+await nexus.guides.fetch({ pathname: window.location.pathname });
+
+const activeGuides = nexus.guides.guides;
+
+// Acionar eventos de visualização e ação
+await nexus.guides.markSeen('guide-uuid-here');
+await nexus.guides.markInteracted('guide-uuid-here');
+await nexus.guides.dismiss('guide-uuid-here');
+```
+
+### 3. Preferências (`nexus.preferences`)
+
+Busque e atualize as escolhas de canais:
+
+```ts
+// Carregar preferências
+await nexus.preferences.fetch();
+
+const topics = nexus.preferences.topics;
+const settings = nexus.preferences.preferences; // ex. { topic_id: { EMAIL: true } }
+
+// Atualizar o valor de uma preferência
+await nexus.preferences.updatePreference('billing_topic_id', 'EMAIL', false);
+```
+
+---
+
+## Exemplos de Integração com Frameworks
+
+### 1. Vue 3 (Composition API)
+
+```vue title="components/NotificationFeed.vue"
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { NexusClient } from "@nexus-signal/js";
+import { ref, onMounted, onUnmounted } from 'vue';
+import { NexusClient } from '@nexus-signal/js';
+
+const props = defineProps<{ hmac: string; userId: string }>();
 
 const nexus = new NexusClient({
-  publicKey: "pk_...",
-  subscriberId: "user-1",
-  hmacSignature: "...",
+  publicKey: 'pk_dev_your_public_key',
+  subscriberId: props.userId,
+  hmacSignature: props.hmac,
 });
-const unread = ref(0);
+
+const unreadCount = ref(0);
+const messages = ref<any[]>([]);
+let countUnsub: () => void;
 
 onMounted(async () => {
   await nexus.connect();
-  unread.value = nexus.notifications.unread;
-  nexus.on("notifications.count_changed", (c) => {
-    unread.value = c;
+  unreadCount.value = nexus.notifications.unread;
+  messages.value = nexus.notifications.items;
+
+  // Vincular atualizações reativas
+  countUnsub = nexus.on('notifications.count_changed', (count) => {
+    unreadCount.value = count;
+    messages.value = [...nexus.notifications.items];
   });
 });
-onUnmounted(() => nexus.disconnect());
+
+onUnmounted(() => {
+  if (countUnsub) countUnsub();
+  nexus.disconnect();
+});
 </script>
+
+<template>
+  <div class="inbox">
+    <span>Notificações não lidas: {{ unreadCount }}</span>
+    <div v-for="msg in messages" :key="msg.logId" class="item">
+      <h6>{{ msg.title }}</h6>
+      <button @click="nexus.notifications.markRead(msg.logId)">Marcar como lida</button>
+    </div>
+  </div>
+</template>
 ```
-
-## Relacionado
-
-- [React SDK](/docs/sdk/frontend/react) — componentes de interface do usuário pré-construídos
-- [Angular SDK](/docs/sdk/frontend/angular)
-- [Caixa de Entrada Rica](/docs/platform/features/rich-inbox)
-- [API de SDK](/docs/api/sdk)

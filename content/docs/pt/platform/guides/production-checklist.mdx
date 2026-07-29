@@ -1,57 +1,90 @@
 ---
-title: Lista de Verificação de Produção
-description: Verifique sua integração do Nexus Signal antes de alternar para as chaves de Produção.
+title: Checklist de Produção
+description: Verifique se sua integração do Nexus Signal está pronta antes de alternar para as chaves de Produção e direcionar o tráfego real.
 ---
 
-Use esta lista de verificação antes de direcionar o tráfego real para a Produção.
+# Checklist de Produção
 
-## Chaves e ambientes
+Use este checklist antes de direcionar o tráfego de usuários reais para a Produção. Execute cada seção na ordem indicada.
 
-- [ ] Chave secreta de Produção (`sk_prd_`) armazenada no gerenciador de segredos — nunca no git.
-- [ ] Ambiente de Homologação testado com `sk_stg_` e chaves reais de provedores.
-- [ ] Chave pública (`pk_prd_`) configurada apenas nas variáveis de ambiente do frontend.
+---
+
+## Chaves e Ambientes
+
+- [ ] Chave secreta de Produção (`sk_prd_…`) armazenada em um gerenciador de segredos (por exemplo, AWS Secrets Manager, Vault, segredos do Railway) — **nunca confirmada no git**
+- [ ] Ambiente de Homologação (Staging) testado de ponta a ponta com `sk_stg_…` e credenciais de provedores reais
+- [ ] Chave pública (`pk_prd_…`) armazenada apenas nas variáveis de ambiente do frontend — nunca exposta em serviços de backend
+
+---
 
 ## Provedores
 
-- [ ] Todos os provedores necessários conectados e aprovados no teste de conexão.
-- [ ] Divisão de pesos configurada se utilizar múltiplos provedores por canal.
-- [ ] Custos unitários dos provedores definidos para a [análise de custos](/docs/platform/features/cost-analytics).
-- [ ] Orçamento mensal opcional configurado e e-mail de alerta verificado.
+- [ ] Todos os provedores de canais necessários conectados sob o ambiente de Produção
+- [ ] Botão **Test connection** executado com sucesso para cada provedor
+- [ ] Divisão de pesos (weight splits) configurada corretamente caso use múltiplos provedores por camada de canal
+- [ ] Custos unitários de provedores inseridos para a precisão do painel de [análise de custos](/docs/platform/features/cost-analytics)
+- [ ] Limite de orçamento mensal configurado e endereço de e-mail de alerta verificado
 
-## Fluxos de trabalho
+---
 
-- [ ] Modelos de templates promovidos para **Production Active** (e não em Rascunho/Draft).
-- [ ] Fluxos de trabalho marcados como **ativos**.
-- [ ] Caminhos de failover testados através do modo caos de Desenvolvimento.
-- [ ] Janelas de entrega definidas para envios de marketing voltados a usuários finais.
-- [ ] Tópicos atribuídos e matriz de preferências testada.
+## Workflows e Modelos
 
-## Integração de SDK
+- [ ] Todos os modelos promovidos para o status **Production Active** (e não Rascunho/Draft ou Arquivado)
+- [ ] Todos os workflows configurados como **Active** no ambiente de Produção
+- [ ] Cadeias de failover testadas — pelo menos um provedor secundário por canal crítico
+- [ ] Janelas de entrega (delivery windows) configuradas para envios de marketing e resumos (digests) voltados ao usuário
+- [ ] Tópicos atribuídos aos workflows apropriados e matriz de preferências testada de ponta a ponta
+- [ ] Smart Send-Time ativado em campanhas onde aplicável
 
-- [ ] Assinatura HMAC gerada no lado do servidor por sessão.
-- [ ] Tratamento de disjuntor / tentativas do SDK do Node implementado.
-- [ ] O `externalId` do inscrito corresponde aos IDs de usuário do seu sistema de autenticação.
+---
 
-## Conformidade e operações
+## Integração de SDK e Backend
 
-- [ ] Processo de remoção sob a GDPR documentado (API de exclusão de inscrito).
-- [ ] Funções de equipe atribuídas (Owner, Developer, Marketer).
-- [ ] Autenticação de dois fatores (MFA) ativada para contas de administrador.
-- [ ] Plano definido para monitoramento e tempo de retenção dos logs de auditoria.
+- [ ] Assinatura HMAC gerada no **lado do servidor** por sessão de inscrito — nunca calculada no navegador
+- [ ] Os valores de `externalId` do inscrito correspondem exatamente aos IDs de usuário do seu sistema de autenticação
+- [ ] Tratamento de erros do Node SDK implementado — verifique `result.ok` antes de usar `result.data`
+- [ ] Chaves de idempotência utilizadas em chamadas de disparo que podem ser repetidas em falhas de rede
+- [ ] Payloads dos disparos validados quanto ao correto formato de `workflowName`, `recipients` e `data` antes de enviar
+
+---
+
+## Conformidade e Operações
+
+- [ ] Processo de remoção de inscritos sob a GDPR documentado — use `DELETE /v1/subscribers/:id` para apagar perfil, logs e estado no Redis
+- [ ] Endpoint de exportação sob a GDPR testado — `GET /v1/subscribers/:id/export` retorna o conjunto de dados completo
+- [ ] Funções da equipe atribuídas (Owner, Admin, Developer, Marketer) — sem credenciais compartilhadas
+- [ ] MFA ativado para todas as contas de Proprietário (Owner) e Administrador (Admin)
+- [ ] Plano definido para retenção de logs de auditoria e monitoramento de plantão (on-call)
+
+---
 
 ## Faturamento
 
-- [ ] Nível do plano corresponde ao volume esperado.
-- [ ] Preferência de teto de gastos configurada.
-- [ ] Acesso ao portal de faturamento da Stripe liberado para os administradores.
+- [ ] O nível do plano selecionado condiz com o volume esperado de disparos mensais
+- [ ] Comportamento de limite excedido confirmado (limite suave com alerta ou bloqueio total)
+- [ ] Acesso ao portal de faturamento da Stripe confirmado para os Proprietários (Owners) da conta
 
-## Entrada no ar (Go live)
+---
 
-1. Altere o ambiente do painel para **Production** (Produção).
-2. Implante seu backend com a chave secreta `sk_prd_`.
-3. Envie um acionamento de teste canário para a equipe interna.
-4. Monitore os **Logs de Auditoria** e a **Visão Geral** na primeira hora.
+## Procedimento de Entrada no Ar (Go-Live)
+
+1. Altere o seletor de ambiente do painel de controle para **Production**
+2. Implante seu backend com as variáveis de ambiente `sk_prd_…` e `pk_prd_…`
+3. Envie um disparo de teste canário para um inscrito da equipe interna primeiro
+4. Monitore os **Audit Logs** e a tela de **Overview** durante a primeira hora
+5. Confirme se a taxa de sucesso de entrega está acima do limite esperado antes de remover os limites do teste canário
 
 <Callout type="warn">
-O sandbox de Desenvolvimento **não** funciona em Produção. Cada acionamento enviará mensagens por meio dos provedores reais e incorrerá em custos.
+  O modo Sandbox de Desenvolvimento **não** se aplica à Produção. Cada disparo em Produção é enviado
+  por meio de provedores reais e incorre em custos cobrados pelos provedores. Teste minuciosamente
+  em Staging antes de alternar.
 </Callout>
+
+---
+
+## Relacionado
+
+- [Autenticação e segurança](/docs/platform/getting-started/authentication) — configuração de HMAC
+- [Guia de ambientes](/docs/platform/getting-started/environments) — isolamento de ambientes
+- [Análise de Custos](/docs/platform/features/cost-analytics) — monitorando gastos
+- [Recurso de Failover](/docs/platform/features/failover) — redundância de provedores

@@ -1,48 +1,38 @@
 ---
 title: React SDK
-description: "@nexus-signal/react — sino de notificação, inbox e matriz de preferências."
+description: '@nexus-signal/react — sino de notificações, inbox e matriz de preferências.'
 ---
 
-Componentes React prontos para uso em notificações in-app e preferências de inscritos.
+# React SDK
+
+O pacote `@nexus-signal/react` fornece componentes de UI prontos para uso e hooks do React para incorporar centros de notificações, menus de preferências e mensagens de toast em sua aplicação React.
+
+---
 
 ## Instalação
 
+Instale o React SDK juntamente com suas dependências de parceria:
+
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/react socket.io-client
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/react socket.io-client
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/react socket.io-client
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/react socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/react socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/react socket.io-client ```</Tab>
 </Tabs>
+
+---
 
 ## NexusProvider
 
-Envolva seu aplicativo (ou layout autenticado):
+Envolva sua árvore React com o `NexusProvider` para configurar o contexto do seu workspace. Coloque este wrapper abaixo dos layouts de autenticação para garantir que as chaves estejam carregadas.
 
 ```tsx title="app/layout.tsx"
-import { NexusProvider } from "@nexus-signal/react";
+import { NexusProvider } from '@nexus-signal/react';
 
-export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+export function RootLayout({ children, user, hmac }: RootProps) {
   return (
     <NexusProvider
-      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
-      subscriberId={user.id}
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!} // pk_dev_... ou pk_prd_...
+      subscriberId={user.externalId}
       hmacSignature={hmac}
       backendUrl="https://api.nexussignal.dev"
     >
@@ -52,134 +42,240 @@ export function AppShell({ user, hmac }: { user: User; hmac: string }) {
 }
 ```
 
+### Configuração do Provider
+
 <TypeTable
   type={{
     publicKey: {
-      type: "string",
+      type: 'string',
       description:
-        "Chave pública do ambiente (começa com pk_dev_, pk_prd_, etc.). Obrigatório.",
+        'Sua chave pública de ambiente (começa com pk_dev_, pk_prd_, etc.). Obrigatório.',
     },
     subscriberId: {
-      type: "string",
+      type: 'string',
       description:
-        "O mesmo externalId exclusivo do inscrito usado nos acionadores de fluxo de trabalho. Obrigatório.",
+        'O ID exclusivo do destinatário que corresponde aos payloads do gatilho do workflow do seu backend. Obrigatório.',
     },
     hmacSignature: {
-      type: "string",
+      type: 'string',
       description:
-        "A assinatura HMAC gerada no seu backend para segurança. Obrigatório.",
+        'Assinatura hexadecimal HMAC-SHA256 computada no lado do servidor para evitar a falsificação de ID. Obrigatório.',
     },
     backendUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
       description:
-        "A URL base da API da plataforma Nexus (também pode ser mapeada através da propriedade apiBaseUrl).",
+        'A origem do endpoint da plataforma Nexus. Pode ser substituída para sandbox local.',
     },
   }}
 />
 
-## Sino de notificação
+---
+
+## Suíte de Componentes
+
+Monte componentes pré-estilizados baseados em Radix no seu layout:
+
+### 1. Sino do Centro de Notificações
+
+Renderiza um sino de notificação padrão com listeners WebSocket em tempo real, um emblema (badge) de contagem pulsante e uma lista de feed em popover.
 
 ```tsx title="components/header.tsx"
-import { NotificationCenterBell } from "@nexus-signal/react";
+import { NotificationCenterBell } from '@nexus-signal/react';
 
-<header>
-  <NotificationCenterBell position="bottom-end" variant="ghost" />
-</header>;
+export function Header() {
+  return (
+    <header className="flex justify-between items-center px-4 py-2 border-b">
+      <h3>Meu Painel</h3>
+      <NotificationCenterBell position="bottom-end" variant="ghost" />
+    </header>
+  );
+}
 ```
 
-- Atualizações em tempo real por WebSockets com selo de não lidas
-- Ações para marcar como lida e arquivar
-- Sincronização de leitura entre múltiplos dispositivos
+### 2. Inbox de Página Completa
 
-## Inbox de notificações
-
-Feed de página inteira com agrupamento por datas e rolagem infinita:
+Um layout de feed completo com cabeçalhos de data, ações de ler/arquivar e rolagem infinita:
 
 ```tsx title="pages/notifications.tsx"
-import { NotificationInbox } from "@nexus-signal/react";
+import { NotificationInbox } from '@nexus-signal/react';
 
-<NotificationInbox />;
+export default function NotificationsPage() {
+  return (
+    <main className="max-w-2xl mx-auto py-8">
+      <h2>Suas Notificações</h2>
+      <NotificationInbox />
+    </main>
+  );
+}
 ```
 
-Utiliza `GET /v1/sdk/notifications` com paginação (`hasMore`, `loadMore`).
+Para limitar os banners a tags de tópicos específicas (por exemplo, extratos de cobrança, alertas):
 
-## Matriz de preferências
+```tsx
+<NotificationInbox tag="billing" maxItems={50} />
+```
+
+### 3. Matriz de Preferências
+
+Expõe controles de alternância de inclusão/exclusão (opt-in/opt-out) para que os inscritos gerenciem seus canais de notificação por tópico:
 
 ```tsx title="pages/settings.tsx"
-import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
+import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
 
-<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
+export default function Settings() {
+  return (
+    <section className="p-6 bg-card rounded-md">
+      <h4>Canais de Notificação</h4>
+      <SubscriberPreferenceMatrix variant="borderless" />
+    </section>
+  );
+}
 ```
 
-Renderiza eventos de fluxo de trabalho ou **tópicos** com caixas de seleção de canais. As alterações persistem através da API de preferências do SDK.
+---
 
-## Hook useNotifications
+## Hook de Layout Personalizado (`useNotifications`)
 
-```tsx title="components/notification-list.tsx"
-import { useNotifications } from "@nexus-signal/react";
+Para layouts personalizados, use o hook de estado headless:
 
-const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
-  useNotifications();
+```tsx title="components/custom-inbox.tsx"
+import { useNotifications } from '@nexus-signal/react';
+
+export function CustomInbox() {
+  const { items, unread, status, loadMore, hasMore, markRead } = useNotifications();
+
+  return (
+    <div>
+      <p>
+        Não lidas: {unread} | Conexão: {status}
+      </p>
+      <div className="space-y-2">
+        {items.map((msg) => (
+          <div
+            key={msg.logId}
+            className={`p-3 border rounded ${msg.read ? 'bg-muted' : 'font-bold'}`}
+            onClick={() => msg.logId && markRead(msg.logId)}
+          >
+            <h5>{msg.title}</h5>
+            <p>{msg.body}</p>
+          </div>
+        ))}
+      </div>
+      {hasMore && <button onClick={loadMore}>Carregar Mais</button>}
+    </div>
+  );
+}
 ```
+
+### Propriedades do Hook
 
 <TypeTable
   type={{
     items: {
-      type: "InAppNotification[]",
-      description: "Array contendo os objetos de notificação in-app carregados atualmente.",
+      type: 'InAppNotification[]',
+      description: 'Array reativo de registros de notificações in-app.',
     },
     unread: {
-      type: "number",
-      description: "Contador de notificações não lidas e não arquivadas.",
+      type: 'number',
+      description: 'O número de mensagens não lidas e não arquivadas.',
     },
     status: {
       type: "'connected' | 'disconnected'",
-      description: "Status de conexão do WebSocket em tempo real.",
+      description: 'Estado atual da conexão WebSocket em tempo real.',
     },
     hasMore: {
-      type: "boolean",
-      description:
-        "Indica se há mais notificações históricas a serem carregadas.",
+      type: 'boolean',
+      description: 'Indica se existem registros históricos adicionais no banco de dados.',
     },
     loadingMore: {
-      type: "boolean",
-      description:
-        "Flag indicando se uma solicitação de busca de página está em andamento.",
+      type: 'boolean',
+      description: 'Verdadeiro se uma consulta de paginação estiver em andamento.',
     },
     loadMore: {
-      type: "() => Promise<void>",
-      description:
-        "Busca a próxima página de notificações e as anexa ao feed de itens.",
+      type: '() => Promise<void>',
+      description: 'Busca e anexa de forma assíncrona a próxima página de notificações.',
     },
     markRead: {
-      type: "(logId: string) => Promise<void>",
-      description: "Marca uma notificação específica como lida.",
+      type: '(logId: string) => Promise<void>',
+      description:
+        'Marca uma notificação específica como lida, sincronizando o estado entre dispositivos.',
     },
     markAllRead: {
-      type: "() => Promise<void>",
-      description: "Marca todas as notificações atuais como lidas.",
+      type: '() => Promise<void>',
+      description: 'Marca todas as notificações atuais como lidas.',
     },
     archive: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "Arquiva uma notificação específica, marcando-a como lida e removendo-a da lista de não lidas ativas.",
+      type: '(logId: string) => Promise<void>',
+      description: 'Oculta a notificação da lista de não lidas e a move para o arquivo.',
     },
     remove: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "Exclui uma notificação inteiramente do banco de dados e do feed.",
+      type: '(logId: string) => Promise<void>',
+      description: 'Exclui permanentemente o registro de notificação do banco de dados.',
     },
   }}
 />
 
-## Temas
+---
 
-Os componentes usam variáveis CSS (`--nexus-theme-*`) compatíveis com Tailwind. Sobrescreva no seu CSS global para combinar com a sua marca.
+## Hook de Interceptação de Guias (`useGuides`)
 
-## Segurança
+Gerencie gatilhos de banners e tooltips dentro da sua aplicação React dinamicamente:
 
-<Callout type="error">
-  Gere o `hmacSignature` no seu servidor para cada sessão. Nunca coloque a
-  `secretKey` no código do frontend.
-</Callout>
+```tsx
+import { useGuides } from '@nexus-signal/react';
+
+export function AppGuideSlots() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} className="p-4 border border-blue-200 bg-blue-50 rounded">
+      <h6>{guide.content.title}</h6>
+      <p>{guide.content.body}</p>
+      <button onClick={() => markSeen(guide.id)}>Entendido</button>
+      <button onClick={() => dismiss(guide.id)}>Dispensar</button>
+    </div>
+  ));
+}
+```
+
+---
+
+## Personalização de Estilos e Temas
+
+Os componentes usam variáveis CSS compatíveis com estilos personalizados e alternadores de modo escuro (dark mode). Substitua-os em sua folha de estilos CSS global:
+
+```css title="styles/global.css"
+:root {
+  /* Fundos de painel */
+  --nexus-theme-panel: #ffffff;
+  --nexus-theme-panel-muted: #f9fafb;
+
+  /* Tipografia */
+  --nexus-theme-text: #111827;
+  --nexus-theme-muted: #6b7280;
+
+  /* Bordas e linhas */
+  --nexus-theme-border: #e5e7eb;
+  --nexus-theme-border-subtle: #f3f4f6;
+
+  /* Destaques de destaque (pontos não lidos, caixas de seleção ativas) */
+  --nexus-theme-accent: #2563eb;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #f9fafb;
+}
+
+[data-theme='dark'] {
+  --nexus-theme-panel: #1f2937;
+  --nexus-theme-panel-muted: #111827;
+  --nexus-theme-text: #f9fafb;
+  --nexus-theme-muted: #9ca3af;
+  --nexus-theme-border: #374151;
+  --nexus-theme-border-subtle: #1f2937;
+  --nexus-theme-accent: #3b82f6;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #111827;
+}
+```

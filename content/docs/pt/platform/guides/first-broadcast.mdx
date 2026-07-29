@@ -1,36 +1,51 @@
 ---
 title: Seu Primeiro Broadcast
-description: Envie um anúncio de produto de envio único para um segmento de audiência dinâmico a partir do painel — sem necessidade de implantação de código.
+description: Envie um anúncio de produto de envio único para um segmento de audiência dinâmico — da configuração do painel à automação do Node SDK.
 ---
 
-Os **broadcasts** permitem que as equipes de produto e marketing enviem mensagens multicanal para um **segmento** sem envolvimento da engenharia.
+# Seu Primeiro Broadcast
+
+Os Broadcasts permitem que as equipes de produto e marketing enviem mensagens multicanais para um segmento de audiência filtrado sem a necessidade de implantar um novo código. Este guia orientará você por todo o fluxo.
+
+---
 
 ## Pré-requisitos
 
-- Um workflow publicado (por exemplo, `product.announcement`) com canais Email + In-App
-- Um segmento de [audiência](/docs/platform/features/audiences) definido
+- Um workflow publicado (por exemplo, `product.announcement`) com pelo menos um nó de canal ativo.
+- Inscritos (subscribers) já registrados em seu ambiente.
+- Pelo menos um provedor de e-mail ou push conectado.
 
-## Etapa 1 — Criar uma audiência
+---
 
-Painel: **Audiences** → **New audience**
+## Passo 1 — Definir um Segmento de Audiência
 
-Filtros de exemplo:
+Navegue até **Audiences** → **New Audience**.
 
-| Regra             | Operador    | Valor    |
-| ----------------- | ----------- | -------- |
-| `properties.plan` | equals      | `growth` |
-| `lastActiveAt`    | within days | `30`     |
+Dê um nome para sua audiência (por exemplo, `Growth Plan Users`) e adicione regras de filtro. Exemplo:
 
-Salve e anote a visualização da contagem de membros ativos.
+| Campo                | Operador      | Valor |
+| :------------------- | :------------ | :---- |
+| `locale`             | `starts_with` | `en`  |
+| `globalUnsubscribed` | `is_false`    | —     |
 
-## Etapa 2 — Redigir o broadcast
+> Campos de filtro suportados: `email`, `phoneNumber`, `locale`, `timezone`, `globalUnsubscribed`, `externalId`, `createdAt`. Veja [Audiências](/docs/platform/features/audiences) para todos os operadores.
 
-Painel: **Broadcasts** → **New broadcast**
+Salve o segmento — o painel de controle exibirá uma prévia da contagem de membros ativos em tempo real.
 
-1. **Nome:** "Q3 Feature Launch"
-2. **Workflow:** selecione `product.announcement`
-3. **Audiência:** selecione seu segmento Growth
-4. **Dados:** JSON opcional para variáveis de template:
+---
+
+## Passo 2 — Compor o Broadcast
+
+Navegue até **Broadcasts** → **New Broadcast**.
+
+| Campo        | Valor                                              |
+| :----------- | :------------------------------------------------- |
+| **Name**     | `Q3 Feature Launch`                                |
+| **Workflow** | Selecione `product.announcement`                   |
+| **Audience** | Selecione o segmento que você acabou de criar      |
+| **Data**     | Contexto JSON opcional para as variáveis do modelo |
+
+Exemplo de payload de dados:
 
 ```json
 {
@@ -39,64 +54,100 @@ Painel: **Broadcasts** → **New broadcast**
 }
 ```
 
-5. **Agendamento:** envie agora ou escolha uma data e hora futura
+| Opção de Agendamento | Comportamento                                                                               |
+| :------------------- | :------------------------------------------------------------------------------------------ |
+| **Send now**         | Enfileira imediatamente os trabalhos de entrega                                             |
+| **Schedule at**      | Define uma data/hora ISO futura; um job em segundo plano fará o disparo no momento definido |
 
-## Etapa 3 — Visualizar e enviar
+---
 
-Reveja o tamanho da audiência e os canais do workflow. Clique em **Send** (ou agende).
+## Passo 3 — Visualizar e Enviar
 
-O status da transmissão progride: `DRAFT` → `SENDING` → `COMPLETED`
+Revise o tamanho estimado da audiência e os canais que serão executados. Clique em **Send** (ou **Schedule**).
 
-## Etapa 4 — Monitorar resultados
+Estados do ciclo de vida do broadcast:
 
-Abra a visualização de detalhes da transmissão para obter estatísticas de entrega por canal. Cruze referências nos **Audit Logs** para falhas individuais.
+| Status      | Significado                                                                            |
+| :---------- | :------------------------------------------------------------------------------------- |
+| `DRAFT`     | Salvo, mas ainda não enviado. Totalmente editável.                                     |
+| `SCHEDULED` | Enfileirado para envio no futuro. Ainda editável.                                      |
+| `SENDING`   | Ativamente enviando os jobs para a fila de entrega. Não pode ser editado ou cancelado. |
+| `COMPLETED` | Todos os membros da audiência foram processados.                                       |
+| `CANCELLED` | Parado antes ou durante a execução.                                                    |
+| `FAILED`    | Um erro fatal interrompeu o envio.                                                     |
 
-## Alternativa via API
+---
+
+## Passo 4 — Monitorar Resultados
+
+Abra a tela de detalhes do broadcast para visualizar as estatísticas de entrega por canal. Cruze referências com os **Audit Logs** para verificar falhas de entrega individuais ou detalhes de rejeição (bounces).
+
+---
+
+## Alternativa via API (JWT do Painel)
+
+Use a API REST do painel de controle a partir de uma sessão autenticada:
 
 <DashboardAuth />
 
 ```http
 POST /v1/broadcasts
-Authorization: Bearer <jwt>
-```
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-```json
 {
   "name": "Q3 Feature Launch",
-  "workflowId": "workflow-uuid-from-dashboard",
-  "audienceId": "audience-uuid",
-  "data": { "featureName": "Smart Analytics" }
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+  "data": { "featureName": "Smart Analytics" },
+  "scheduledAt": "2026-09-01T09:00:00.000Z"
 }
 ```
 
-Enviar:
+Em seguida, envie:
 
 ```http
-POST /v1/broadcasts/:id/send
+POST /v1/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/send
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
 <Callout type="info">
-  `workflowId` e `audienceId` são UUIDs obtidos dos endpoints da lista do painel
-  ou da API de Gerenciamento — não são strings de nomes de workflows.
+  `workflowId` e `audienceId` são strings no formato UUID. Obtenha-os a partir da URL do painel de
+  controle ou dos endpoints de listagem da API de Gerenciamento — e não use strings com nomes dos
+  workflows.
 </Callout>
 
-## SDK de Node
+---
+
+## Alternativa via Node SDK (Chave Secreta)
+
+Use o Node SDK para CI/CD ou automação de broadcasts por scripts:
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
+// Criar o broadcast
 const created = await nexus.broadcasts.create({
-  name: "Q3 Launch",
-  workflowId: "uuid",
-  audienceId: "uuid",
-  data: { featureName: "Smart Analytics" },
+  name: 'Q3 Feature Launch',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  audienceId: '771e8400-e29b-41d4-a716-446655440000',
+  data: { featureName: 'Smart Analytics' },
 });
 
+// Enviar imediatamente
 if (created.ok) {
   await nexus.broadcasts.send(created.data!.broadcast.id);
 }
 ```
 
+> O Node SDK chama `/v1/management/broadcasts` (autenticação com Chave Secreta) — e não a rota do painel de controle com JWT.
+
+---
+
 ## Relacionado
 
-- [Recurso de Broadcasts](/docs/platform/features/broadcasts)
-- [Audiências](/docs/platform/features/audiences)
-- [API de Broadcasts](/docs/api/broadcasts)
+- [Visão geral do recurso de Broadcasts](/docs/platform/features/broadcasts)
+- [Audiências](/docs/platform/features/audiences) — criando regras de segmentos
+- [Referência da API de Broadcasts](/docs/api/broadcasts)

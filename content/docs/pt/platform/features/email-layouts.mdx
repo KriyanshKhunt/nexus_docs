@@ -1,57 +1,103 @@
 ---
-title: Layouts de Email
-description: Estruturas de email compartilhadas e fragmentos HTML reutilizáveis — mude a marca uma vez, atualize cada template.
+title: Layouts de E-mail e Parciais
+description: Estruturas de e-mail compartilhadas e fragmentos HTML reutilizáveis — mude a identidade visual uma vez, atualize todos os modelos.
 ---
 
-Os **layouts de email** envolvem todos os templates de email em uma estrutura HTML compartilhada (cabeçalho, rodapé, estilos). As **parciais** (partials) são fragmentos reutilizáveis do Handlebars referenciados em templates.
+# Layouts de E-mail e Parciais
 
-## Layouts
+Os **layouts de e-mail** envolvem todos os modelos de e-mail em uma estrutura HTML compartilhada (cabeçalho, rodapé, estilos). As **parciais** (partials) são trechos reutilizáveis do Handlebars que podem ser referenciados em múltiplos modelos. Juntos, eles permitem manter uma identidade de marca consistente sem duplicar código HTML.
 
-Os layouts definem a estrutura externa com um espaço para o conteúdo:
+## Layouts de E-mail
+
+Um layout define a estrutura HTML externa. O corpo do modelo compilado é injetado em `{{{ content }}}`:
 
 ```html
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* seus estilos base */
+    </style>
+  </head>
   <body>
-    <img src="{{ branding.logoUrl }}" alt="Logo" />
-    <div class="content">{{{ content }}}</div>
-    <footer>{{ branding.footerHtml }}</footer>
+    <header>
+      <img src="{{ logo }}" alt="{{ name }}" style="max-height: 40px;" />
+    </header>
+    <main>{{{ content }}}</main>
+    <footer>{{{ footerHtml }}}</footer>
   </body>
 </html>
 ```
 
-Painel: **Templates → Layouts**. Um layout pode ser marcado como ativo por ambiente. As variáveis de marca do tenant são injetadas automaticamente quando um contexto de tenant é definido.
+<Callout type="info">
+Use chaves triplas `{{{ content }}}` e `{{{ footerHtml }}}` para renderizar HTML sem escapar caracteres. Use chaves duplas `{{ logo }}` para strings de URL e outros valores escalares.
+</Callout>
+
+### Variáveis de Marca de Tenant em Layouts
+
+Quando o disparo do seu workflow inclui um valor de `tenant`, os campos de marca do tenant são injetados diretamente no contexto do layout pelos seus nomes de campo:
+
+| Variável de Layout   | Origem                         |
+| :------------------- | :----------------------------- |
+| `{{ logo }}`         | `tenant.branding.logo`         |
+| `{{ primaryColor }}` | `tenant.branding.primaryColor` |
+| `{{{ footerHtml }}}` | `tenant.branding.footerHtml`   |
+| `{{ name }}`         | `tenant.name`                  |
+
+Se nenhum tenant for definido no disparo, essas variáveis ficarão vazias e seu layout deve incluir valores alternativos padrão (fallbacks).
+
+### Variáveis de Layout
+
+Além do branding do tenant, você pode definir **variáveis estáticas personalizadas** no próprio layout (pares de chave-valor no painel de controle). Elas são mescladas ao contexto junto com o branding do tenant e os dados do inscrito.
 
 ## Parciais (Partials)
 
-Crie blocos reutilizáveis em **Templates → Partials**:
+As parciais são trechos de HTML reutilizáveis registrados por nome. Crie-os em **Templates → Partials**:
 
 ```html
-<!-- partial: cta-button -->
-<a href="{{ url }}" class="btn btn-primary">{{ label }}</a>
+<!-- nome da parcial: cta-button -->
+<a
+  href="{{ url }}"
+  style="display:inline-block; padding:12px 24px;
+   background-color:{{ primaryColor }}; color:#fff; text-decoration:none;
+   border-radius:4px;"
+  >{{ label }}</a
+>
 ```
 
-Referência em qualquer template de email:
+Referencie em qualquer modelo ou layout de e-mail com:
 
 ```html
 {{> cta-button url=data.checkoutUrl label="Complete purchase" }}
 ```
 
-Altere a parcial uma vez — todos os templates que a utilizam são atualizados no próximo envio.
+Altere a parcial uma única vez — todos os modelos que a utilizam serão atualizados no próximo envio.
 
-## Ordem de compilação
+## Ordem de Compilação
 
 ```mermaid
 flowchart TD
-  T[Template HTML] --> P[Resolve partials]
-  P --> L[Wrap in active layout]
-  L --> B[Apply tenant branding]
-  B --> H[Handlebars compile]
-  H --> Out[Final HTML]
+  T[HTML do modelo de e-mail] --> P[Resolver parciais (partials)]
+  P --> C[Compilar Handlebars — inscrito + dados do disparo]
+  C --> L[Envolver no HTML do layout ativo]
+  L --> B[Injetar variáveis de marca do tenant]
+  B --> H[Compilar Handlebars do layout]
+  H --> Out[HTML final enviado ao provedor de e-mail]
 ```
+
+## Atribuir um Layout a um Workflow
+
+No **Canvas do Workflow** no painel de controle:
+
+1. Abra as configurações do workflow.
+2. Selecione **Email Layout** — escolha entre os layouts do ambiente atual.
+3. Salve — o layout se aplica a todas as etapas do canal de e-mail daquele workflow.
+
+Um mesmo layout pode estar ativo em vários workflows. Alterar o HTML do layout atualiza todos os workflows que o utilizam no próximo envio.
 
 ## Relacionado
 
-- [Branding por tenant](/docs/platform/features/tenants)
-- [API de layouts de email](/docs/api/email-layouts)
-- [Plantilhas multi-idioma](/docs/platform/features/i18n)
+- [Marca por tenant](/docs/platform/features/tenants)
+- [API de layouts de e-mail](/docs/api/email-layouts)
+- [Modelos multilíngues](/docs/platform/features/i18n)

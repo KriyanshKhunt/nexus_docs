@@ -1,34 +1,49 @@
 ---
-title: Traduções e i18n
-description: Armazenamentos de chave-valor centralizados por idioma com o helper de Handlebars {{ t "key" }} — strings reutilizáveis em todas as plantilhas.
+title: Arquivos de Tradução
+description: Repositórios de chave-valor centralizados por localidade com o helper Handlebars {{ t "key" }} — strings reutilizáveis em todos os modelos.
 ---
 
-Os **arquivos de tradução** armazenam strings de idioma compartilhadas por ambiente. Faça referência a elas em qualquer template com `{{ t "welcome_message" }}` em vez de duplicar cópias completas de templates por idioma.
+# Arquivos de Tradução
+
+Os **arquivos de tradução** armazenam strings compartilhadas por localidade (locale) em cada ambiente. Referencie-as em qualquer modelo de e-mail, SMS ou push usando `{{ t "key" }}` em vez de duplicar cópias inteiras de modelos para cada idioma.
 
 <Callout type="info">
-  Isso complementa as [Plantilhas multi-idioma](/docs/platform/features/i18n),
-  que armazenam variantes completas de local dentro de `contentTemplates`. Use
-  arquivos de tradução para strings compartilhadas; use templates de local para
-  diferenças de layout específicas do canal.
+  Isso complementa as [Modelos multilíngues](/docs/platform/features/i18n), que armazenam variantes
+  completas de localidade dentro de `contentTemplates`. Use **arquivos de tradução** para strings
+  reutilizáveis compartilhadas; use **modelos de localidade** para diferenças completas de layout
+  específicas de cada canal.
 </Callout>
 
-## Enviar traduções
+## Como o Helper `t` Funciona
 
-Painel: **Templates → Translations**, ou API:
+No momento da compilação do modelo, o helper Handlebars `{{ t "key" }}` realiza as seguintes etapas:
 
-API do painel / navegador:
+1. Resolve a localidade atual do inscrito (a partir da substituição de `_locale` → campo `locale` do inscrito → padrão `en`)
+2. Procura a chave no arquivo de tradução daquela localidade
+3. Faz fallback para a localidade base (por exemplo, `"en"` a partir de `"en-US"`)
+4. Faz fallback para o inglês se nenhuma correspondência for encontrada
+5. Retorna a própria string de chave bruta se não houver tradução em nenhuma localidade
+
+## Enviar Traduções
+
+**Painel de Controle**: **Templates → Translations** → selecione a localidade → cole ou faça o upload do JSON.
+
+**API de Gerenciamento (chave `sk_*` — para scripts e CI/CD):**
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+**API do Painel de Controle (autenticação JWT — para integrações no navegador):**
 
 ```http
 PUT /v1/translations
 Authorization: Bearer <jwt_token>
 ```
 
-API de Gerenciamento / Servidor (CLI/Scripts):
-
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+**Payload:**
 
 ```json
 {
@@ -37,12 +52,15 @@ Authorization: Bearer sk_prd_…
   "content": {
     "welcome_message": "Bienvenido",
     "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "cta_view_order": "Ver pedido",
+    "invoice_due": "Factura vencida"
   }
 }
 ```
 
-## Usar em templates
+O campo `namespace` é uma classificação para organizar suas chaves no painel de controle. As chaves de todos os namespaces estão disponíveis para o helper `t` independentemente do namespace — a busca por chaves é feita de forma plana por todo o conteúdo da localidade.
+
+## Uso em Modelos (Templates)
 
 ```html
 <h1>{{ t "welcome_message" }}</h1>
@@ -50,30 +68,72 @@ Authorization: Bearer sk_prd_…
 <a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
 ```
 
-## Cadeia de resolução de local
+Quando a localidade do inscrito é `es`, isso renderiza:
 
-1. Campo `locale` do assinante
-2. Substituição de `_locale` por trigger
-3. Idioma padrão do tenant (se o contexto do tenant estiver definido)
-4. Padrão do ambiente (`en`)
-5. Chave bruta se nenhuma tradução for encontrada
+```html
+<h1>Bienvenido</h1>
+<p>Tu pedido ha sido enviado — ORD-12345</p>
+<a href="https://track.example.com/xyz">Ver pedido</a>
+```
 
-## Namespaces (Espaços de nomes)
+## Ordem de Resolução de Localidade
 
-Organize as strings por área de recurso:
+Quando uma notificação é enviada, a localidade é resolvida nesta ordem de prioridade:
+
+1. Campo `_locale` no payload `data` do disparo (substituição por disparo)
+2. Campo `locale` do inscrito (por exemplo, `"es"`, `"ja"`)
+3. Fallback para `"en"` (padrão do ambiente)
+
+**Substituir localidade em um disparo específico:**
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _locale: 'es',
+    orderId: 'ORD-12345',
+  },
+});
+```
+
+## Organizando Chaves com Namespaces
+
+Os namespaces são uma ferramenta organizacional opcional para agrupar strings relacionadas no painel de controle. Eles **não** afetam como as chaves são referenciadas nos modelos.
+
+**Melhor prática**: Use uma convenção de nomenclatura de chaves que sugira o namespace, como `billing_invoice_due` ou `auth_login_prompt`:
 
 ```json
 {
   "locale": "ja",
   "namespace": "billing",
-  "content": { "invoice_due": "請求書の支払期限" }
+  "content": {
+    "billing_invoice_due": "請求書の支払期限",
+    "billing_pay_now": "今すぐ支払う"
+  }
 }
 ```
 
-Referência: `{{ t "billing.invoice_due" }}` (busca com reconhecimento de namespace).
+Nos modelos: `{{ t "billing_invoice_due" }}` (busca simples e plana de chaves).
+
+## Fluxo de Trabalho com CLI
+
+Gerencie arquivos de tradução a partir da linha de comando:
+
+```bash
+# Baixar todas as traduções atuais para arquivos JSON locais
+nexus translations pull --locale es --output ./translations/es.json
+
+# Enviar traduções atualizadas
+nexus translations push --locale es --input ./translations/es.json
+```
+
+## Localidades Suportadas
+
+Qualquer string de localidade BCP 47 é suportada (por exemplo, `en`, `en-US`, `es`, `es-MX`, `ja`, `pt`, `pt-BR`, `fr`, `de`, `zh-CN`). O helper `t` remove o sufixo de região e faz fallback para a localidade base se um arquivo específico da região não for encontrado.
 
 ## Relacionado
 
-- [Plantilhas multi-idioma](/docs/platform/features/i18n)
+- [Modelos multilíngues](/docs/platform/features/i18n)
 - [API de Traduções](/docs/api/translations)
-- [Puxar/enviar traduções da CLI](/docs/sdk/devtools/cli)
+- [Puxar/Enviar traduções com a CLI](/docs/sdk/devtools/cli)

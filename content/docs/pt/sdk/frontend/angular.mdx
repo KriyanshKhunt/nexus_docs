@@ -1,80 +1,239 @@
 ---
-title: SDK de Angular
-description: "@nexus-signal/angular — componentes standalone e signals para a campana de notificação, inbox e guias."
+title: Angular SDK
+description: '@nexus-signal/angular — componentes independentes e signals para sino de notificações, inbox e guias.'
+---
+
+# Angular SDK
+
+O pacote `@nexus-signal/angular` fornece bindings reativos do Angular para notificações in-app, guias dinâmicos e matrizes de configurações de inscritos. Ele requer **Angular 17+** e utiliza os Angular Signals nativos.
+
 ---
 
 ## Instalação
 
-```bash
-npm install @nexus-signal/angular socket.io-client
-```
+Instale o pacote juntamente com suas dependências de parceria:
 
-Requer **Angular 17+** (componentes standalone, signals).
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/angular socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/angular socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/angular socket.io-client ```</Tab>
+</Tabs>
 
-## Configuração
+---
 
-```ts
-// app.config.ts
-import { provideNexus } from "@nexus-signal/angular";
+## Configuração do Workspace
 
-export const appConfig = {
+Configure o provedor global dentro da configuração do seu aplicativo:
+
+```ts title="app.config.ts"
+import { ApplicationConfig } from '@angular/core';
+import { provideNexus } from '@nexus-signal/angular';
+
+export const appConfig: ApplicationConfig = {
   providers: [
     provideNexus({
-      publicKey: "pk_prd_...",
-      subscriberId: "user-123",
-      hmacSignature: hmacFromBackend,
-      apiBaseUrl: "https://api.nexussignal.dev",
-      onNotification: (n) => console.log(n.title),
+      publicKey: 'pk_prd_your_public_key', // pk_dev_... ou pk_prd_...
+      subscriberId: 'user_active_99',
+      hmacSignature: 'your_computed_hmac_hex',
+      apiBaseUrl: 'https://api.nexussignal.dev',
     }),
   ],
 };
 ```
 
-## Componentes
+### Opções de Configuração
 
-```html
-<!-- Popover do sino -->
-<nexus-notification-bell />
+<TypeTable
+  type={{
+    publicKey: {
+      type: 'string',
+      description: 'Chave pública de ambiente (pk_dev_... ou pk_prd_...). Obrigatório.',
+    },
+    subscriberId: {
+      type: 'string',
+      description:
+        'ID de inscrito exclusivo que corresponde aos payloads do gatilho do backend. Obrigatório.',
+    },
+    hmacSignature: {
+      type: 'string',
+      description: 'Assinatura de validação HMAC gerada no lado do servidor. Obrigatório.',
+    },
+    apiBaseUrl: {
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'Origem da URL base da API da plataforma Nexus.',
+    },
+    onNotification: {
+      type: '(notification: NexusNotification) => void',
+      description: 'Callback opcional acionado sempre que uma mensagem em tempo real é recebida.',
+    },
+  }}
+/>
 
-<!-- Inbox de página inteira com filtro de tag -->
-<nexus-notification-inbox tag="updates" [maxItems]="20" />
+---
 
-<!-- Popups de notificação toast em tempo real -->
-<nexus-notification-toast position="top-right" [duration]="5000" />
-```
+## Seletores Diretos de Componentes
 
-## Serviços Headless
+Importe os símbolos de componentes em seus componentes independentes (standalone components):
 
-Injete serviços para interfaces personalizadas:
-
-```ts
-import { NexusNotificationsService } from "@nexus-signal/angular";
+```ts title="components/dashboard.component.ts"
+import { Component } from '@angular/core';
+import {
+  NexusNotificationBellComponent,
+  NexusNotificationInboxComponent,
+  NexusNotificationToastComponent,
+} from '@nexus-signal/angular';
 
 @Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [
+    NexusNotificationBellComponent,
+    NexusNotificationInboxComponent,
+    NexusNotificationToastComponent,
+  ],
   template: `
-    <p>Não lidas: {{ notifications.unread() }}</p>
-    @for (item of notifications.items(); track item.logId) {
-      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
-    }
+    <!-- Sino de notificação popover no menu superior -->
+    <nexus-notification-bell variant="ghost" position="bottom-end" />
+
+    <!-- Feed de inbox em página completa com filtro de tag -->
+    <nexus-notification-inbox tag="billing" [maxItems]="50" />
+
+    <!-- Sobreposições de alerta toast -->
+    <nexus-notification-toast position="top-right" />
   `,
 })
-export class InboxComponent {
-  notifications = inject(NexusNotificationsService);
+export class DashboardComponent {}
+```
+
+---
+
+## Serviços e Signals Headless
+
+Injete serviços diretamente para interfaces de modelos personalizadas:
+
+### 1. Serviço de Notificação In-App (`NexusNotificationsService`)
+
+```ts title="components/custom-feed.component.ts"
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { NexusNotificationsService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-custom-feed',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="header">
+      <h4>Notificações ({{ notifications.unread() }} não lidas)</h4>
+      <button (click)="notifications.markAllRead()">Marcar todas como lidas</button>
+    </div>
+
+    <div class="list">
+      <div
+        *ngFor="let item of notifications.items()"
+        [class.unread]="!item.read"
+        (click)="item.logId && notifications.markRead(item.logId)"
+      >
+        <h5>{{ item.title }}</h5>
+        <p>{{ item.body }}</p>
+      </div>
+    </div>
+
+    <button *ngIf="notifications.hasMore()" (click)="notifications.loadMore()">
+      {{ notifications.loadingMore() ? 'Carregando...' : 'Carregar Mais' }}
+    </button>
+  `,
+})
+export class CustomFeedComponent {
+  readonly notifications = inject(NexusNotificationsService);
 }
 ```
 
-| Serviço                     | Signals                                 |
-| --------------------------- | --------------------------------------- |
-| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
-| `NexusGuidesService`        | `guides`, `loading`                     |
-| `NexusPreferencesService`   | `preferences`, `topics`, `loading`      |
+#### Signals de Serviço Observáveis
 
-## Estilização
+| Assinatura do Signal | Tipo de Retorno       | Descrição                                                              |
+| :------------------- | :-------------------- | :--------------------------------------------------------------------- |
+| `items()`            | `NexusNotification[]` | Lista reativa de notificações carregadas.                              |
+| `unread()`           | `number`              | Contador computado de notificações não lidas e ativas.                 |
+| `loading()`          | `boolean`             | Verdadeiro se a solicitação inicial do feed estiver buscando dados.    |
+| `loadingMore()`      | `boolean`             | Verdadeiro se uma solicitação de paginação estiver ativa.              |
+| `hasMore()`          | `boolean`             | Verdadeiro se houver histórico adicional disponível no banco de dados. |
+| `connected()`        | `boolean`             | Verdadeiro se o handshake do WebSocket estiver ativo.                  |
 
-Usa as mesmas variáveis CSS do React (`--nexus-theme-accent`, `--nexus-theme-border`, etc.).
+---
 
-## Relacionado
+### 2. Serviço de Interceptação de Guias (`NexusGuidesService`)
 
-- [React SDK](/docs/sdk/frontend/react)
-- [Headless JS SDK](/docs/sdk/frontend/js)
-- [Guias no Produto](/docs/platform/features/guides)
+Busque e dispense mensagens in-app programaticamente:
+
+```ts
+import { Component, inject, OnInit } from '@angular/core';
+import { NexusGuidesService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-guides',
+  standalone: true,
+  template: `
+    <div *ngFor="let g of guidesService.guides()" class="guide-banner">
+      <h6>{{ g.content.title }}</h6>
+      <p>{{ g.content.body }}</p>
+      <button (click)="guidesService.markSeen(g.id)">Entendido</button>
+      <button (click)="guidesService.dismiss(g.id)">Fechar</button>
+    </div>
+  `,
+})
+export class GuidesComponent implements OnInit {
+  readonly guidesService = inject(NexusGuidesService);
+
+  ngOnInit() {
+    // Buscar guias limitados ao caminho atual
+    this.guidesService.fetch({ pathname: window.location.pathname });
+  }
+}
+```
+
+---
+
+### 3. Serviço de Preferências (`NexusPreferencesService`)
+
+Crie um formulário de preferências personalizado utilizando Signals:
+
+```ts
+import { Component, inject } from '@angular/core';
+import { NexusPreferencesService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-user-preferences',
+  standalone: true,
+  template: `
+    <div *ngFor="let topic of prefService.topics()">
+      <span>{{ topic.displayName }}</span>
+      <input
+        type="checkbox"
+        [checked]="prefService.preferences()[topic.id]?.['EMAIL']"
+        (change)="toggleEmail(topic.id, $event)"
+      />
+    </div>
+  `,
+})
+export class UserPreferencesComponent {
+  readonly prefService = inject(NexusPreferencesService);
+
+  toggleEmail(topicId: string, event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.prefService.updatePreference(topicId, 'EMAIL', checked);
+  }
+}
+```
+
+---
+
+## Estilos e Temas
+
+Os componentes do Angular procuram por propriedades CSS personalizadas (exatamente como no React):
+
+- `--nexus-theme-panel`: Fundo de sinos, menus suspensos e cartões.
+- `--nexus-theme-text`: Cor do texto primário.
+- `--nexus-theme-accent`: Cor de destaque do tema (emblemas de contagem).
+- `--nexus-theme-border`: Bordas de componentes.

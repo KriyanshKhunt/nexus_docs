@@ -1,67 +1,162 @@
 ---
-title: Construa Seu Primeiro Fluxo
-description: Crie um fluxo de boas-vindas multicanal com modelo, gatilho e o sino de notificações in-app.
+title: Construa seu Primeiro Workflow
+description: Crie um workflow de boas-vindas multicanal com e-mail, sino in-app e entrega em tempo real — passo a passo.
 ---
 
-Este guia constrói um fluxo de boas-vindas do tipo **user.signup**: e-mail + notificação in-app.
+# Construa seu Primeiro Workflow
 
-## 1. Crie o fluxo de trabalho
+Este guia orientará você na criação de um workflow de boas-vindas **`user.signup`** que envia um e-mail e uma notificação in-app no momento em que um usuário se cadastra.
 
-Acesse o Painel → **Workflows** → Novo fluxo de trabalho com o nome `user.signup`.
+---
 
-Adicione os nós:
+## Pré-requisitos
+
+- Um workspace do Nexus Signal com pelo menos um ambiente ativo.
+- SDK de Node instalado (`@nexus-signal/node`) e inicializado com uma chave secreta.
+- Pelo menos um provedor de e-mail conectado em **Integrations**.
+
+---
+
+## Passo 1 — Criar o Workflow
+
+No painel de controle, navegue até **Workflows** → **New Workflow**.
+
+- **Nome:** `user.signup`
+- **Canais:** Adicione um nó de **Email** e um nó de **In-App**
+
+Seu canvas deve se parecer com:
 
 ```
-Trigger (Gatilho) → Canal (E-mail) → Canal (In-App)
+Trigger → Email → In-App
 ```
 
-Ative **Suppress when online** (Supressão ao estar online) no nó de E-mail se desejar uma entrega ciente de presença.
+> **Dica:** Ative **Suppress when online** no nó de Email se quiser pular o envio do e-mail quando o usuário estiver ativamente online em sua aplicação.
 
-## 2. Escreva os modelos (Templates)
+---
 
-Abra a aba **Templates** neste fluxo de trabalho.
+## Passo 2 — Escrever os Modelos (Templates)
 
-**E-mail (HTML):**
+Clique em cada nó de canal para abrir o editor de modelos.
+
+**Modelo de E-mail (HTML):**
+
 ```html
-<h1>Bem-vindo, {{ data.name }}!</h1>
-<p>Obrigado por se cadastrar. O ID da sua conta é {{ subscriber.externalId }}.</p>
+<h1>Welcome, {{ data.name }}!</h1>
+<p>Thanks for joining. Your account ID is <strong>{{ subscriber.externalId }}</strong>.</p>
+<p><a href="{{ data.dashboardUrl }}">Go to your dashboard →</a></p>
 ```
 
-**In-App:**
+**Modelo In-App:**
+
 ```json
-{ "title": "Bem-vindo!", "body": "Olá {{ data.name }}, que bom que você está aqui." }
+{
+  "title": "Welcome, {{ data.name }}!",
+  "body": "Your account is ready. Click to explore.",
+  "redirect": "{{ data.dashboardUrl }}"
+}
 ```
 
-Promova o modelo para **Production Active** (Ativo em Produção).
+Quando terminar, promova os modelos para o status **Production Active**.
 
-## 3. Crie um inscrito de teste
+---
 
-Acesse **Subscribers (Inscritos)** → Adicionar inscrito com seu `externalId` de teste e seu e-mail.
+## Passo 3 — Criar um Inscrito de Teste
 
-## 4. Acione a partir do código
+No painel de controle: **Subscribers** → **Add Subscriber**
+
+Preencha com:
+
+- `externalId`: `test_user_01`
+- `email`: `you@example.com`
+
+> Os inscritos devem ser criados **antes** do disparo. O endpoint do gatilho identifica os destinatários pelo `externalId` — ele não registra novos usuários durante o disparo.
+
+---
+
+## Passo 4 — Disparar a partir do seu Backend
+
+Instale e inicialize o SDK do Node:
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+```
+
+Execute o gatilho após o cadastro de um usuário:
 
 ```ts
 await nexus.workflows.trigger({
   workflowName: 'user.signup',
-  recipients: [{ externalId: 'test_user', email: 'seu_email@exemplo.com' }],
-  data: { name: 'Usuário Teste' },
+  recipients: [{ externalId: 'test_user_01' }],
+  data: {
+    name: 'Test User',
+    dashboardUrl: 'https://app.example.com/dashboard',
+  },
 });
 ```
 
-Em Desenvolvimento, o e-mail aparece no **Sandbox**. O canal In-app requer a instalação e uso do SDK do React.
+> **Nota:** O array `recipients` aceita `externalId` ou `subscriberId` para identificar o destinatário. **Não** passe dados de contato diretos como `email` ou `phoneNumber` aqui — esses dados pertencem ao perfil do inscrito, e não ao payload do gatilho.
 
-## 5. Adicione o sino in-app
+No ambiente de **Development**, os e-mails são interceptados na guia **Sandbox** — nenhum e-mail real é enviado.
 
-```tsx
-<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
-  <NotificationCenterBell />
-</NexusProvider>
+---
+
+## Passo 5 — Adicionar o Sino In-App ao seu Frontend
+
+Instale o React SDK:
+
+```bash
+npm install @nexus-signal/react
 ```
 
-Acione o gatilho novamente — o balão de notificações do sino será atualizado em tempo real.
+Envolva sua aplicação e adicione o componente do sino:
 
-## Próximos passos
+```tsx
+import { NexusProvider, NotificationCenterBell } from '@nexus-signal/react';
 
-- Adicione [horário de envio inteligente](/docs/platform/features/smart-send-time) no e-mail
-- Vincule o fluxo a um [tópico](/docs/platform/features/topics)
-- Adicione uma [janela de entrega](/docs/platform/features/delivery-windows) para envios de marketing
+export function App() {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId="test_user_01"
+      hmacSignature={userSession.nexusHmac}
+    >
+      <NotificationCenterBell />
+      {/* restante da sua app */}
+    </NexusProvider>
+  );
+}
+```
+
+> **Segurança:** O `hmacSignature` deve ser gerado no lado do servidor usando sua **Chave Secreta** + o `externalId` do inscrito. Nunca calcule o HMAC no navegador. Consulte [Autenticação](/docs/platform/getting-started/authentication) para obter a fórmula do HMAC.
+
+Dispare o gatilho novamente — o contador de notificações do sino será incrementado em tempo real via WebSocket.
+
+---
+
+## O que Acontece Internamente
+
+```mermaid
+sequenceDiagram
+  participant App as Seu Backend
+  participant Nexus as API do Nexus
+  participant Queue as Worker do BullMQ
+  participant Provider as Provedor de E-mail
+
+  App->>Nexus: POST /v1/workflows/trigger
+  Nexus->>Nexus: Validar esquema, resolver inscrito
+  Nexus-->>App: 202 Accepted
+  Nexus->>Queue: Enfileirar jobs de entrega
+  Queue->>Provider: Enviar e-mail (SMTP/API)
+  Queue->>App: Enviar in-app via WebSocket
+```
+
+---
+
+## Próximos Passos
+
+- Adicione [Smart Send-Time](/docs/platform/features/smart-send-time) ao e-mail para taxas de abertura ideais
+- Atribua este workflow a um [Tópico](/docs/platform/features/topics) para controle de preferências pelo usuário
+- Defina uma [Janela de Entrega](/docs/platform/features/delivery-windows) para evitar envios durante a noite
+- Adicione uma [condição de etapa](/docs/platform/features/step-conditions) para pular o e-mail quando o usuário estiver no celular

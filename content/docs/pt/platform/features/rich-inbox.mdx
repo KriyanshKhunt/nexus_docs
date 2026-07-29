@@ -1,87 +1,156 @@
 ---
-title: Caixa de Entrada Rica
-description: Abas, botões de ação, atores e filtragem por tag — um feed de notificação completo além do sino básico.
+title: Caixa de Entrada Rica In-App
+description: Botões de ação, avatares de atores, redirecionamentos e filtragem por tag — um feed de notificação completo que vai além do sino básico.
 ---
 
-Os componentes do inbox SDK suportam feeds categorizados, CTAs por notificação, avatares de atores e filtragem baseada em tags.
+# Caixa de Entrada Rica In-App
 
-## Filtragem por tag
+A caixa de entrada in-app suporta um payload de notificação rico, incluindo botões de ação, avatares de atores, redirecionamentos ao clicar e filtragem de tags baseada em tópicos — tudo configurado no momento do disparo por meio de chaves especiais prefixadas com `_` no campo `data`.
 
-Filtre por tag de tópico do workflow usando a propriedade `tag`:
+## Ator (quem causou a notificação)
+
+Passe os metadados do ator usando a chave `_actor` no payload `data` do disparo para mostrar quem iniciou o evento:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'comment.added',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _actor: {
+      name: 'Sarah Chen',
+      avatar: 'https://cdn.example.com/avatars/sarah.jpg',
+      id: 'user_sarah',
+    },
+    commentPreview: 'Looks good to me!',
+  },
+});
+```
+
+O ator é renderizado como um avatar com nome no feed do inbox ("Sarah Chen comentou…"). Todos os três campos do ator são opcionais.
+
+| Campo de `_actor` | Tipo   | Descrição                                         |
+| :---------------- | :----- | :------------------------------------------------ |
+| `name`            | string | Nome de exibição exibido ao lado da notificação   |
+| `avatar`          | string | URL para a imagem do avatar                       |
+| `id`              | string | ID externo do ator (para links/redirecionamentos) |
+
+## Botões de Ação
+
+Inclua até **2 botões de ação** usando a chave `_actions` no payload `data` do disparo:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'approval.requested',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _actions: [
+      { label: 'Approve', url: '/api/approve/req_123', variant: 'primary' },
+      { label: 'Decline', url: '/api/decline/req_123', variant: 'secondary' },
+    ],
+    requestId: 'req_123',
+  },
+});
+```
+
+| Campo de `_actions` | Tipo                         | Descrição                                    |
+| :------------------ | :--------------------------- | :------------------------------------------- |
+| `label`             | string                       | Texto do botão (máx. 50 caracteres)          |
+| `url`               | string                       | URL da ação — relativa (sua app) ou absoluta |
+| `variant`           | `'primary'` \| `'secondary'` | Estilo do botão (o padrão é `'primary'`)     |
+
+<Callout type="info">
+  Apenas as 2 primeiras ações são renderizadas — itens adicionais são ignorados silenciosamente.
+</Callout>
+
+## Redirecionamento ao Clicar
+
+Controle para onde a notificação navega quando é clicada usando `_redirect`:
+
+```ts
+data: {
+  _redirect: {
+    url: '/orders/ord_789',
+    target: '_self',   // '_self' (padrão) ou '_blank'
+  },
+}
+```
+
+Ou como uma string simples para navegação direta:
+
+```ts
+data: {
+  _redirect: '/orders/ord_789',
+}
+```
+
+## Filtragem por Tag
+
+As tags são originadas a partir do **nome do tópico do workflow** — atribua um tópico a um workflow no painel de controle e todas as notificações desse workflow carregarão esse tópico como uma tag.
+
+### Filtragem por Tag no React SDK
+
+No React SDK, o componente `NotificationInbox` filtra as notificações no lado do cliente usando a propriedade `tag`:
 
 ```tsx
 <NotificationInbox tag="billing" />
 ```
 
-Crie uma interface de abas personalizada renderizando vários feeds ou alternando a propriedade `tag`:
+Construa uma interface de abas personalizada passando um valor de estado para a propriedade `tag`:
 
 ```tsx
-const [tab, setTab] = useState<string | undefined>(undefined);
+const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
 
-<button onClick={() => setTab(undefined)}>All</button>
-<button onClick={() => setTab('billing')}>Billing</button>
-<NotificationInbox tag={tab} />
+<>
+  <button onClick={() => setActiveTag(undefined)}>All</button>
+  <button onClick={() => setActiveTag('billing')}>Billing</button>
+  <button onClick={() => setActiveTag('mentions')}>Mentions</button>
+  <NotificationInbox tag={activeTag} />
+</>;
 ```
 
-Atribua tags nos workflows no painel ou via [workflow-as-code](/docs/sdk/workflow/workflow-as-code). Os filtros mapeiam para `GET /v1/sdk/notifications?tag=...`.
+### Filtragem na API do SDK Bruta e no SDK JS Headless
 
-## Botões de ação
+Para integrações personalizadas sem interface gráfica (headless), as tags podem ser filtradas no lado do servidor:
 
-Inclua ações em dados de trigger ou saída de template do workflow:
+- **API do SDK Bruta**: Consulte o endpoint com o parâmetro de consulta `tag` ou `tags`:
+  ```http
+  GET /v1/sdk/notifications?subscriberExternalId=user_42&tag=billing
+  ```
+- **SDK JS Headless**: Passe a opção de array `tags`:
+  ```ts
+  await nexus.notifications.refetch({ tags: ['billing'] });
+  ```
 
-```json
-{
-  "actions": [
-    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
-    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
-  ]
-}
-```
+## Estados do Ciclo de Vida da Notificação
 
-As ações são renderizadas como botões clicáveis no item do inbox. As URLs podem ser relativas (seu aplicativo gerencia o roteamento) ou endpoints de API absolutos.
+| Estado       | Significado                                                                   |
+| :----------- | :---------------------------------------------------------------------------- |
+| **Unread**   | Entregue, não aberta — incrementa a contagem de emblemas (badge) de não lidas |
+| **Read**     | O usuário clicou ou a marcou explicitamente como lida                         |
+| **Archived** | Ocultada do feed ativo — ainda pode ser recuperada                            |
+| **Seen**     | O SDK renderizou o item na janela de visualização (viewport)                  |
 
-## Suporte a atores
+Sincronização entre dispositivos: marcar uma notificação como lida em um dispositivo limpa o emblema (badge) em todos os outros lugares por meio de transmissão via WebSocket.
 
-Passe metadatos do ator no trigger para mostrar quem causou a notificação:
+## Acesso pelo SDK Headless
 
 ```ts
-await nexus.workflows.trigger({
-  workflowName: "comment.added",
-  recipients: [{ externalId: "user_42" }],
-  data: {
-    actor: {
-      name: "Sarah Chen",
-      avatarUrl: "https://cdn.example.com/sarah.jpg",
-    },
-    commentPreview: "Looks good to me!",
-  },
-});
+// Buscar com filtro de tag
+await nexus.notifications.refetch({ tags: ['billing'] });
+
+// Carregar próxima página
+await nexus.notifications.loadMore({ tags: ['mentions'] });
+
+// Marcar ações
+await nexus.notifications.markRead(notificationId);
+await nexus.notifications.markAllRead();
+await nexus.notifications.archive(notificationId);
 ```
 
-Renderiza como "Sarah Chen comentou..." com o avatar no feed.
-
-## Ciclo de vida da notificação
-
-| Estado   | Significado                          |
-| -------- | ------------------------------------ |
-| Unread   | Entregue, não aberta                 |
-| Read     | O usuário clicou ou marcou como lida |
-| Archived | Oculto do feed ativo                 |
-| Seen     | (SDK) rolado no feed                 |
-
-Sincronização multidispositivo: marcar como lida em um dispositivo limpa os badges em todos os lugares via WebSocket.
-
-## Acesso Headless (JS SDK)
-
-```ts
-await nexus.notifications.refetch({ tags: ["billing"] });
-await nexus.notifications.loadMore({ tags: ["mention"] });
-```
-
-Crie uma UI totalmente personalizada com [`@nexus-signal/js`](/docs/sdk/frontend/js) enquanto o Nexus gerencia o WebSocket + estado da API.
+Construa interfaces totalmente personalizadas com [`@nexus-signal/js`](/docs/sdk/frontend/js) enquanto o Nexus gerencia o estado do WebSocket.
 
 ## Relacionado
 
 - [React SDK](/docs/sdk/frontend/react)
-- [Headless JS SDK](/docs/sdk/frontend/js)
+- [SDK JS Headless](/docs/sdk/frontend/js)
 - [API de SDK](/docs/api/sdk)

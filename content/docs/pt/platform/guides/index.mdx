@@ -3,23 +3,68 @@ title: Guias
 description: Guias passo a passo para tarefas de integração comuns no Nexus Signal.
 ---
 
-Passos práticos e tutoriais além do início rápido.
+# Guias
+
+Tutoriais e passos práticos além do início rápido.
+
+## Primeiros Passos
 
 <Cards>
-  <Card title="Primeiro fluxo de trabalho" href="/docs/platform/guides/first-workflow" description="Construa um fluxo de trabalho multicanal do zero." />
-  <Card title="Lista de verificação de produção" href="/docs/platform/guides/production-checklist" description="O que fazer antes de alternar para as chaves de Produção." />
+  <Card
+    title="Primeiro workflow"
+    href="/docs/platform/guides/first-workflow"
+    description="Construa um fluxo de trabalho multicanal do zero."
+  />
+  <Card
+    title="Envio em leque de objetos"
+    href="/docs/platform/guides/object-fanout"
+    description="Notifique todos que estão acompanhando uma entidade."
+  />
+  <Card
+    title="Primeiro broadcast"
+    href="/docs/platform/guides/first-broadcast"
+    description="Envie para uma audiência a partir do painel de controle."
+  />
+  <Card
+    title="B2B multi-tenant"
+    href="/docs/platform/guides/b2b-multi-tenant"
+    description="Configure marca própria (white-label) por cliente."
+  />
+  <Card
+    title="Checklist de produção"
+    href="/docs/platform/guides/production-checklist"
+    description="O que fazer antes de alternar para as chaves de Produção."
+  />
 </Cards>
 
-## Antes da produção
+## Escolha Seu Caminho
+
+| Objetivo                                                          | Comece por aqui                                                  |
+| :---------------------------------------------------------------- | :--------------------------------------------------------------- |
+| Notificações transacionais a partir do código                     | [Primeiro workflow](/docs/platform/guides/first-workflow)        |
+| "Notificar todos os observadores" sem consultas ao banco de dados | [Envio em leque de objetos](/docs/platform/guides/object-fanout) |
+| Comunicado de produto sem precisar implantar código               | [Primeiro broadcast](/docs/platform/guides/first-broadcast)      |
+| Cada cliente com e-mails personalizados com sua própria marca     | [B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)       |
+| Controle de versão de definições de workflows                     | [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)          |
+| Automatizar a partir do CI/CD                                     | [CLI](/docs/sdk/devtools/cli)                                    |
+
+## Antes da Produção
 
 <Accordions type="single">
   <Accordion title="Já testei em Desenvolvimento?">
-    Use o ambiente de Desenvolvimento e o simulador sandbox antes de conectar suas chaves de provedores de Produção.
+    Use o ambiente de Desenvolvimento e o simulador sandbox antes de conectar suas chaves de
+    provedores de Produção.
   </Accordion>
-  <Accordion title="Minhas credenciais de provedor estão apenas em Produção?">
-    O ambiente de Homologação pode espelhar a Produção, mas nunca reutilize chaves de Produção em arquivos locais `.env` confirmados no git.
+  <Accordion title="Minhas credenciais de provedores estão apenas em Produção?">
+    O ambiente de Homologação (Staging) pode espelhar a Produção, mas nunca reutilize chaves de
+    Produção em arquivos locais `.env` confirmados no git.
   </Accordion>
   <Accordion title="O HMAC é gerado no lado do servidor?">
-    As sessões do SDK do React precisam de um HMAC gerado dinamicamente a partir do seu backend — consulte [Autenticação](/docs/platform/getting-started/authentication).
+    As sessões do SDK do cliente precisam de um HMAC gerado dinamicamente a partir do seu backend —
+    consulte [Autenticação](/docs/platform/getting-started/authentication).
+  </Accordion>
+  <Accordion title="Testei o envio em leque de objetos e broadcasts?">
+    Se estiver usando recursos de mensagens de produto, verifique a resolução de audiências e as
+    suscrições de objetos no ambiente de Staging primeiro.
   </Accordion>
 </Accordions>
