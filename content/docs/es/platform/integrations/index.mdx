@@ -1,39 +1,56 @@
 ---
 title: Integraciones
-description: Conecta tus proveedores de email, SMS, push, mensajería e IA a Nexus Signal.
+description: Conecta tus propios proveedores de email, SMS, push, webhook, chat e IA a Nexus Signal.
 ---
 
-Nexus Signal se integra con **tus cuentas de proveedor existentes**. Configura las claves una vez en el hub **Integraciones** del dashboard.
+Nexus actúa como un controlador de enrutamiento que se sitúa delante de **tus propias cuentas de proveedor**. Configura las credenciales de la API una vez en el hub de **Integrations** del panel de control, y Nexus gestiona el enrutamiento, el failover, las plantillas y el seguimiento de entregas.
 
-<Cards>
-  <Card title="Catálogo de proveedores" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend y más." />
-  <Card title="Canales de mensajería" href="/docs/platform/integrations/messaging-channels" description="Slack, Discord, Teams — webhooks por suscriptor." />
-  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Endpoints HTTP personalizados para cualquier payload." />
-</Cards>
+---
 
-## Capas de integración
+## Capas de integración y proveedores
 
-| Capa | Ejemplos |
-|------|----------|
-| Email | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
-| SMS | Twilio, Vonage, Plivo, Sinch |
-| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
-| Push | Firebase FCM, Apple APNs |
-| Mensajería | Slack, Discord, Microsoft Teams |
-| Webhook | Endpoints HTTP personalizados |
-| IA | OpenAI, Anthropic (generación de contenido) |
+| Capa         | Clave                              | Proveedores admitidos                           | Descripción                                                |
+| :----------- | :--------------------------------- | :---------------------------------------------- | :--------------------------------------------------------- |
+| **Email**    | `email`                            | SendGrid, Resend, Amazon SES, Postmark, Mailgun | Emails transaccionales y de marketing                      |
+| **SMS**      | `sms`                              | Twilio, Vonage, Plivo, Sinch                    | Alertas SMS rápidas y OTPs                                 |
+| **WhatsApp** | `whatsapp`                         | Meta Cloud API, Twilio WhatsApp, Infobip        | Comunicaciones ricas B2C por chat                          |
+| **Push**     | `push`                             | Firebase Cloud Messaging (FCM), Apple APNs      | Notificaciones push web y móvil                            |
+| **Chat**     | `slack` \| `discord` \| `ms_teams` | Slack, Discord, Microsoft Teams                 | Actualizaciones directas en el workspace de chat           |
+| **Webhooks** | `webhook`                          | Destinos HTTP personalizados                    | Webhooks directos backend-a-backend                        |
+| **IA**       | `openai_ai` \| `anthropic_ai`      | OpenAI, Anthropic                               | Generación de contenido y nodos LLM en tiempo de ejecución |
 
-## Configuración de pesos
+---
 
-Cuando existen varios proveedores en una capa, define los pesos de tráfico (deben sumar 100):
+## Configuración de pesos (Enrutamiento A/B)
+
+Si configuras múltiples integraciones para una sola capa, puedes dividir el tráfico entre ellas estableciendo pesos personalizados:
 
 ```http
 PUT /v1/integrations/weights/email
-{ "sendgrid": 70, "resend": 30 }
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "weights": {
+    "sendgrid": 70,
+    "resend": 30
+  }
+}
 ```
 
-Capas: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+- **Capas admitidas**: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`.
+- **Validación**: Todos los pesos dentro de una capa deben sumar exactamente **100**.
 
-<Callout type="info">
-Consulta [BYOP](/docs/platform/concepts/byop) para entender por qué Nexus nunca aplica markup sobre los costos del proveedor.
-</Callout>
+---
+
+## Seguridad
+
+Todas las claves de API, tokens y secretos de cliente de los proveedores se cifran en el servidor utilizando AES-256-GCM antes de escribirse en la base de datos. El descifrado ocurre únicamente a nivel de memoria en los threads del worker al despachar entregas salientes.
+
+---
+
+## Relacionado
+
+- [BYOP (Conceptos)](/docs/platform/concepts/byop) — detalles de precios sin margen
+- [Catálogo de credenciales del proveedor](/docs/platform/integrations/providers)
+- [Configuración de webhooks](/docs/platform/integrations/webhooks)

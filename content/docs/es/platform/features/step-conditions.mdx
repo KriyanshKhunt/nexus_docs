@@ -1,9 +1,24 @@
 ---
 title: Condiciones de Paso
-description: Reglas booleanas en cualquier nodo del flujo de trabajo — envía SMS solo si el monto > 100, omite pasos los fines de semana y más.
+description: Reglas booleanas en cualquier nodo de workflow — envía SMS solo cuando el monto > 100, omite pasos para locales específicos y más.
 ---
 
-Las **condiciones de paso** te permiten adjuntar reglas de filtrado a cualquier nodo en el lienzo del flujo de trabajo. Si las condiciones se evalúan como falsas, el paso se omite y la ejecución continúa con el siguiente nodo.
+Las **condiciones de paso** te permiten adjuntar reglas de filtrado a cualquier nodo en el lienzo de workflow. Si las condiciones se evalúan como `false`, el paso se **omite** (skipped) y la ejecución continúa hacia el siguiente nodo — no se lanza ningún error ni se produce ningún reintento.
+
+---
+
+## Cómo funcionan las condiciones
+
+Cuando el motor de workflows llega a un paso que tiene condiciones configuradas, evalúa todas las reglas con respecto al contexto de ejecución en vivo **antes** de ejecutar el paso. Los pasos omitidos se registran como `CONDITION_SKIPPED` en el árbol del ciclo de vida de ejecución.
+
+```mermaid
+flowchart LR
+  Trigger --> Eval{Evaluar condiciones}
+  Eval -->|true| Execute[Ejecutar paso]
+  Eval -->|false| Skip[Registrar CONDITION_SKIPPED → siguiente paso]
+```
+
+---
 
 ## Estructura de las condiciones
 
@@ -11,46 +26,108 @@ Las **condiciones de paso** te permiten adjuntar reglas de filtrado a cualquier 
 {
   "logic": "AND",
   "rules": [
-    { "variable": "data.amount", "operator": "greater_than", "value": 100 },
+    { "variable": "data.amount", "operator": "greater_than", "value": 500 },
     { "variable": "subscriber.locale", "operator": "equals", "value": "en" }
   ]
 }
 ```
 
-Usa `"logic": "OR"` para que coincida con cualquier regla en lugar de todas ellas.
+- `logic`: `"AND"` (todas las reglas deben cumplirse) o `"OR"` (basta con que se cumpla una sola regla)
+- `rules`: Matriz de objetos de regla, cada uno con `variable`, `operator` y `value`
 
-## Variables compatibles
+---
 
-| Prefijo        | Ejemplos                                  |
-| -------------- | ----------------------------------------- |
-| `data.*`       | `data.orderTotal`, `data.plan`            |
-| `subscriber.*` | `subscriber.email`, `subscriber.locale`   |
-| `tenant.*`     | `tenant.name`, `tenant.properties.tier`   |
-| `object.*`     | `object.name`, `object.properties.status` |
+## Namespaces de variables compatibles
 
-## Operadores
+Las variables se resuelven a partir del contexto de ejecución en vivo en el momento en que se ejecuta el paso. Esto significa que los datos enriched por pasos anteriores (por ejemplo, el output de un HTTP Fetch) están disponibles.
 
-`equals`, `not_equals`, `greater_than`, `greater_than_or_equals`, `less_than`, `less_than_or_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `in_list`, `not_in_list`, `regex_match`, `is_true`, `is_false`
+| Namespace      | Variables de ejemplo                                             | Origen                                                        |
+| :------------- | :--------------------------------------------------------------- | :------------------------------------------------------------ |
+| `data.*`       | `data.amount`, `data.plan`, `data.status`                        | Payload del trigger + output de HTTP Fetch / AI Node          |
+| `subscriber.*` | `subscriber.email`, `subscriber.locale`, `subscriber.externalId` | Registro del suscriptor                                       |
+| `env.*`        | `env.name`                                                       | Nombre del entorno actual (`development`, `production`, etc.) |
 
-## Uso en el lienzo (Canvas)
+<Callout type="warn">
+  Únicamente se admiten `data.*`, `subscriber.*` y `env.*`. Las variables como `tenant.*` o
+  `object.*` no se resuelven en las condiciones de paso.
+</Callout>
 
-Haz clic en cualquier nodo → panel **Conditions** (Condiciones) → añade tus reglas. Los pasos omitidos registran `CONDITION_SKIPPED` en el árbol del ciclo de vida de ejecución.
+---
 
-## Ejemplo: solo SMS de alto valor
+## Operadores compatibles
+
+| Operador                 | Funciona en         | Descripción                                                   |
+| :----------------------- | :------------------ | :------------------------------------------------------------ |
+| `equals`                 | String, number      | Igualdad estricta de cadenas después de la coerción           |
+| `not_equals`             | String, number      | Negación de `equals`                                          |
+| `greater_than`           | Number              | Comparación `>`                                               |
+| `greater_than_or_equals` | Number              | Comparación `>=`                                              |
+| `less_than`              | Number              | Comparación `<`                                               |
+| `less_than_or_equals`    | Number              | Comparación `<=`                                              |
+| `contains`               | String              | Coincidencia de subcadena                                     |
+| `not_contains`           | String              | Coincidencia de subcadena invertida                           |
+| `starts_with`            | String              | Coincidencia de prefijo                                       |
+| `ends_with`              | String              | Coincidencia de sufijo                                        |
+| `is_empty`               | String, array, null | `null`, `""` o `[]`                                           |
+| `is_not_empty`           | String, array, null | No vacío                                                      |
+| `in_list`                | String              | El valor está en una lista separada por comas o en una matriz |
+| `not_in_list`            | String              | El valor no está en la lista                                  |
+| `regex_match`            | String              | Prueba contra una expresión regular                           |
+| `is_true`                | Boolean             | `true`, `"true"` o `1`                                        |
+| `is_false`               | Boolean             | `false`, `"false"`, `0` o `null`                              |
+
+---
+
+## Uso en el lienzo
+
+1. Haz clic en cualquier nodo en el lienzo de workflow.
+2. Abre el panel de **Conditions** (Condiciones) en la barra lateral derecha.
+3. Añade reglas utilizando el selector de campos, el menú desplegable de operadores y la entrada de valor.
+4. Elige la lógica **AND** o **OR**.
+
+Las reglas surten efecto en el próximo trigger del workflow — sin necesidad de realizar un nuevo despliegue.
+
+---
+
+## Uso de condiciones con datos dinámicos
+
+Después de un paso de **HTTP Fetch** o **AI Node**, su output está disponible en `data.*` para las condiciones subsiguientes. Por ejemplo, si un paso de HTTP Fetch utiliza `responseKey: "invoice"`, puedes condicionar un paso de email según `data.invoice.status`:
 
 ```json
 {
   "logic": "AND",
-  "rules": [
-    { "variable": "data.amount", "operator": "greater_than", "value": 500 }
-  ]
+  "rules": [{ "variable": "data.invoice.status", "operator": "equals", "value": "overdue" }]
 }
 ```
 
-Adjúntalo a un nodo de canal SMS — los pedidos de bajo valor omitirán el SMS y procederán al siguiente paso.
+---
+
+## Ejemplo de Workflow-as-code
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('invoice.reminder')
+  .addChannel('EMAIL')
+  .addChannel('SMS', {
+    conditions: {
+      logic: 'AND',
+      rules: [
+        { variable: 'data.amount', operator: 'greater_than', value: 500 },
+        { variable: 'subscriber.locale', operator: 'equals', value: 'en' },
+      ],
+    },
+  })
+  .toDefinition();
+```
+
+La opción `conditions` está disponible en todos los métodos de los constructores de pasos: `addChannel`, `addDelay`, `addDigest`, `addThrottle`, `addHttpFetch` y `addAiNode`.
+
+---
 
 ## Relacionado
 
-- [Concepto de Workflows](/docs/platform/concepts/workflows)
-- [Nodo de Petición HTTP](/docs/platform/features/http-fetch-node)
-- [Nodo de Flujo de IA](/docs/platform/features/ai-workflow-node)
+- [Workflows](/docs/platform/concepts/workflows)
+- [Nodo HTTP Fetch](/docs/platform/features/http-fetch-node)
+- [Nodo de workflow de IA](/docs/platform/features/ai-workflow-node)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

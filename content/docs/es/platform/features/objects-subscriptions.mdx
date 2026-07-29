@@ -1,69 +1,173 @@
 ---
 title: Objetos y Suscripciones
-description: Envía notificaciones en abanico a todos los que observan un proyecto, issue, pedido o canal — sin resolver destinatarios en tu base de datos.
+description: Envía notificaciones en abanico (fan-out) a todos los que observan un proyecto, issue, pedido o canal — sin consultar los destinatarios en tu base de datos.
 ---
 
-Los **objetos** son entidades de primer nivel (como proyectos, documentos, pedidos, canales) a las cuales los usuarios pueden suscribirse. Al disparar un flujo de trabajo con un objeto como destinatario, Nexus realiza automáticamente un envío en abanico a todos los suscriptores.
+Los **objetos** (Objects) son entidades de primer nivel en Nexus — piensa en proyectos, documentos, pedidos o cualquier recurso al que tus usuarios se suscriban. Al disparar un workflow con un objeto como destinatario, Nexus resuelve automáticamente todos los suscriptores y ejecuta el workflow para cada uno de ellos.
 
-## Por qué son importantes los objetos
+---
 
-Sin objetos, cada disparo (trigger) requiere que tu backend consulte "¿quién está observando esto?" y pase una lista completa de destinatarios. Los objetos trasladan esa relación directamente a Nexus.
+## El problema que resuelven los objetos
+
+Sin objetos, cada trigger de envío en abanico requiere que tu backend:
+
+1. Consulte tu base de datos para responder a "¿quién está observando este recurso?".
+2. Construya una lista de IDs de destinatarios.
+3. Pase esa lista completa en cada llamada de trigger.
+
+Los objetos trasladan esa relación directamente a Nexus, de modo que un único trigger realiza la entrega a todos los observadores automáticamente.
 
 ```mermaid
 flowchart LR
-  App[Your app] -->|trigger on object| Nexus[Nexus API]
-  Nexus -->|resolve subscribers| DB[(ObjectSubscription)]
-  DB --> W[Workflow engine]
-  W --> U1[User A]
-  W --> U2[User B]
-  W --> U3[User C]
+  App[Tu aplicación] -->|trigger sobre el objeto| Nexus[API de Nexus]
+  Nexus -->|resolver suscriptores| DB[(Tabla ObjectSubscription)]
+  DB --> W[Motor de workflows]
+  W --> U1[Notificación al Usuario A]
+  W --> U2[Notificación al Usuario B]
+  W --> U3[Notificación al Usuario C]
 ```
 
-## Crear un objeto
+---
 
-Desde el panel en la sección **Objects** (Objetos), o a través de la API/SDK:
+## Conceptos
+
+| Término                        | Descripción                                                                   |
+| :----------------------------- | :---------------------------------------------------------------------------- |
+| **Colección (Collection)**     | Un grupo de tipo lógico (por ejemplo, `"projects"`, `"orders"`, `"channels"`) |
+| **Objeto (Object)**            | Una sola entidad dentro de una colección, identificada por `externalId`       |
+| **Suscripción (Subscription)** | Un mapeo de un suscriptor a un objeto con propiedades opcionales              |
+
+---
+
+## Crear o actualizar un objeto
+
+Los objetos se crean o actualizan mediante upsert — llamar al método `set` sobre un `externalId` existente actualiza sus campos.
+
+**SDK de Node:**
 
 ```ts
 await nexus.objects.set({
-  collection: "projects",
-  externalId: "proj_alpha",
-  name: "Project Alpha",
-  properties: { status: "active", owner: "team-eng" },
+  collection: 'projects',
+  externalId: 'proj_alpha',
+  name: 'Project Alpha',
+  properties: { status: 'active', owner: 'team-eng' },
 });
 ```
 
-Las propiedades de los objetos están disponibles en las plantillas como `{{ object.name }}`, `{{ object.properties.status }}`.
+**API de Gestión (lado del servidor, clave `sk_*`):**
+
+```http
+PUT /v1/management/objects/projects/proj_alpha
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "owner": "team-eng" }
+}
+```
+
+<Callout type="info">
+  **Nota sobre las variables**: Debido a que los objetos se resuelven y eliminan duplicados a
+  perfiles de suscriptores sin procesar en el momento del trigger, las propiedades específicas de
+  los objetos no están disponibles automáticamente dentro de los contextos de las variables de la
+  plantilla. Para mostrar los detalles del objeto (como el nombre o el estado de un proyecto) en tus
+  notificaciones, pásalos en el payload `data` de la solicitud del trigger.
+</Callout>
+
+---
 
 ## Gestionar suscripciones
 
-```ts
-await nexus.objects.addSubscriptions("projects", "proj_alpha", {
-  recipients: ["user_alice", "user_bob"],
-});
+**Añadir suscriptores a un objeto:**
 
-await nexus.objects.removeSubscriptions("projects", "proj_alpha", ["user_bob"]);
+```ts
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
+  recipients: ['user_alice', 'user_bob'],
+  // o: recipients: [{ externalId: 'user_alice' }]
+});
 ```
 
-## Disparar con envío en abanico (Fan-out) de objetos
+**Eliminar suscriptores de un objeto:**
 
-Pasa el objeto en lugar de los usuarios individuales:
+```ts
+await nexus.objects.removeSubscriptions('projects', 'proj_alpha', ['user_bob']);
+```
+
+<Callout type="info">
+  Los destinatarios ya deben existir como **suscriptores** en el mismo entorno antes de que puedan
+  añadirse a un objeto. Utiliza `nexus.subscribers.identify()` primero si aún no los has creado.
+</Callout>
+
+El campo `recipients` acepta cadenas simples `externalId` o bien objetos con la estructura `{ externalId: string }`.
+
+---
+
+## Disparar con envío en abanico (fan-out) de objetos
+
+Pasa un destinatario de objeto utilizando `{ collection, id }` en tu llamada del trigger:
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "project.updated",
-  recipients: [{ collection: "projects", id: "proj_alpha" }],
-  data: { changeType: "milestone_completed" },
+  workflowName: 'project.updated',
+  recipients: [{ collection: 'projects', id: 'proj_alpha' }],
+  data: { changeType: 'milestone_completed', updatedBy: 'sarah' },
 });
 ```
 
-El worker resuelve todos los suscriptores suscritos y ejecuta el flujo de trabajo para cada uno de ellos.
+El worker del workflow resuelve todos los suscriptores activos de `proj_alpha` y ejecuta un workflow por suscriptor. El contexto del suscriptor (`subscriber.email`, `subscriber.locale`, etc.) está disponible en las plantillas de forma normal.
+
+---
+
+## Mezclar objetos y suscriptores
+
+Una sola llamada de trigger puede incluir tanto objetos como suscriptores individuales:
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'project.updated',
+  recipients: [
+    { collection: 'projects', id: 'proj_alpha' }, // envío en abanico a todos los observadores
+    { externalId: 'admin_user' }, // suscriptor individual explícito
+  ],
+  data: { changeType: 'status_change' },
+});
+```
+
+---
+
+## Propiedades de suscripción por objeto
+
+Al añadir suscriptores, puedes almacenar metadatos a nivel de suscripción:
+
+```ts
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
+  recipients: ['user_alice'],
+  properties: { role: 'owner', notifyOnAll: true },
+});
+```
+
+---
 
 ## Preferencias por objeto
 
-Los suscriptores pueden silenciar un objeto específico mientras mantienen otros activos. Las preferencias se estructuran dentro del JSON de `preferences` de cada suscriptor bajo las claves correspondientes al objeto.
+Los suscriptores pueden silenciar un objeto específico mientras mantienen activas las notificaciones para otros. La preferencia se delimita bajo la clave del objeto en la matriz de preferencias del suscriptor — sin necesidad de realizar cambios en el código de tu lado.
+
+---
+
+## Límites de la API
+
+| Límite                                                   | Valor                 |
+| :------------------------------------------------------- | :-------------------- |
+| Máximo de objetos por entorno                            | Configurable por plan |
+| Máximo de suscripciones por objeto                       | Configurable por plan |
+| Máximo de destinatarios por llamada a `addSubscriptions` | 100                   |
+
+---
 
 ## Relacionado
 
-- [Guía de notificaciones en abanico de objetos](/docs/platform/guides/object-fanout)
+- [Guía de envío en abanico de objetos](/docs/platform/guides/object-fanout)
 - [API de Objetos](/docs/api/objects)
-- [Objetos en el SDK de Node](/docs/sdk/backend/node)
+- [SDK de Node](/docs/sdk/backend/node)
+- [Broadcasts](/docs/platform/features/broadcasts)

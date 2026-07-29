@@ -1,65 +1,76 @@
 ---
-title: Catálogo de proveedores
-description: Lista completa de proveedores BYOP soportados por capa de canal.
+title: Catálogo de Credenciales del Proveedor
+description: Lista completa de los canales BYOP (Bring Your Own Provider) admitidos, los IDs de proveedor y las credenciales requeridas.
 ---
 
-## Email
+Nexus Signal funciona con tus propias conexiones de operador. Conecta cualquiera de los proveedores admitidos a continuación en **Settings → Integrations** en el panel de control. Todas las claves se cifran en reposo usando AES-256-GCM.
 
-| ID | Proveedor |
-|----|-----------|
-| `sendgrid` | SendGrid |
-| `resend` | Resend |
-| `amazon_ses` | Amazon SES |
-| `postmark` | Postmark |
-| `mailgun` | Mailgun |
+---
 
-## SMS
+## Capa de integración de email
 
-| ID | Proveedor |
-|----|-----------|
-| `twilio` | Twilio |
-| `vonage` | Vonage |
-| `plivo` | Plivo |
-| `sinch` | Sinch |
+| ID de proveedor | Etiqueta del proveedor | Credenciales requeridas                              | Webhooks de telemetría |
+| :-------------- | :--------------------- | :--------------------------------------------------- | :--------------------- |
+| `sendgrid`      | SendGrid               | `apiKey` (Secreto)                                   | ✅ Admitido            |
+| `resend`        | Resend                 | `apiKey` (Secreto)                                   | ✅ Admitido            |
+| `ses`           | Amazon SES             | `accessKeyId`, `secretAccessKey` (Secreto), `region` | —                      |
+| `postmark`      | Postmark               | `serverToken` (Secreto)                              | ✅ Admitido            |
+| `mailgun`       | Mailgun                | `apiKey` (Secreto), `domain`                         | —                      |
 
-## WhatsApp
+---
 
-| ID | Proveedor |
-|----|-----------|
-| `meta_whatsapp` | Meta Cloud Business API |
-| `twilio_whatsapp` | Twilio WhatsApp Gateway |
-| `infobip_whatsapp` | Infobip |
+## Capa de integración de SMS
 
-## Push
+| ID de proveedor | Etiqueta del proveedor | Credenciales requeridas               | Webhooks de telemetría |
+| :-------------- | :--------------------- | :------------------------------------ | :--------------------- |
+| `twilio`        | Twilio                 | `accountSid`, `authToken` (Secreto)   | ✅ Admitido            |
+| `vonage`        | Vonage                 | `apiKey`, `apiSecret` (Secreto)       | —                      |
+| `plivo`         | Plivo                  | `authId`, `authToken` (Secreto)       | —                      |
+| `sinch`         | Sinch                  | `servicePlanId`, `apiToken` (Secreto) | —                      |
 
-| ID | Proveedor |
-|----|-----------|
-| `fcm` | Firebase Cloud Messaging |
-| `apns` | Apple Push Notification Service |
+---
 
-## Mensajería
+## Capa de integración de WhatsApp
 
-| ID | Proveedor |
-|----|-----------|
-| `slack` | Slack Incoming Webhook |
-| `discord` | Discord Webhook |
-| `ms_teams` | Microsoft Teams Incoming Webhook |
+| ID de proveedor   | Etiqueta del proveedor  | Credenciales requeridas                  | Webhooks de telemetría |
+| :---------------- | :---------------------- | :--------------------------------------- | :--------------------- |
+| `meta_whatsapp`   | Meta Cloud Business API | `phoneNumberId`, `accessToken` (Secreto) | ✅ Admitido            |
+| `twilio_whatsapp` | Twilio WhatsApp Gateway | `accountSid`, `authToken` (Secreto)      | ✅ Admitido            |
+| `infobip`         | Infobip WhatsApp        | `baseUrl`, `apiKey` (Secreto), `sender`  | —                      |
 
-## Webhook
+---
 
-| ID | Proveedor |
-|----|-----------|
-| `webhook_custom` | Endpoint HTTP personalizado |
+## Capa de notificaciones push
 
-## IA (generación de contenido)
+| ID de proveedor | Etiqueta del proveedor         | Credenciales requeridas                                                      |
+| :-------------- | :----------------------------- | :--------------------------------------------------------------------------- |
+| `fcm`           | Firebase Cloud Messaging       | `projectId`, `clientEmail`, `privateKey` (Secreto)                           |
+| `apns`          | Apple Push Notification (APNs) | `keyId`, `teamId`, `privateKey` (Secreto, formato `.p8`), `bundleId` (Topic) |
 
-| ID | Proveedor |
-|----|-----------|
-| `openai_ai` | OpenAI |
-| `anthropic_ai` | Anthropic |
+---
 
-## Configuración
+## Capa de chat y webhooks
 
-Cada proveedor acepta credenciales mediante el modal de Integraciones (claves API, URLs de webhook, IDs de remitente). Las claves se cifran en reposo.
+| ID de proveedor  | Etiqueta del proveedor | Credenciales requeridas                                                                               | Descripción               |
+| :--------------- | :--------------------- | :---------------------------------------------------------------------------------------------------- | :------------------------ |
+| `slack`          | Slack Webhook          | `webhookUrl` (Secreto)                                                                                | Webhook del canal destino |
+| `discord`        | Discord Webhook        | `webhookUrl` (Secreto)                                                                                | Webhook del canal destino |
+| `ms_teams`       | MS Teams Webhook       | `webhookUrl` (Secreto)                                                                                | Webhook del canal destino |
+| `webhook_custom` | Webhook personalizado  | `url`, `authType`, `authToken` (Secreto), `username`, `password` (Secreto), `signingSecret` (Secreto) | Endpoints HTTP destino    |
 
-Define el costo por mensaje para [analítica de costos](/docs/platform/features/cost-analytics) en **Settings → Provider costs**.
+---
+
+## IA (generación de contenido y workflows)
+
+| ID de proveedor | Etiqueta del proveedor | Credenciales requeridas | Modelos admitidos         |
+| :-------------- | :--------------------- | :---------------------- | :------------------------ |
+| `openai_ai`     | OpenAI                 | `apiKey` (Secreto)      | `gpt-4o-mini`             |
+| `anthropic_ai`  | Anthropic (Claude)     | `apiKey` (Secreto)      | `claude-3-haiku-20240307` |
+
+---
+
+## Relacionado
+
+- [Enrutamiento ponderado](/docs/platform/integrations#weight-configuration) — dividir el tráfico entre múltiples proveedores
+- [Analíticas de costos](/docs/platform/features/cost-analytics) — asignar costos unitarios a los proveedores
+- [Webhooks de entrega](/docs/platform/integrations/webhooks) — verificar el estado de entrega

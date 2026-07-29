@@ -1,63 +1,99 @@
 ---
-title: Reducción de costos
-description: Supresión por presencia, pruebas en sandbox y enrutamiento ponderado para reducir el gasto en proveedores.
+title: Reducción de Costos
+description: Supresión por presencia, simulador sandbox y enrutamiento ponderado para optimizar y reducir el gasto en proveedores.
 ---
 
-Nexus Signal incluye varias funciones diseñadas para **reducir el gasto innecesario en proveedores** sin sacrificar la entregabilidad.
+Nexus incluye mecanismos de control de costos integrados diseñados para eliminar automáticamente el gasto innecesario en notificaciones.
 
-## Supresión por presencia
+---
 
-Cuando un suscriptor tiene una conexión **WebSocket activa** (está usando tu app en este momento), Nexus puede omitir canales externos costosos y entregar **solo in-app**.
+## Supresión por presencia (Presence Suppression)
 
-### Comportamiento predeterminado
+Enviar múltiples alertas externas (SMS, push) cuando un usuario ya está usando activamente tu aplicación es molesto para el usuario y un desperdicio del presupuesto del proveedor.
 
-En los nodos de canal, estos canales se suprimen cuando el usuario está online:
+Cuando un suscriptor tiene una conexión activa del SDK cliente (React, Angular o Headless JS), Nexus lo marca como **en línea (online)** y suprime los canales externos salientes, enrutando la notificación únicamente al **inbox in-app**.
 
-- Web Push
-- Mobile Push
-- SMS
-- WhatsApp
-
-**In-app** siempre entrega por WebSocket. Activa `suppressWhenOnline` en el nodo de canal para controlarlo explícitamente.
-
-### Cómo funciona
-
-1. El SDK de React mantiene un WebSocket con heartbeat
-2. Redis rastrea `presence:sub:{subscriberId}` (TTL de 45 s)
-3. El worker comprueba la presencia antes de despachar canales externos
-4. Las entregas omitidas registran `SKIPPED_BY_PREFERENCE` con el paso del ciclo de vida `PRESENCE_SUPPRESSION`
-
-**Resultado:** Sin SMS redundantes de $0.05 cuando el usuario ya está mirando tu app.
-
-## Modo sandbox (Development)
-
-En el entorno **Development**, las llamadas salientes a proveedores se reemplazan por un **simulador virtual**. Ves vistas previas de push, SMS y email en el dashboard sin gasto en APIs.
-
-Consulta [Modo sandbox](/docs/platform/features/sandbox).
-
-## Enrutamiento ponderado de proveedores
-
-Ejecuta varias cuentas de proveedor por canal y reparte el tráfico por porcentaje:
-
-```json
-{ "sendgrid": 70, "resend": 30 }
+```mermaid
+flowchart TD
+  Trigger[Disparar workflow] --> Check{¿Suscriptor en línea?}
+  Check -->|Sí| Suppress[Solo feed in-app]
+  Check -->|No| Dispatch[Email / SMS / Push / WhatsApp]
 ```
 
-Configúralo en **Integrations → Weight sliders**. El worker tira 1–100 y elige un proveedor — útil para migraciones graduales y distribución de carga.
+### Canales suprimibles
 
-## Failover con circuit breaker
+Por defecto, los siguientes canales se suprimen si el suscriptor está activo:
 
-Cuando un proveedor falla repetidamente (5 errores en 60 s), el circuito se abre y el tráfico se enruta a alternativas sanas o ramas de failover del flujo — evitando gasto desperdiciado en reintentos contra un endpoint caído.
+- Mobile Push (`MOBILE_PUSH`)
+- Web Push (`WEB_PUSH`)
+- SMS (`SMS`)
+- WhatsApp (`WHATSAPP`)
 
-## Impacto combinado
+Las notificaciones in-app nunca se suprimen y siempre se entregan a través de la conexión WebSocket.
 
-Los equipos suelen reducir el gasto mediante:
+### Cómo se rastrea la presencia
 
-1. Suprimir push/SMS redundantes para usuarios activos
-2. Probar en sandbox antes de envíos en producción
-3. Enrutar automáticamente lejos de proveedores con fallos
+1. El SDK del lado del cliente abre una conexión WebSocket y envía un ping de heartbeat a `/realtime` cada **40 segundos**.
+2. Redis almacena la clave de conexión `presence:sub:<subscriberId>` con un Time-To-Live (TTL) estricto de **45 segundos**.
+3. Antes de despachar un paso suprimible, el worker del workflow consulta Redis. Si la clave existe, el paso se omite.
+4. Las ejecuciones suprimidas se registran bajo el paso del ciclo de vida `PRESENCE_SUPPRESSION` con el estado `SKIPPED_BY_PREFERENCE`.
+
+<Callout type="info">
+  Puedes activar o desactivar esto por cada paso de canal en el editor de workflows usando la
+  casilla de verificación **Suppress when subscriber is online**, o en workflow-as-code
+  estableciendo `suppressWhenOnline` en las opciones.
+</Callout>
+
+---
+
+## Modo Sandbox (Desarrollo)
+
+Probar workflows de notificaciones con proveedores reales (por ejemplo, Twilio, SendGrid) genera costos transaccionales y corre el riesgo de enviar mensajes basura a usuarios reales.
+
+En el entorno de **Development**, Nexus aísla todos los canales externos utilizando un **Simulador Sandbox** virtual. Las llamadas a la API salientes se simulan (mocked), y el contenido generado, los payloads y los resultados de renderizado se almacenan directamente en tus logs de desarrollo.
+
+- Previsualiza los emails exactos, los payloads de SMS y los formatos JSON de WhatsApp en el panel de control.
+- No se requieren credenciales de API reales para las pruebas.
+- Consulta [Modo Sandbox](/docs/platform/features/sandbox) para la configuración.
+
+---
+
+## Enrutamiento ponderado de proveedores (Weighted Provider Routing)
+
+Distribuye el tráfico de entrega entre múltiples proveedores en la misma capa de canal (por ejemplo, 70% SendGrid, 30% Resend). Esto es útil para:
+
+- Dividir el gasto entre proveedores.
+- Migración gradual de proveedor.
+- Distribución del riesgo.
+
+**Actualizar los pesos de enrutamiento vía API:**
+
+```http
+PUT /v1/integrations/weights/:layer
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "weights": {
+    "sendgrid": 70,
+    "resend": 30
+  }
+}
+```
+
+- `:layer`: Debe ser uno de `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord` o `ms_teams`.
+- **Restricción**: La suma de todos los pesos de proveedores en una capa **debe ser exactamente 100**.
+
+---
+
+## Failover por circuit breaker
+
+Cuando un endpoint de proveedor rechaza solicitudes repetidamente (5 errores consecutivos en una ventana de 60 segundos), el circuit breaker del proveedor se abre (estado `OPEN`). El tráfico se redirige automáticamente a proveedores alternativos en la capa, evitando reintentos desperdiciados en endpoints de API caídos.
+
+---
 
 ## Relacionado
 
-- [Envío inteligente](/docs/platform/features/smart-send-time) — gasta mejor, no solo menos
-- [Analítica de costos](/docs/platform/features/cost-analytics) — mide lo que ahorras
+- [Smart send-time](/docs/platform/features/smart-send-time) — optimización de temporización
+- [Analíticas de costos](/docs/platform/features/cost-analytics) — medición de ahorros
+- [Digest y throttle](/docs/platform/features/digest-throttle) — reglas de anti-rebote

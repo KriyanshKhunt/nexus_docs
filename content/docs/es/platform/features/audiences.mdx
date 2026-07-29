@@ -1,48 +1,138 @@
 ---
 title: Audiencias y Segmentación
-description: Segmentos dinámicos de suscriptores con reglas de filtrado — objetivos de actualización automática para broadcasts y disparadores de flujos de trabajo.
+description: Segmentos dinámicos de suscriptores con reglas de filtrado — objetivos que se actualizan automáticamente para broadcasts y envíos programados.
 ---
 
-Las **audiencias** son segmentos dinámicos identificados por un nombre y definidos por reglas de filtrado. Los miembros se actualizan automáticamente a medida que cambian las propiedades del suscriptor, sin necesidad de mantenimiento manual de listas.
+Las **audiencias** (Audiences) son segmentos dinámicos y nombrados definidos por reglas de filtrado aplicadas a los campos del suscriptor. Los conteos de miembros se actualizan automáticamente a medida que cambian los datos del suscriptor — sin necesidad de un mantenimiento manual de la lista.
 
-## Reglas de filtrado
+---
 
-Construye segmentos desde el panel en la sección **Audiences** (Audiencias) o mediante la API:
+## Cómo funcionan las audiencias
+
+Las reglas de la audiencia se evalúan **en el momento del envío** (cuando se dispara un broadcast), no en el momento de la creación. Esto significa que un suscriptor que se une a tu plan `"growth"` hoy se incluirá en la audiencia coincidente cuando realices el envío mañana.
+
+```mermaid
+flowchart LR
+  D[Definir reglas] --> A[Audiencia guardada]
+  A -->|broadcast disparado| E[Reglas evaluadas con respecto a los datos del suscriptor en vivo]
+  E --> M[Suscriptores coincidentes reciben la notificación]
+```
+
+---
+
+## Campos filtrables
+
+Las reglas de la audiencia pueden filtrar por los siguientes campos de suscriptor:
+
+| Campo                | Tipo     | Valores de ejemplo     |
+| :------------------- | :------- | :--------------------- |
+| `email`              | string   | `"user@example.com"`   |
+| `phoneNumber`        | string   | `"+14155552671"`       |
+| `locale`             | string   | `"en"`, `"es"`, `"ja"` |
+| `timezone`           | string   | `"America/New_York"`   |
+| `globalUnsubscribed` | boolean  | `true`, `false`        |
+| `externalId`         | string   | `"user_42"`            |
+| `createdAt`          | datetime | Cadena ISO 8601        |
+
+<Callout type="warn">
+  Los campos personalizados de `properties` del suscriptor (por ejemplo, `properties.plan`) **no**
+  son directamente filtrables en las reglas de la audiencia. Los filtros de audiencia se limitan a
+  los campos estándar del suscriptor listados anteriormente.
+</Callout>
+
+---
+
+## Operadores compatibles
+
+| Operador                     | Funciona en                                       |
+| :--------------------------- | :------------------------------------------------ |
+| `equals` / `not_equals`      | Todos los campos string y booleanos               |
+| `contains` / `not_contains`  | Campos string                                     |
+| `starts_with` / `ends_with`  | Campos string                                     |
+| `is_empty` / `is_not_empty`  | Campos string                                     |
+| `is_true` / `is_false`       | Campos booleanos                                  |
+| `greater_than` / `less_than` | Campos de fecha/número (por ejemplo, `createdAt`) |
+
+Máximo de 10 reglas por audiencia.
+
+---
+
+## Crear una audiencia
+
+**Panel de control**: Página de **Audiences** → **New Audience** → añadir reglas.
+
+**API (Gestión, clave `sk_*`):**
+
+```http
+POST /v1/management/audiences
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
 
 ```json
 {
-  "name": "Growth active users",
+  "name": "English locale subscribers",
+  "description": "Subscribers whose locale is set to English",
   "filters": {
     "logic": "AND",
     "rules": [
-      { "field": "properties.plan", "operator": "equals", "value": "growth" },
-      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+      { "field": "locale", "operator": "equals", "value": "en" },
+      { "field": "globalUnsubscribed", "operator": "is_false" }
     ]
   }
 }
 ```
 
-Los filtros compatibles incluyen propiedades de los suscriptores, idioma (locale), dominio de correo, actividad (último disparo, última apertura) y estado de preferencias.
+**API (Panel/Navegador, autenticación por JWT):**
+
+```http
+POST /v1/audiences
+Authorization: Bearer <jwt_token>
+```
+
+---
 
 ## Vista previa de miembros
 
+El panel de control muestra un **conteo de miembros en tiempo real** mientras editas las reglas. También puedes obtener los miembros a través de la API:
+
 ```http
 GET /v1/audiences/:id/members?page=1&limit=50
+Authorization: Bearer <jwt_token>
 ```
 
-El panel de control muestra la cantidad de miembros en tiempo real mientras editas las reglas.
+Devuelve una lista paginada de suscriptores que coinciden con las reglas actuales.
 
-## Uso en disparadores (Triggers)
+---
 
-Haz referencia a una audiencia como destinatario (en los broadcasts del panel y futuras expansiones de disparadores):
+## Uso en broadcasts
 
-```ts
-// Flujo de Broadcast — ver función de Broadcasts
+Las audiencias se utilizan como el objetivo destinatario para los [Broadcasts](/docs/platform/features/broadcasts):
+
+```json
 {
-  "audienceId": "aud_growth_active",
-  "workflowId": "product-update"
+  "name": "English User Re-engagement",
+  "workflowId": "<workflow-uuid>",
+  "audienceId": "<audience-uuid>",
+  "scheduledAt": "2026-09-01T09:00:00Z"
 }
 ```
+
+<Callout type="info">
+  Un broadcast **debe** tener un `audienceId` asignado antes de poder ser enviado. Intentar enviar
+  un broadcast sin una audiencia devuelve un error `400`.
+</Callout>
+
+---
+
+## Límites
+
+| Límite                           | Valor |
+| :------------------------------- | :---- |
+| Máximo de audiencias por entorno | 50    |
+| Máximo de reglas por audiencia   | 10    |
+
+---
 
 ## Relacionado
 

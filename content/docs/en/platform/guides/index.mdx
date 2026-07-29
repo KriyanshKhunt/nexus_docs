@@ -8,37 +8,61 @@ Practical walkthroughs beyond the quickstart.
 ## Getting started
 
 <Cards>
-  <Card title="First workflow" href="/docs/platform/guides/first-workflow" description="Build a multi-channel workflow from scratch." />
-  <Card title="Object fan-out" href="/docs/platform/guides/object-fanout" description="Notify everyone watching an entity." />
-  <Card title="First broadcast" href="/docs/platform/guides/first-broadcast" description="Send to an audience from the dashboard." />
-  <Card title="B2B multi-tenant" href="/docs/platform/guides/b2b-multi-tenant" description="White-label per customer." />
-  <Card title="Production checklist" href="/docs/platform/guides/production-checklist" description="Before you flip to Production keys." />
+  <Card
+    title="First workflow"
+    href="/docs/platform/guides/first-workflow"
+    description="Build a multi-channel workflow from scratch."
+  />
+  <Card
+    title="Object fan-out"
+    href="/docs/platform/guides/object-fanout"
+    description="Notify everyone watching an entity."
+  />
+  <Card
+    title="First broadcast"
+    href="/docs/platform/guides/first-broadcast"
+    description="Send to an audience from the dashboard."
+  />
+  <Card
+    title="B2B multi-tenant"
+    href="/docs/platform/guides/b2b-multi-tenant"
+    description="White-label per customer."
+  />
+  <Card
+    title="Production checklist"
+    href="/docs/platform/guides/production-checklist"
+    description="Before you flip to Production keys."
+  />
 </Cards>
 
 ## Choose your path
 
-| Goal | Start here |
-|------|------------|
-| Transactional notifications from code | [First workflow](/docs/platform/guides/first-workflow) |
-| "Notify all watchers" without DB queries | [Object fan-out](/docs/platform/guides/object-fanout) |
-| Product announcement without deploy | [First broadcast](/docs/platform/guides/first-broadcast) |
-| Each customer gets branded emails | [B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant) |
-| Version-control workflow definitions | [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) |
-| Automate from CI/CD | [CLI](/docs/sdk/devtools/cli) |
+| Goal                                     | Start here                                                 |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| Transactional notifications from code    | [First workflow](/docs/platform/guides/first-workflow)     |
+| "Notify all watchers" without DB queries | [Object fan-out](/docs/platform/guides/object-fanout)      |
+| Product announcement without deploy      | [First broadcast](/docs/platform/guides/first-broadcast)   |
+| Each customer gets branded emails        | [B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant) |
+| Version-control workflow definitions     | [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)    |
+| Automate from CI/CD                      | [CLI](/docs/sdk/devtools/cli)                              |
 
 ## Before production
 
 <Accordions type="single">
   <Accordion title="Have I tested in Development?">
-    Use the Development environment and sandbox simulator before connecting Production provider keys.
+    Use the Development environment and sandbox simulator before connecting Production provider
+    keys.
   </Accordion>
   <Accordion title="Are provider credentials in Production only?">
-    Staging can mirror Production, but never reuse Production keys in local `.env` files committed to git.
+    Staging can mirror Production, but never reuse Production keys in local `.env` files committed
+    to git.
   </Accordion>
   <Accordion title="Is HMAC generated server-side?">
-    Client SDK sessions need a fresh HMAC from your backend — see [Authentication](/docs/platform/getting-started/authentication).
+    Client SDK sessions need a fresh HMAC from your backend — see
+    [Authentication](/docs/platform/getting-started/authentication).
   </Accordion>
   <Accordion title="Did I test object fan-out and broadcasts?">
-    If using product messaging features, verify audience resolution and object subscriptions in Staging first.
+    If using product messaging features, verify audience resolution and object subscriptions in
+    Staging first.
   </Accordion>
 </Accordions>

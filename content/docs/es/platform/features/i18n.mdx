@@ -1,47 +1,95 @@
 ---
-title: Plantillas multidioma
-description: Plantillas según locale — un flujo, contenido en cada idioma.
+title: Plantillas Multi-Idioma
+description: Plantillas de mensajes localizadas — ejecuta un único workflow y entrega el copy automáticamente en el idioma del suscriptor.
 ---
 
-Llega a usuarios globales sin duplicar flujos.
+Nexus incluye soporte nativo para la internacionalización (i18n). En lugar de duplicar workflows para diferentes idiomas, almacenas el copy específico del locale directamente dentro de cada nodo de canal en la plantilla del workflow.
 
-## Estructura de plantilla
+---
 
-Almacena variantes por locale en `contentTemplates`:
+## Estructura de la plantilla
+
+En la definición de la plantilla del workflow, el objeto `contentTemplates` contiene claves de canal (por ejemplo, `email`, `sms`). Si un canal está localizado, su valor mapea códigos de locale (`en`, `es`, `ja`) a sus respectivas plantillas de canal.
+
+### Ejemplo de esquema de contenido localizado
 
 ```json
 {
-  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
-  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" },
-  "fr": { "email_subject": "Votre commande est expédiée", "sms_body": "Expédié !" }
+  "email": {
+    "en": {
+      "subject": "Your order has shipped!",
+      "html": "<p>Hi {{ subscriber.first_name }}, your order is on its way.</p>"
+    },
+    "es": {
+      "subject": "¡Tu pedido ha sido enviado!",
+      "html": "<p>Hola {{ subscriber.first_name }}, tu pedido está en camino.</p>"
+    }
+  },
+  "sms": {
+    "en": {
+      "body": "Hi {{ subscriber.first_name }}, your order has shipped."
+    },
+    "es": {
+      "body": "Hola {{ subscriber.first_name }}, tu pedido ha sido enviado."
+    }
+  }
 }
 ```
 
-## Orden de resolución de locale
+El compilador comprueba si el objeto del canal está localizado probando sus claves con `LOCALE_KEY_REGEX = /^[a-z]{2,3}$/`. Si coincide, extrae el segmento que corresponde al locale resuelto, con fallback a inglés (`en`) si no se encuentra.
 
-1. Override `_locale` por trigger (desde el recipient en el trigger)
-2. Campo `locale` del suscriptor
-3. Respaldo a `en`
+---
 
-## Establecer locale en el trigger
+## Cadena de resolución de locale
 
-```ts
-recipients: [{ externalId: 'user_1', locale: 'es' }]
-```
+Para cada entrega, Nexus determina el idioma objetivo en este orden de prioridad estricto:
 
-## Locales soportados
+1. **Anulación en el trigger**: La propiedad `_locale` pasada en el objeto `data` del trigger:
+   ```ts
+   data: {
+     _locale: 'es';
+   }
+   ```
+2. **Propiedad del suscriptor**: El campo `locale` en el perfil del suscriptor:
+   ```ts
+   recipients: [{ externalId: 'user_42', locale: 'es-MX' }];
+   ```
+3. **Valor por defecto del entorno**: Fallback a **`en`**.
 
-`en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `ko`, `zh`, `ar`, `hi`, `nl`, `pl` — validados como etiquetas BCP 47.
+### Reglas de validación
 
-## Editor de plantillas
+- Las cadenas de locale del suscriptor se validan usando un patrón BCP 47 (`/^[a-z]{2,3}(-[a-zA-Z0-9]{1,8})*$/`). Esto admite locales regionales como `en-US`, `es-MX` y `pt-BR`.
+- Al hacer coincidir las claves en `contentTemplates`, el compilador elimina los sufijos regionales (por ejemplo, `es-MX` se resuelve a la clave base `es`).
 
-Usa las **pestañas de locale** en el estudio de plantillas del dashboard para añadir o quitar idiomas. El emulador de dispositivo previsualiza cada locale.
+---
 
-## Generación con IA
+## Locales base admitidos
 
-La generación de contenido con IA acepta un parámetro `locale` para producir copy traducido en un solo paso.
+Nexus tiene soporte de localización integrado para los siguientes idiomas base:
+
+| Código | Idioma    | Código | Idioma     |
+| :----- | :-------- | :----- | :--------- |
+| `en`   | English   | `nl`   | Nederlands |
+| `es`   | Español   | `tr`   | Türkçe     |
+| `fr`   | Français  | `hi`   | हिन्दी     |
+| `de`   | Deutsch   | `ar`   | العربية    |
+| `pt`   | Português | `ja`   | 日本語     |
+| `it`   | Italiano  | `zh`   | 中文       |
+| `ko`   | 한국어    |        |            |
+
+---
+
+## Archivos de traducción vs Plantillas localizadas
+
+Para una organización óptima, combina los archivos de traducción y las plantillas localizadas:
+
+- **Usa plantillas localizadas** (esta función) para layouts estructurales específicos del canal, contenido de email enriquecido o diferencias de layout entre idiomas.
+- **Usa [Archivos de traducción](/docs/platform/features/translations)** con el helper `{{ t "key" }}` para cadenas reutilizables compartidas (por ejemplo, pies de página, etiquetas de botones, enlaces de soporte) referenciadas en múltiples workflows.
+
+---
 
 ## Relacionado
 
-- [Flujos](/docs/platform/concepts/workflows)
-- [Topics](/docs/platform/features/topics)
+- [Workflows](/docs/platform/concepts/workflows)
+- [Archivos de traducción](/docs/platform/features/translations)
+- [Generación de contenido con IA](/docs/platform/features/ai-content)

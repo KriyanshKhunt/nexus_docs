@@ -1,43 +1,89 @@
 ---
-title: Ventanas de entrega
-description: Entrega según zona horaria — envía solo entre las horas permitidas en la hora local del suscriptor.
+title: Ventanas de Entrega
+description: Horas de silencio con reconocimiento de zona horaria — mantiene las notificaciones en cola hasta que se abra la ventana de tiempo permitida del suscriptor.
 ---
 
-Los nodos **Delivery Window** garantizan que las notificaciones nunca lleguen en horas inapropiadas (p. ej. 9 AM–9 PM en la zona horaria del usuario).
+El paso de **Ventana de entrega** (Delivery Window) comprueba la hora local del suscriptor antes de despachar las notificaciones posteriores. Si la hora actual está fuera de la ventana permitida (por ejemplo, en mitad de la noche), Nexus pausa la ejecución y programa un trabajo diferido para reanudar cuando la ventana se abra.
 
-## Configuración en el canvas
-
-Añade un nodo **Delivery Window** con:
-
-- `windowStart` — `"09:00"`
-- `windowEnd` — `"21:00"`
-- `urgent` — omite la ventana para alertas críticas (opcional)
-
-## Zona horaria del suscriptor
-
-Establécela en el perfil del suscriptor o pásala por trigger:
-
-```ts
-recipients: [{ externalId: 'user_1', timezone: 'Europe/London' }]
+```mermaid
+flowchart TD
+  Trigger[Disparar notificación] --> Check{¿La hora local está dentro de la ventana?}
+  Check -->|Sí| Deliver[Entregar inmediatamente]
+  Check -->|No| Delay[Calcular retraso en ms]
+  Delay --> Queue[Programar trabajo diferido en BullMQ]
+  Queue -->|Se abre la ventana| Deliver
 ```
 
-Usa identificadores de zona horaria IANA. Si no está definida, usa UTC como respaldo.
+---
 
-## Comportamiento
+## Configuración
 
-| Situación | Acción |
-|-----------|--------|
-| Dentro de la ventana | Continúa de inmediato |
-| Fuera de la ventana | Retiene en cola; el job retrasado de BullMQ se reanuda al abrir la próxima ventana |
-| `urgent: true` | Entrega de inmediato sin importar la ventana |
+Al definir un nodo de Ventana de entrega en el lienzo o mediante workflow-as-code, especifica los siguientes parámetros:
 
-## Casos de uso
+| Campo         | Tipo    | Requerido | Descripción                                                                                                          |
+| :------------ | :------ | :-------- | :------------------------------------------------------------------------------------------------------------------- |
+| `windowStart` | string  | ✅        | Hora de inicio en formato `HH:MM` (24 horas, por ejemplo, `"09:00"`)                                                 |
+| `windowEnd`   | string  | ✅        | Hora de fin en formato `HH:MM` (24 horas, por ejemplo, `"21:00"`)                                                    |
+| `urgent`      | boolean | —         | Establece `true` para omitir completamente la comprobación de la ventana en alertas críticas. Por defecto es `false` |
 
-- Emails de marketing — solo en horario laboral
-- Notificaciones push — evita horas de sueño
-- SMS — horas de silencio compatibles con normativa
+---
+
+## Cómo se resuelve la zona horaria del suscriptor
+
+La hora local del suscriptor se determina en el siguiente orden de prioridad:
+
+1. La propiedad `timezone` pasada en el objeto del suscriptor al momento del trigger:
+   ```ts
+   recipients: [{ externalId: 'user_42', timezone: 'America/New_York' }];
+   ```
+2. La `timezone` almacenada en el perfil del suscriptor en la base de datos.
+3. Fallback a **`UTC`** si no se resuelve ninguna zona horaria o si la cadena proporcionada no es un identificador IANA válido.
+
+---
+
+## Estados de ejecución y ciclo de vida
+
+El paso de ventana de entrega registra los siguientes eventos del ciclo de vida en el árbol del log de ejecución:
+
+### 1. Retención de ventana de entrega (`DELIVERY_WINDOW_HOLD`)
+
+Si la hora local del usuario está fuera de la ventana permitida:
+
+- El estado cambia a `QUEUED`.
+- BullMQ programa un trabajo diferido con `jobId: "deliveryWindow:<logId>:<nodeId>"` y un retraso personalizado en milisegundos.
+- Registra metadatos que muestran:
+  - `subscriberLocalTime`
+  - `delayMs` (milisegundos hasta que se abra la ventana)
+  - `resumeNodeId` (el siguiente paso en el flujo)
+
+### 2. Paso de ventana de entrega (`DELIVERY_WINDOW_PASS`)
+
+Si la hora local del usuario está dentro de la ventana permitida, o si `urgent` está establecido en `true`:
+
+- El estado permanece en `PROCESSING` (se ejecuta inmediatamente).
+- Registra `reason: "within_window"` o `reason: "urgent_bypass"`.
+
+---
+
+## Ejemplo de Workflow-as-code
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('invoice.overdue')
+  .addDeliveryWindow({
+    windowStart: '09:00',
+    windowEnd: '18:00',
+    urgent: false,
+  })
+  .addChannel('SMS')
+  .toDefinition();
+```
+
+---
 
 ## Relacionado
 
-- [Envío inteligente](/docs/platform/features/smart-send-time) — optimiza *qué* hora; la ventana de entrega define las horas *permitidas*
-- [API de suscriptores](/docs/api/sdk)
+- [Smart send-time](/docs/platform/features/smart-send-time) — optimiza _qué_ hora; la ventana de entrega establece las horas _permitidas_
+- [API de Suscriptores](/docs/api/subscribers) — configurar las zonas horarias de los usuarios
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

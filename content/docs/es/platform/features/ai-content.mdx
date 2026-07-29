@@ -1,55 +1,112 @@
 ---
-title: Generación de contenido con IA
-description: Genera copy de notificaciones optimizado por canal desde un solo prompt usando tu propia clave de IA.
+title: Generación de Contenido con IA
+description: Genera copias de notificaciones optimizadas por canal a partir de un único prompt utilizando tus propias claves de proveedor de IA.
 ---
 
-El editor de plantillas incluye **AI Assist** — describe qué debe decir la notificación y obtén copy optimizado para los límites de caracteres de cada canal.
+El editor de plantillas del panel de control incluye **AI Assist**. Describe en texto simple lo que debe decir la notificación y obtén variaciones de copy optimizadas para los límites de caracteres de cada canal.
 
-## Claves BYOP de IA
+---
 
-Conecta tu propia clave en **Integrations**:
+## BYOP (Bring Your Own Provider) — Claves de IA propias
+
+Nexus no aplica margen de beneficio al uso de tokens de IA. Conecta tu propia clave de API en **Settings → Integrations** en el panel de control:
 
 - **OpenAI** (`openai_ai`) — usa `gpt-4o-mini`
-- **Anthropic** (`anthropic_ai`) — usa `claude-3-haiku`
+- **Anthropic** (`anthropic_ai`) — usa `claude-3-haiku-20240307`
 
-Nexus no cobra por tokens de IA — pagas directamente a tu proveedor.
+Las llamadas al proveedor se ejecutan en el lado del servidor utilizando una restricción de formato JSON. Si no hay ninguna clave de proveedor activa, el generador devuelve un error de validación `400`.
 
-## API
+---
+
+## Endpoint de la API del panel de control
+
+La interfaz de usuario del panel genera el copy invocando el endpoint de plantillas:
 
 ```http
 POST /v1/templates/ai-generate
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 ```
+
+**Cuerpo de la solicitud:**
 
 ```json
 {
-  "prompt": "Order shipped notification with tracking link",
-  "tone": "friendly",
-  "locale": "en",
-  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+  "prompt": "Order #4092 shipped with carrier DHL. Include tracking number.",
+  "tone": "casual",
+  "locale": "en"
 }
 ```
 
-Devuelve contenido estructurado por canal con límites aplicados:
+- `prompt`: Descripción en texto simple del objetivo del mensaje (máximo 1,000 caracteres).
+- `tone`: Tono del estilo visual. Debe ser `professional`, `casual`, `urgent` o `friendly`. Por defecto es `professional`.
+- `locale`: Idioma destino opcional. Si se especifica, el LLM traduce y adapta el copy a ese idioma.
 
-| Canal | Límite |
-|-------|--------|
-| Email subject | 80 chars |
-| SMS body | 160 chars |
-| Push title / body | 50 / 120 chars |
-| WhatsApp body | 1024 chars |
+**Cuerpo de la respuesta:**
 
-**Tones:** `professional`, `casual`, `urgent`, `friendly`
+```json
+{
+  "generated": {
+    "email": {
+      "subject": "Your order has shipped! 📦",
+      "html": "Good news! Order #4092 is on its way. You can track your package with DHL..."
+    },
+    "sms": {
+      "body": "Hi! Order #4092 has shipped via DHL. Track it here!"
+    },
+    "push": {
+      "title": "Order Shipped!",
+      "body": "Your order #4092 is on its way via DHL."
+    },
+    "whatsapp": {
+      "body": "Good news! Order #4092 has shipped with DHL."
+    },
+    "slack": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "discord": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "ms_teams": {
+      "body": "Order #4092 has shipped with DHL."
+    }
+  },
+  "locale": "en",
+  "message": "Content generated"
+}
+```
 
-## Flujo de trabajo
+---
 
-1. Abre **Templates** en el dashboard
-2. Haz clic en el panel **AI Assist**
-3. Introduce el prompt y selecciona canales
-4. Previsualiza el copy generado por canal
-5. Acéptalo en el borrador de tu plantilla
+## Límites de canal aplicados
+
+Todos los outputs generados se truncan automáticamente en el servidor para ajustarse a los límites de tamaño máximo de cada canal de mensajería:
+
+| Canal              | Límite           | Campo generado            |
+| :----------------- | :--------------- | :------------------------ |
+| Asunto de email    | 80 caracteres    | `generated.email.subject` |
+| Cuerpo de SMS      | 160 caracteres   | `generated.sms.body`      |
+| Título de push     | 50 caracteres    | `generated.push.title`    |
+| Cuerpo de push     | 120 caracteres   | `generated.push.body`     |
+| Cuerpo de WhatsApp | 1,024 caracteres | `generated.whatsapp.body` |
+| Cuerpo de Slack    | 2,000 caracteres | `generated.slack.body`    |
+| Cuerpo de Discord  | 2,000 caracteres | `generated.discord.body`  |
+| Cuerpo de MS Teams | 2,000 caracteres | `generated.ms_teams.body` |
+
+---
+
+## Flujo de trabajo en el editor de plantillas
+
+1. Ve a **Templates** en el panel de control y crea o abre un borrador.
+2. Haz clic en la pestaña **AI Assist** en la barra lateral.
+3. Introduce tu prompt, selecciona el tono que prefieras y elige los canales que deseas rellenar.
+4. Haz clic en **Generate** — se mostrará una vista previa del contenido del borrador.
+5. Haz clic en **Apply to Draft** para combinar las cadenas generadas directamente en los campos del editor.
+
+---
 
 ## Relacionado
 
-- [Plantillas i18n](/docs/platform/features/i18n) — genera por locale
-- [Guía del primer flujo](/docs/platform/guides/first-workflow)
+- [Plantillas i18n](/docs/platform/features/i18n) — localizar variantes por canal
+- [Guía de tu primer workflow](/docs/platform/guides/first-workflow)
+- [Nodo de workflow de IA](/docs/platform/features/ai-workflow-node) — ejecución de LLM en tiempo de ejecución

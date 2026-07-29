@@ -1,47 +1,98 @@
 ---
-title: Triggers programados
-description: Notificaciones cron y programadas de una sola vez sin construir tu propio job runner.
+title: Triggers Programados
+description: Workflows programados de cron y de un único disparo sin necesidad de configurar tu propio ejecutor de tareas o daemon de cron.
 ---
 
-Programa disparos de flujo desde el dashboard o el Node SDK — no hace falta cron externo.
+Nexus incluye capacidades de programación integradas. Puedes definir temporizadores recurrentes (Cron) o poner en cola entregas futuras de una sola vez directamente desde el panel de control o a través del SDK de Node.
 
-## Tipos
+---
 
-| Tipo | Campo | Ejemplo |
-|------|-------|---------|
-| **Recurrente** | `cronExpression` | `0 9 * * 1` (lunes 9 AM) |
-| **Una sola vez** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+## Tipos de programaciones
 
-Ambos admiten `timezone` (UTC por defecto) y payload estático de `recipients` + `data`.
+| Tipo                    | Configuración de temporización | Descripción                                                                     |
+| :---------------------- | :----------------------------- | :------------------------------------------------------------------------------ |
+| **Recurrente**          | `cronExpression`               | Un patrón cron estándar (por ejemplo, `0 9 * * 1` para los lunes a las 9:00 AM) |
+| **De un único disparo** | `scheduledAt`                  | Una cadena datetime ISO 8601 (por ejemplo, `2026-08-01T10:00:00Z`)              |
 
-## Dashboard
+Ambos tipos de programación aceptan un parámetro `timezone` (por defecto `'UTC'`) para resolver los tiempos de ejecución en el marco local del suscriptor.
 
-Página **Schedules** — crear, pausar, editar, eliminar. Consulta `nextFireAt` y `lastFiredAt`.
+---
 
-## Node SDK
+## Endpoints de la API
+
+Dependiendo del contexto del cliente, Nexus aísla la gestión de programaciones en dos endpoints:
+
+### 1. API del SDK (Scripts del lado del servidor / SDK, clave `sk_*`)
+
+El SDK de Node interactúa con este endpoint para registrar las programaciones creadas programáticamente:
+
+```http
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+### 2. API del panel de control (Frontend del panel, autenticación JWT)
+
+La consola web gestiona las programaciones usando tokens de sesión estándar:
+
+```http
+POST /v1/schedules
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+---
+
+## Uso del SDK de Node
+
+Crea, edita, lista y elimina programaciones de forma programática:
 
 ```ts
-await nexus.schedules.create({
-  name: 'Weekly digest',
-  workflowId: 'wf_uuid',
-  cronExpression: '0 9 * * 1',
+// Crear una programación de digest semanal recurrente
+const result = await nexus.schedules.create({
+  name: 'Weekly Digest',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  cronExpression: '0 9 * * 1', // Lunes a las 9 AM
   timezone: 'America/New_York',
-  recipients: [{ externalId: 'user_1' }],
-  data: { week: '2026-W27' },
+  recipients: [{ externalId: 'user_42' }, { externalId: 'user_109' }],
+  data: { scope: 'weekly_summary' },
+  active: true,
 });
+
+// Actualizar el estado activo o los datos de la programación
+await nexus.schedules.update(scheduleId, {
+  active: false,
+});
+
+// Eliminar programación
+await nexus.schedules.delete(scheduleId);
 ```
 
-```ts
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
-```
+### Tipos y estructura de las programaciones
 
-## Ejecución
+El array `recipients` acepta objetos que contienen `subscriberId` (UUID de la base de datos) o `externalId` (tu ID de usuario).
 
-Un cron del worker evalúa los schedules vencidos cada **60 segundos** (máximo 100 schedules activos por entorno).
+---
+
+## Mecánica de ejecución
+
+- Un planificador cron en el worker del workflow escanea la base de datos cada **60 segundos** para encontrar las programaciones activas que están listas para su entrega.
+- Cuando es el momento, dispara una ejecución del workflow usando el `workflowId`, los `recipients` y el payload de `data` especificados.
+- En el panel de control, puedes rastrear el historial, ver `lastFiredAt` y previsualizar `nextFireAt`.
+
+---
+
+## Límites
+
+| Límite                                | Valor       |
+| :------------------------------------ | :---------- |
+| Máximo de programaciones por entorno  | 100         |
+| Intervalo de comprobación del trabajo | 60 segundos |
+
+---
 
 ## Relacionado
 
-- [Referencia API — Schedules](/docs/api/schedules)
-- [Node SDK](/docs/sdk/backend/node)
+- [Referencia de la API de Schedules](/docs/api/schedules)
+- [SDK de Node](/docs/sdk/backend/node)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

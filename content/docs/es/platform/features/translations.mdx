@@ -1,35 +1,51 @@
 ---
-title: Traducciones e i18n
-description: Almacenes de clave-valor centralizados por idioma con el helper de Handlebars {{ t "key" }} — cadenas reutilizables en todas las plantillas.
+title: Archivos de Traducción
+description: Almacenes de claves-valores de locale centralizados con el helper {{ t "key" }} de Handlebars — cadenas reutilizables en todas las plantillas.
 ---
 
-Los **archivos de traducción** almacenan cadenas de texto compartidas por cada idioma y entorno. Haz referencia a ellas en cualquier plantilla con `{{ t "welcome_message" }}` en lugar de duplicar copias completas de plantillas para cada idioma.
+Los **archivos de traducción** almacenan cadenas de locale compartidas por entorno. Referencialas en cualquier plantilla de email, SMS o push con `{{ t "key" }}` en lugar de duplicar copias completas de la plantilla por idioma.
 
 <Callout type="info">
-  Esto complementa a las [Plantillas
-  multi-idioma](/docs/platform/features/i18n), las cuales guardan variantes
-  completas de locales dentro de `contentTemplates`. Utiliza los archivos de
-  traducción para cadenas compartidas y las plantillas localizadas para
-  diferencias de diseño específicas de cada canal.
+  Esto complementa las [Plantillas multi-idioma](/docs/platform/features/i18n), que almacenan
+  variantes de locale completas dentro de `contentTemplates`. Usa los **archivos de traducción**
+  para cadenas reutilizables compartidas; usa las **plantillas de locale** para diferencias de
+  layout completas específicas del canal.
 </Callout>
+
+---
+
+## Cómo funciona el helper `t`
+
+Al compilar la plantilla, el helper `{{ t "key" }}` de Handlebars:
+
+1. Resuelve el locale actual del suscriptor (desde la anulación `_locale` → campo `locale` del suscriptor → por defecto `en`)
+2. Busca la clave en el archivo de traducción para ese locale
+3. Hace fallback al locale base (por ejemplo, `"en"` desde `"en-US"`)
+4. Hace fallback a inglés si no se encuentra ninguna coincidencia
+5. Devuelve la cadena de la clave sin procesar si no existe ninguna traducción en ningún locale
+
+---
 
 ## Subir traducciones
 
-Desde el panel de control en **Templates → Translations** (Traducciones), o a través de la API:
+**Panel de control**: **Templates → Translations** → seleccionar locale → pegar o cargar JSON.
 
-API del panel / navegador:
+**API de Gestión (clave `sk_*` — para scripts y CI/CD):**
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+**API del panel de control (autenticación JWT — para integraciones de navegador):**
 
 ```http
 PUT /v1/translations
 Authorization: Bearer <jwt_token>
 ```
 
-API de Gestión / Servidor (CLI/Scripts):
-
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+**Payload:**
 
 ```json
 {
@@ -38,10 +54,15 @@ Authorization: Bearer sk_prd_…
   "content": {
     "welcome_message": "Bienvenido",
     "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "cta_view_order": "Ver pedido",
+    "invoice_due": "Factura vencida"
   }
 }
 ```
+
+El campo `namespace` es una etiqueta para organizar tus claves en el panel de control. Las claves de todos los namespaces están disponibles para el helper `t` independientemente del namespace — la búsqueda de claves es plana en todo el contenido del locale.
+
+---
 
 ## Uso en plantillas
 
@@ -51,30 +72,82 @@ Authorization: Bearer sk_prd_…
 <a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
 ```
 
-## Cadena de resolución del idioma
+Cuando el locale del suscriptor es `es`, esto renderiza:
 
-1. Campo `locale` del suscriptor.
-2. Anulación del idioma por trigger mediante la clave `_locale`.
-3. Idioma predeterminado del tenant (si se proporciona contexto de tenant).
-4. Idioma predeterminado del entorno (`en`).
-5. La clave en crudo si no se encuentra ninguna traducción.
+```html
+<h1>Bienvenido</h1>
+<p>Tu pedido ha sido enviado — ORD-12345</p>
+<a href="https://track.example.com/xyz">Ver pedido</a>
+```
 
-## Namespaces (Espacios de nombres)
+---
 
-Organiza tus cadenas por áreas de funcionalidad:
+## Orden de resolución de locale
+
+Cuando se envía una notificación, el locale se resuelve en este orden de prioridad:
+
+1. Campo `_locale` en el payload `data` del trigger (anulación por trigger)
+2. Campo `locale` del suscriptor (por ejemplo, `"es"`, `"ja"`)
+3. Fallback a `"en"` (valor por defecto del entorno)
+
+**Anular el locale en un trigger específico:**
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _locale: 'es',
+    orderId: 'ORD-12345',
+  },
+});
+```
+
+---
+
+## Organizar claves con namespaces
+
+Los namespaces son una herramienta organizativa opcional para agrupar cadenas relacionadas en el panel de control. **No** afectan cómo se referencian las claves en las plantillas.
+
+**Buena práctica**: Usa una convención de nomenclatura de claves que implique el namespace, como `billing_invoice_due` o `auth_login_prompt`:
 
 ```json
 {
   "locale": "ja",
   "namespace": "billing",
-  "content": { "invoice_due": "請求書の支払期限" }
+  "content": {
+    "billing_invoice_due": "請求書の支払期限",
+    "billing_pay_now": "今すぐ支払う"
+  }
 }
 ```
 
-Referencia: `{{ t "billing.invoice_due" }}` (búsqueda con reconocimiento de namespace).
+En las plantillas: `{{ t "billing_invoice_due" }}` (búsqueda de clave plana simple).
+
+---
+
+## Flujo de trabajo con CLI
+
+Gestiona los archivos de traducción desde la línea de comandos:
+
+```bash
+# Descargar todas las traducciones actuales a archivos JSON locales
+nexus translations pull --locale es --output ./translations/es.json
+
+# Subir traducciones actualizadas
+nexus translations push --locale es --input ./translations/es.json
+```
+
+---
+
+## Locales admitidos
+
+Se admite cualquier cadena de locale BCP 47 (por ejemplo, `en`, `en-US`, `es`, `es-MX`, `ja`, `pt`, `pt-BR`, `fr`, `de`, `zh-CN`). El helper `t` elimina el sufijo de la región y hace fallback al locale base si no se encuentra un archivo específico de la región.
+
+---
 
 ## Relacionado
 
 - [Plantillas multi-idioma](/docs/platform/features/i18n)
 - [API de Traducciones](/docs/api/translations)
-- [CLI pull/push de traducciones](/docs/sdk/devtools/cli)
+- [Traducciones pull/push con CLI](/docs/sdk/devtools/cli)

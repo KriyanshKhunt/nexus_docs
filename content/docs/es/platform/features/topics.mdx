@@ -1,43 +1,110 @@
 ---
-title: Topics
-description: Suscripciones a notificaciones por categoría — Marketing, Security, Product Updates.
+title: Topics de Notificaciones
+description: Preferencias de notificaciones basadas en categorías — permite a los suscriptores suscribirse o cancelar la suscripción a grupos enteros como Marketing o Billing en lugar de nombres de eventos del backend.
 ---
 
-**Topics** permiten a los usuarios optar por entrar o salir de **categorías** en lugar de nombres individuales de eventos de flujo.
+Los **topics** representan categorías de notificaciones (por ejemplo, `"Billing"`, `"Product Updates"`, `"Marketing"`). En lugar de exponer los nombres de eventos del backend a los suscriptores, asignas los workflows a un topic. Los suscriptores luego gestionan sus preferencias a nivel de topic.
 
-## Modelo
+---
 
-| Campo | Descripción |
-|-------|-------------|
-| `name` | Clave de máquina (p. ej. `marketing`) |
-| `displayName` | Etiqueta en la UI |
-| `defaultStatus` | `OPTED_IN`, `OPTED_OUT` o `REQUIRED` |
-| `sortOrder` | Orden en la matriz de preferencias |
+## Modelo del topic
 
-Máximo **50 topics** por entorno.
+| Campo           | Tipo   | Requerido | Descripción                                                                                                                                                                 |
+| :-------------- | :----- | :-------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`          | string | ✅        | Identificador de máquina único (por ejemplo, `billing_alerts`). Debe ser alfanumérico en minúsculas con guiones/guiones bajos (`^[a-z][a-z0-9_-]*$`, máximo 64 caracteres). |
+| `displayName`   | string | ✅        | Nombre para mostrar al usuario en el menú de preferencias (máximo 128 caracteres).                                                                                          |
+| `description`   | string | —         | Breve resumen del contenido de este topic para el usuario (máximo 256 caracteres).                                                                                          |
+| `defaultStatus` | enum   | ✅        | Estado de suscripción inicial para nuevos suscriptores: `OPTED_IN`, `OPTED_OUT` o `REQUIRED`.                                                                               |
+| `sortOrder`     | number | —         | Entero que define el orden de visualización de las filas en las tablas de preferencias.                                                                                     |
 
-## Asignar flujos
+### Estados por defecto explicados
 
-Vincula un flujo a un topic mediante `topicId`. La evaluación de preferencias comprueba las claves `topic:{name}` en el perfil del suscriptor.
+- **`OPTED_IN`**: Los suscriptores están suscritos por defecto pero pueden cancelar la suscripción explícitamente.
+- **`OPTED_OUT`**: Los suscriptores están desuscritos por defecto pero pueden suscribirse explícitamente.
+- **`REQUIRED`**: Los suscriptores están suscritos permanentemente. Representan alertas críticas (por ejemplo, restablecimiento de contraseña, advertencias de fallo de facturación) que no se pueden desactivar.
 
-## Dashboard
+---
 
-Gestiona topics en **Settings → Topics**. Asigna flujos desde el desplegable del editor de flujos.
+## Cómo se evalúan las preferencias
 
-## SDK
+Cuando se dispara un workflow:
+
+1. Nexus comprueba si el workflow está vinculado a un `topicId`. Si no lo está, ejecuta los pasos del canal.
+2. Si está vinculado, el motor comprueba la matriz de preferencias del suscriptor para las claves estructuradas como `topic:<name>`.
+3. Si existe una preferencia explícita para el canal (por ejemplo, `{ "topic:marketing": { "EMAIL": false } }`), el paso se omite, registrando `PREFERENCE_GATE` en el ciclo de vida.
+4. Si no se establece ninguna preferencia explícita, el motor hace fallback a la configuración de `defaultStatus` del topic.
+
+---
+
+## Integración con el SDK
+
+### Obtener los topics activos
+
+El cliente suscriptor puede obtener la lista de topics configurados en el entorno para renderizar menús personalizados:
 
 ```http
 GET /v1/sdk/topics
 x-nexus-public-key: pk_prd_…
 ```
 
-También incluido en `GET /v1/sdk/notification-events` para la matriz de preferencias.
+**Cuerpo de la respuesta:**
 
-## React SDK
+```json
+{
+  "topics": [
+    {
+      "id": "topic-uuid",
+      "name": "billing",
+      "displayName": "Billing & Invoices",
+      "defaultStatus": "REQUIRED"
+    },
+    {
+      "id": "topic-uuid-2",
+      "name": "marketing",
+      "displayName": "Marketing & Promotions",
+      "defaultStatus": "OPTED_OUT"
+    }
+  ]
+}
+```
 
-`<SubscriberPreferenceMatrix groupByTopic />` renderiza los topics como filas con casillas de canal.
+Este endpoint también se incluye en `GET /v1/sdk/notification-events` junto con los canales activos.
+
+---
+
+## Componentes del SDK de React
+
+El SDK de React proporciona un componente listo para usar que carga, agrupa y actualiza automáticamente las preferencias por topic:
+
+```tsx
+import { PreferenceMatrix } from '@nexus-signal/react';
+
+function UserSettings() {
+  return (
+    <div className="settings-panel">
+      <h2>Notification Preferences</h2>
+      <PreferenceMatrix />
+    </div>
+  );
+}
+```
+
+El componente renderiza los topics como filas y los canales disponibles (Email, SMS, Push) como columnas. Cuando un usuario activa o desactiva una casilla de verificación, el cliente actualiza el perfil del suscriptor (`PUT /v1/sdk/subscribers/:externalId/preferences`) automáticamente.
+
+---
+
+## Límites
+
+| Límite                                  | Valor          |
+| :-------------------------------------- | :------------- |
+| Máximo de topics por entorno            | 50             |
+| Longitud máxima del nombre de máquina   | 64 caracteres  |
+| Longitud máxima del nombre para mostrar | 128 caracteres |
+
+---
 
 ## Relacionado
 
-- [React SDK](/docs/sdk/frontend/react)
-- [SDK API](/docs/api/sdk)
+- [Componentes del SDK de React](/docs/sdk/frontend/react)
+- [Referencia de la API del SDK](/docs/api/sdk)
+- [Matriz de preferencias del suscriptor](/docs/platform/features/rich-inbox)

@@ -1,62 +1,153 @@
 ---
-title: Nodo de Flujo de IA
-description: Ejecución de LLM en tiempo de ejecución en flujos de trabajo — clasifica usuarios, genera copias personalizadas y bifurca basándote en la salida de la IA.
+title: AI Workflow Node
+description: Ejecución de LLM en tiempo de ejecución en workflows — clasifica usuarios, genera copias personalizadas y realiza bifurcaciones basadas en la salida de la IA.
 ---
 
-El **Nodo de IA** realiza llamadas a un modelo de lenguaje (LLM) configurado (OpenAI o Anthropic) en mitad de la ejecución de un flujo de trabajo. Úsalo para generar contenido dinámico, clasificar usuarios, calificar la intención y tomar decisiones de bifurcación no deterministas.
+El **AI Node** realiza una llamada a un LLM configurado (OpenAI o Anthropic) durante la ejecución del workflow. El prompt se compila con el contexto de datos del suscriptor + trigger en vivo, y la respuesta se almacena de vuelta en `data` para las plantillas y condiciones subsiguientes.
 
 <Callout type="info">
-  Esto representa **IA en tiempo de ejecución en flujos de trabajo**. Para la
-  creación de plantillas asistida por IA en el editor del panel, consulta
-  [Generación de contenido por IA](/docs/platform/features/ai-content).
+  Esto representa la **IA en tiempo de ejecución en workflows** — para la creación de plantillas
+  asistida por IA en el editor del panel de control, consulta [Generación de contenido por
+  IA](/docs/platform/features/ai-content).
 </Callout>
+
+---
+
+## Cómo funciona
+
+```mermaid
+flowchart LR
+  T[Datos del Trigger + Suscriptor] --> P[Compilar prompt con Handlebars]
+  P --> LLM[Llamar al LLM: OpenAI / Anthropic]
+  LLM -->|Respuesta JSON| D[Almacenar bajo data.responseKey]
+  D --> Step[Pasos posteriores usan data.responseKey]
+```
+
+El LLM recibe instrucciones a través de un prompt del sistema fijo para devolver siempre un **objeto JSON válido**. La respuesta se analiza y se almacena bajo `data.<responseKey>`.
+
+---
 
 ## Configuración
 
-| Campo         | Descripción                                                                      |
-| ------------- | -------------------------------------------------------------------------------- |
-| `prompt`      | Plantilla de Handlebars con contexto de suscriptor + disparador (trigger)        |
-| `responseKey` | Clave para almacenar la salida del LLM en `ctx.data` (por defecto: `aiResponse`) |
-| `conditions`  | [Condiciones de paso](/docs/platform/features/step-conditions) opcionales        |
+| Campo         | Tipo   | Requerido | Descripción                                                                                             |
+| :------------ | :----- | :-------- | :------------------------------------------------------------------------------------------------------ |
+| `prompt`      | string | ✅        | Plantilla de Handlebars con contexto del suscriptor + trigger                                           |
+| `responseKey` | string | —         | Clave para almacenar la salida JSON del LLM bajo `data.*`. Por defecto es `ai`                          |
+| `conditions`  | object | —         | [Condiciones de paso](/docs/platform/features/step-conditions) opcionales para condicionar la ejecución |
+
+<Callout type="info">
+  **`responseKey` por defecto**: Si no se especifica, la respuesta del LLM se almacena bajo
+  `data.ai`. La clave debe comenzar con una letra y contener únicamente letras, dígitos y guiones
+  bajos (`[a-zA-Z][a-zA-Z0-9_]*`).
+</Callout>
+
+---
 
 ## Ejemplo: asunto de correo personalizado
 
-Prompt:
+**Prompt del AI Node:**
 
 ```
-Write a short email subject line for {{ subscriber.externalId }} about order {{ data.orderId }}.
-Tone: friendly, under 60 characters. Return only the subject text.
+Write a short email subject line for {{ subscriber.first_name }} about order {{ data.orderId }}.
+Tone: friendly, under 60 characters.
+Return a JSON object: { "subject": "<subject line here>" }
 ```
 
-Plantilla de canal de email posterior:
+**Plantilla de correo posterior** (haciendo referencia a `data.ai.subject`):
 
 ```html
-Subject: {{ aiResponse }}
+Subject: {{ data.ai.subject }}
+<p>Hi {{ subscriber.first_name }}, your order {{ data.orderId }} is confirmed!</p>
 ```
+
+O con una `responseKey: "copy"` personalizada:
+
+```html
+Subject: {{ data.copy.subject }}
+```
+
+---
 
 ## Ejemplo: bifurcación por riesgo de abandono (churn-risk)
 
 ```mermaid
 flowchart TD
-  AI[AI Node: classify churn risk] --> C{data.riskLevel}
-  C -->|high| SMS[Urgent SMS]
-  C -->|low| Email[Standard email]
+  AI[AI Node: clasificar riesgo de abandono] --> C{data.risk.level}
+  C -->|high| SMS[SMS urgente + oferta de retención]
+  C -->|medium| Email[Email estándar de reactivación]
+  C -->|low| Skip[Sin notificación]
 ```
 
-El prompt devuelve contexto estructurado fusionado mediante `responseKey`. Vincula [condiciones de paso](/docs/platform/features/step-conditions) en los nodos posteriores basándote en la clave `data.riskLevel`.
+**Prompt:**
+
+```
+Based on last active date {{ data.lastActiveAt }} and plan {{ data.plan }},
+classify this user's churn risk.
+Return JSON: { "level": "high" | "medium" | "low", "reason": "<brief reason>" }
+```
+
+**Condición de paso en el nodo de SMS** (basada en `data.risk.level`):
+
+```json
+{
+  "logic": "AND",
+  "rules": [{ "variable": "data.risk.level", "operator": "equals", "value": "high" }]
+}
+```
+
+---
 
 ## Configuración del proveedor
 
-Configura las claves API de OpenAI o Anthropic en **Integrations → AI Providers**. El consumo de tokens se rastrea por ejecución para el análisis de costes.
+Configura las claves de API de OpenAI o Anthropic en **Integrations → AI Providers** en el panel de control. El uso de tokens se rastrea por ejecución de workflow para el análisis de costos.
 
-## Medidas de protección (Guardrails)
+- **OpenAI**: Establece tu `OPENAI_API_KEY` a través de la integración en el panel de control.
+- **Anthropic**: Establece tu `ANTHROPIC_API_KEY` a través de la integración en el panel de control.
 
-- Tiempo de espera de solicitud por nodo.
-- Ruta de fallback si el LLM falla (usa condiciones en una rama alternativa).
-- Límites de coste configurables por nivel de plan de la organización.
+Si no hay ninguna clave de proveedor de IA configurada, el nodo de IA se omite y registra `AI_NODE_FAILED` con la razón `No AI provider API key configured`.
+
+---
+
+## Manejo de errores y medidas de seguridad
+
+- **Ninguna clave de API configurada**: El paso se omite, `data.<responseKey>` se establece en `null` y se registra `AI_NODE_FAILED`.
+- **Tiempo de espera agotado (timeout) en la solicitud del LLM**: El paso se omite, `data.<responseKey>` se establece en `null` y se registra `AI_NODE_FAILED`.
+- **Respuesta JSON no válida**: Se almacena tal cual; las plantillas posteriores deben manejarlo de forma segura mediante guardas `{{#if data.ai}}`.
+- **Límites de costo**: Configurable por nivel de plan de la organización en la configuración del panel de control.
+
+---
+
+## Workflow-as-code
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('payment.overdue')
+  .addHttpFetch({
+    url: 'https://api.billing.com/invoices/{{ data.invoiceId }}',
+    method: 'GET',
+    responseKey: 'invoice',
+  })
+  .addAiNode({
+    prompt:
+      'Classify urgency for invoice {{ data.invoice.amount }} due {{ data.invoice.dueDate }}. Return JSON: { "level": "low" | "medium" | "high" }',
+    responseKey: 'risk',
+  })
+  .addChannel('EMAIL')
+  .addChannel('SMS', {
+    conditions: {
+      logic: 'AND',
+      rules: [{ variable: 'data.risk.level', operator: 'equals', value: 'high' }],
+    },
+  })
+  .toDefinition();
+```
+
+---
 
 ## Relacionado
 
 - [Generación de contenido por IA](/docs/platform/features/ai-content)
-- [Condiciones de Paso](/docs/platform/features/step-conditions)
-- [Nodo de Petición HTTP](/docs/platform/features/http-fetch-node)
+- [Condiciones de paso](/docs/platform/features/step-conditions)
+- [Nodo HTTP Fetch](/docs/platform/features/http-fetch-node)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
