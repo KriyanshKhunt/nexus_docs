@@ -1,15 +1,15 @@
 ---
-title: Servidor MCP de IA
-description: "@nexus-signal/mcp-server — expone herramientas, prompts y recursos de Nexus a los asistentes de codificación IA."
+title: AI MCP Server
+description: '@nexus-signal/mcp-server — expone herramientas, prompts y recursos de Nexus a los asistentes de codificación de IA.'
 ---
 
-El **Protocolo de Contexto de Modelo (MCP)** permite que los asistentes de codificación IA (como Cursor, Claude Desktop y Windsurf) gestionen flujos de trabajo (workflows), suscriptores, objetos, broadcasts y guías directamente desde tu editor utilizando lenguaje natural.
+El servidor **Model Context Protocol (MCP)** permite que los asistentes de codificación de IA (como Cursor, Claude Desktop y Windsurf) gestionen workflows, suscriptores, objetos, broadcasts y guías directamente desde tu editor utilizando lenguaje natural.
 
 ---
 
-## Configuración en el IDE
+## Instalación y configuración en el IDE
 
-Configura el servidor en el archivo de ajustes de MCP de tu editor.
+Configura el servidor en el archivo de configuración de MCP de tu editor.
 
 ### Variables de Entorno
 
@@ -57,6 +57,12 @@ Ve a **Settings → Features → MCP**, haz clic en **Add New MCP Server** y con
 
 Añade la configuración a `~/.codeium/windsurf/mcp_config.json`:
 
+````json
+{
+  "mcpServers": {
+    "nexus-signal": {
+Add the configuration to `~/.codeium/windsurf/mcp_config.json`:
+
 ```json
 {
   "mcpServers": {
@@ -70,74 +76,74 @@ Añade la configuración a `~/.codeium/windsurf/mcp_config.json`:
     }
   }
 }
-```
+````
 
 ---
 
 ## Primitivas de MCP
 
-El servidor expone **30 herramientas (tools)**, **4 recursos (resources)** y **5 indicaciones (prompts)** para permitir que los modelos de IA exploren y ejecuten configuraciones de notificación.
+El servidor expone **30 herramientas**, **4 recursos** y **5 prompts** para permitir que los LLMs exploren y ejecuten configuraciones de notificación.
 
 ### 1. Herramientas (Tools)
 
-Las herramientas permiten a los agentes de IA ejecutar operaciones de lectura/escritura en tu espacio de trabajo:
+Las herramientas permiten a los agentes de IA realizar operaciones de lectura y escritura en tu espacio de trabajo:
 
 #### Workflows
 
-- `nexus_list_workflows` — Lista los workflows del entorno actual.
+- `nexus_list_workflows` — Lista workflows en el entorno actual.
 - `nexus_get_workflow` — Obtiene la configuración de pasos de un workflow por nombre.
-- `nexus_trigger_workflow` — Dispara un flujo de trabajo para múltiples destinatarios.
-- `nexus_send_notification` — Envía una notificación de workflow a un único destinatario.
-- `nexus_sync_workflows` — Sincroniza las definiciones de workflows declaradas en código.
-- `nexus_get_delivery_status` — Inspecciona el estado de entrega a través de un UUID de registro (log).
+- `nexus_trigger_workflow` — Dispara un workflow para múltiples destinatarios.
+- `nexus_send_notification` — Envía un workflow a un único destinatario.
+- `nexus_sync_workflows` — Sube definiciones de workflows declaradas en código.
+- `nexus_get_delivery_status` — Inspecciona el estado de entrega de un UUID de registro.
 
 #### Suscriptores
 
-- `nexus_list_subscribers` — Busca y filtra destinatarios.
-- `nexus_get_subscriber` — Obtiene detalles de un suscriptor por ID.
-- `nexus_create_subscriber` — Realiza un upsert de los campos de contacto de un suscriptor.
-- `nexus_delete_subscriber` — Elimina a un suscriptor y su historial.
+- `nexus_list_subscribers` — Busca destinatarios.
+- `nexus_get_subscriber` — Obtiene detalles del suscriptor por ID.
+- `nexus_create_subscriber` — Realiza un upsert de los campos de contacto del suscriptor.
+- `nexus_delete_subscriber` — Purga el suscriptor y su historial.
 
 #### Objetos
 
 - `nexus_set_object` — Crea o actualiza una entidad que no sea un usuario.
-- `nexus_get_object` — Obtiene detalles del objeto y la cantidad de suscriptores.
+- `nexus_get_object` — Obtiene detalles del objeto y el recuento de suscriptores.
 - `nexus_subscribe_to_object` — Añade suscriptores para observar un objeto.
-- `nexus_unsubscribe_from_object` — Da de baja a destinatarios de un objeto.
+- `nexus_unsubscribe_from_object` — Da de baja a los destinatarios de un objeto.
 
 #### Tenants B2B
 
-- `nexus_list_tenants` — Obtiene las configuraciones de marca de los tenants.
+- `nexus_list_tenants` — Obtiene las personalizaciones de marca de los tenants.
 - `nexus_create_or_update_tenant` — Realiza un upsert de la configuración de un tenant.
 
 #### Audiencias y Segmentos
 
-- `nexus_list_audiences` — Obtiene los segmentos de audiencias dinámicos.
-- `nexus_create_audience` — Crea un segmento a partir de reglas lógicas.
+- `nexus_list_audiences` — Obtiene segmentos de audiencia dinámicos.
+- `nexus_create_audience` — Crea un segmento con reglas lógicas.
 
 #### Broadcasts
 
 - `nexus_list_broadcasts` — Consulta los broadcasts y sus estados.
-- `nexus_create_broadcast` — Prepara un envío de flujo de trabajo a una audiencia.
-- `nexus_send_broadcast` — Envía un broadcast inmediatamente.
+- `nexus_create_broadcast` — Prepara un envío de workflow a una audiencia.
+- `nexus_send_broadcast` — Entrega un broadcast inmediatamente.
 
 #### Contenido y Layouts
 
-- `nexus_list_layouts` — Obtiene layouts HTML de correo compartido.
+- `nexus_list_layouts` — Obtiene layouts de envoltura HTML de correo.
 - `nexus_create_or_update_layout` — Crea un layout de correo compartido.
-- `nexus_list_translations` — Muestra los diccionarios de traducción e idiomas locales.
-- `nexus_upsert_translation` — Crea o actualiza diccionarios clave-valor de traducción local.
+- `nexus_list_translations` — Lista los paquetes de localización.
+- `nexus_upsert_translation` — Crea o actualiza el diccionario clave-valor de traducción local.
 
-#### Guías en el Producto
+#### Guías en la aplicación (In-App)
 
-- `nexus_list_guides` — Lista las guías integradas en la app (banners, modales, tooltips).
+- `nexus_list_guides` — Lista configuraciones de guías integradas en la app (banners, modales, tooltips).
 - `nexus_get_guide` — Obtiene el esquema de diseño de una guía.
-- `nexus_create_or_update_guide` — Realiza un upsert de atributos de guía.
+- `nexus_create_or_update_guide` — Realiza un upsert de atributos de la guía.
 
 #### Schedules y Sistema
 
-- `nexus_list_schedules` — Lista flujos de trabajo programados cron recurrentes.
-- `nexus_check_health` — Comprueba el estado de conectividad con la API.
+- `nexus_list_schedules` — Lista workflows cron recurrentes activos.
+- `nexus_check_health` — Verifica el estado de conectividad con la API.
 
 ---
 
@@ -146,26 +152,26 @@ Las herramientas permiten a los agentes de IA ejecutar operaciones de lectura/es
 Los recursos proporcionan documentos de contexto de solo lectura a los modelos de IA:
 
 - `nexus://docs/integration-guide` — Ejemplos de inicio rápido para Node.js.
-- `nexus://docs/step-types` — Esquemas de referencia para pasos de delay, digest, channel y httpFetch.
-- `nexus://docs/channels` — Canales compatibles y campos de contacto obligatorios.
+- `nexus://docs/step-types` — Esquemas de referencia para delay, digest, channel y httpFetch.
+- `nexus://docs/channels` — Canales compatibles y campos de contacto requeridos.
 - `nexus://workflows/{name}` — Esquema JSON en vivo de un workflow configurado.
 
 ---
 
-### 3. Indicaciones (Prompts)
+### 3. Prompts
 
-Los prompts actúan como plantillas preconfiguradas que asisten al modelo a estructurar tareas:
+Los prompts actúan como plantillas preconfiguradas que ayudan a los modelos a orquestar tareas:
 
-- `setup-transactional-workflow` — Ayuda a diseñar flujos transaccionales con fallback de canales y delays.
+- `setup-transactional-workflow` — Ayuda a diseñar rutas transaccionales con fallback de canales y delays.
 - `setup-digest-workflow` — Prepara la agrupación de notificaciones y resúmenes de correo/in-app.
-- `setup-escalation-workflow` — Crea cadenas de escalado (`in-app` → `email` → `SMS`) según prioridades.
-- `setup-object-fanout` — Crea objetos, añade suscriptores y dispara flujos de trabajo.
-- `debug-delivery` — Guía al modelo para depurar entregas fallidas mediante logs y preferencias.
+- `setup-escalation-workflow` — Crea cadenas de escalado (`in-app` → `email` → `SMS`) según prioridad.
+- `setup-object-fanout` — Crea objetos, añade suscriptores y dispara workflows.
+- `debug-delivery` — Guía al modelo para depurar entregas fallidas mediante IDs de registro y preferencias.
 
 ---
 
 ## Enlaces Relacionados
 
-- [CLI de Nexus](/docs/sdk/devtools/cli)
+- [Nexus CLI](/docs/sdk/devtools/cli)
 - [API de Gestión](/docs/api/management)
-- [Flujo de trabajo como código](/docs/sdk/workflow/workflow-as-code)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

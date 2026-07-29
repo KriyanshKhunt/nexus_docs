@@ -1,107 +1,153 @@
 ---
 title: Configuración B2B Multi-Tenant
-description: Notificaciones de marca blanca para cada uno de tus clientes — branding, disparadores delimitados y variables de plantilla.
+description: Notificaciones de marca blanca para cada uno de tus clientes — personalización de marca por tenant, triggers delimitados e aislamiento del feed in-app.
 ---
 
-Si tu producto sirve a múltiples empresas (tenants), los **Tenants** de Nexus permiten que cada cliente reciba notificaciones con su propia marca sin necesidad de crear espacios de trabajo de Nexus independientes.
+Si tu producto sirve a múltiples empresas, los **Tenants** de Nexus permiten que cada cliente reciba notificaciones con su propia marca sin necesidad de crear espacios de trabajo independientes por cliente.
 
-## Arquitectura
+---
+
+## Cómo funciona
 
 ```mermaid
 flowchart TB
-  subgraph Your SaaS
-    App[Your application]
+  subgraph Your SaaS [Tu SaaS]
+    App[Tu aplicación]
   end
-  subgraph Nexus
+  subgraph Nexus Workspace [Espacio de trabajo de Nexus]
     T1[Tenant: acme]
     T2[Tenant: globex]
-    W[Workflow engine]
+    W[Motor de workflows]
   end
-  App ---->|trigger + tenant: acme| T1
-  App ---->|trigger + tenant: globex| T2
+  App ---->|trigger + tenant: tenant_acme| T1
+  App ---->|trigger + tenant: tenant_globex| T2
   T1 --> W
   T2 --> W
 ```
 
-**Organización** = tu espacio de trabajo de Nexus. **Tenant** = la empresa de tu cliente dentro de ese espacio de trabajo.
+**Organización (Organization)** = tu espacio de trabajo de Nexus (uno por producto).
+**Inquilino (Tenant)** = uno de tus clientes B2B dentro de ese espacio de trabajo.
 
-## Paso 1 — Crear tenants
+El campo `tenant` en el payload del trigger le indica a Nexus qué contexto de marca del cliente debe aplicar al compilar el mensaje.
 
-Cuando un nuevo cliente se registra en tu aplicación:
+---
+
+## Paso 1 — Registrar tenants
+
+Llama al método `upsert` del SDK de Node cada vez que una nueva empresa se registre en tu aplicación:
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
 await nexus.tenants.upsert({
-  externalId: "tenant_acme",
-  name: "Acme Corp",
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
   branding: {
-    logoUrl: "https://cdn.acme.io/logo.png",
-    primaryColor: "#2563eb",
-    companyName: "Acme Corp",
-    footerHtml: "<p>© Acme Corp · support@acme.io</p>",
+    logo: 'https://cdn.acme.io/logo.png',
+    primaryColor: '#2563eb',
+    footerHtml: '<p>© Acme Corp · <a href="mailto:support@acme.io">support@acme.io</a></p>',
+  },
+  properties: {
+    planTier: 'enterprise',
   },
 });
 ```
 
-Campos de marca (branding) compatibles: `logo`, `logoUrl`, `primaryColor`, `iconUrl`, `companyName`, `footerHtml`, `headerHtml`.
+**Campos de `branding`** — cualquier par clave-valor de cadena que desees que esté accesible en las plantillas. Claves comunes:
 
-## Paso 2 — Aplicar branding en los layouts de email
+| Clave          | Valor de ejemplo               |
+| :------------- | :----------------------------- |
+| `logo`         | `https://cdn.acme.io/logo.png` |
+| `primaryColor` | `#2563eb`                      |
+| `companyName`  | `Acme Corp`                    |
+| `footerHtml`   | `<p>© Acme Corp</p>`           |
 
-Crea un [layout de email](/docs/platform/features/email-layouts) que haga referencia al branding:
+> **Nota:** El objeto `branding` es un `Record<string, string>` de formato libre — puedes definir cualquier clave y hacer referencia a ellas dentro de las plantillas como `{{ branding.yourKey }}`.
+
+---
+
+## Paso 2 — Utilizar la marca en los layouts de correo
+
+Crea un [layout de correo](/docs/platform/features/email-layouts) que haga referencia a las claves de marca del tenant:
 
 ```html
-<img src="{{ branding.logoUrl }}" alt="{{ branding.companyName }}" />
-<div style="color: {{ branding.primaryColor }}">{{{ content }}}</div>
+<header>
+  <img src="{{ branding.logo }}" alt="{{ branding.companyName }}" height="40" />
+</header>
+
+<main style="color: {{ branding.primaryColor }}">{{{ content }}}</main>
+
 <footer>{{{ branding.footerHtml }}}</footer>
 ```
 
-Cuando un trigger incluye un `tenant`, el compilador inyecta la marca de ese tenant de forma automática.
+Cuando un trigger incluye un valor de `tenant`, el compilador de plantillas inyecta automáticamente el objeto de marca de ese tenant en el contexto de Handlebars.
+
+---
 
 ## Paso 3 — Disparar con contexto de tenant
 
+Pasa el `externalId` del tenant en el campo `tenant` de cada trigger para los usuarios de esa empresa:
+
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "invoice.sent",
-  tenant: "tenant_acme",
-  recipients: [{ externalId: user.id, email: user.email }],
-  data: { invoiceId: "INV-001", amount: "$500" },
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: user.id }],
+  data: {
+    invoiceId: 'INV-001',
+    amount: '$500',
+  },
 });
 ```
 
-## Paso 4 — Preferencias por tenant (opcional)
+> El campo `tenant` coincide con el `externalId` que utilizaste en la llamada `upsert` — no con el UUID interno.
 
-Establece `preferenceDefaults` en el tenant para controlar las preferencias predeterminadas de suscripción (opt-in/opt-out) para los nuevos suscriptores de ese tenant.
+---
 
-## Paso 5 — Filtrar feed in-app por tenant
+## Paso 4 — Delimitar el feed de notificaciones in-app
 
-Las notificaciones del SDK admiten la delimitación por tenant mediante un parámetro de consulta:
+Cuando tu aplicación muestre un centro de notificaciones limitado a un tenant, filtra el feed del SDK mediante el UUID de la base de datos de dicho tenant:
 
 ```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=<tenant-uuid>
+x-nexus-public-key: pk_prd_your_public_key
 ```
 
-Utiliza esta opción cuando tu aplicación muestre un centro de notificaciones delimitado para cada tenant.
+<Callout type="info">
+  El `tenantId` en la consulta del SDK es el **UUID** interno del tenant (obtenido de la respuesta
+  de lista), no la cadena `externalId`. Utiliza la [API de Tenants](/docs/api/tenants) o la API de
+  Gestión para recuperarlo.
+</Callout>
+
+---
+
+## Paso 5 — Probar con dos tenants antes de Producción
+
+1. Crea dos tenants de prueba (`tenant_acme`, `tenant_globex`) con diferentes valores de marca en **Development**.
+2. Dispara el mismo workflow dos veces (una vez por tenant) para el mismo suscriptor.
+3. Confirma que cada correo electrónico muestre el logotipo y el pie de página correctos en la vista previa del Sandbox.
+4. Promueve a **Production** únicamente después de que la marca se renderice correctamente.
+
+---
 
 ## Lista de verificación (Checklist)
 
 <Steps>
   <Step>
-    Crea el tenant cuando el cliente se registre (sincroniza `externalId` con tu
-    base de datos).
+    Registra cada tenant en el registro del cliente — sincroniza `externalId` con el ID de la
+    empresa en tu base de datos.
   </Step>
-  <Step>
-    Almacena los recursos de marca (las URLs de los logos deben ser HTTPS y de
-    acceso público).
-  </Step>
-  <Step>
-    Pasa el `tenant` en cada trigger para los usuarios de ese cliente.
-  </Step>
-  <Step>
-    Prueba en Desarrollo con dos tenants antes de Production.
-  </Step>
+  <Step>Sube los recursos de marca a un CDN HTTPS de acceso público. Nexus no aloja imágenes.</Step>
+  <Step>Añade el campo `tenant` en cada trigger disparado para los usuarios de esa empresa.</Step>
+  <Step>Prueba con dos tenants en Desarrollo antes de salir a producción en Production.</Step>
 </Steps>
+
+---
 
 ## Relacionado
 
-- [Marca Multi-Tenant](/docs/platform/features/tenants)
+- [Guía de características de marca por tenant](/docs/platform/features/tenants)
 - [Layouts de Email](/docs/platform/features/email-layouts)
-- [API de Tenants](/docs/api/tenants)
+- [Referencia de la API de Tenants](/docs/api/tenants)

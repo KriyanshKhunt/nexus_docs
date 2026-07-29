@@ -25,7 +25,7 @@ These endpoints support both dashboard JWT sessions and server secret keys (`sk_
 | `GET`    | `/v1/management/objects`                           | `/v1/objects`                           | List all objects.                                    |
 | `POST`   | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Add subscribers as watchers to the object (max 100). |
 | `DELETE` | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Remove watchers from the object.                     |
-| `GET`    | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | List all subscribers watching the object.            |
+| `GET`    | —                                                  | `/v1/objects/:col/:extId/subscriptions` | List all subscribers watching the object.            |
 
 ---
 

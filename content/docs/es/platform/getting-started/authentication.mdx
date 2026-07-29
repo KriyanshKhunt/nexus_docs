@@ -1,65 +1,124 @@
 ---
-title: Autenticación
-description: Claves secretas, claves públicas y firmas HMAC para una integración segura con Nexus Signal.
+title: Autenticación y seguridad
+description: Administra claves secretas, claves públicas y firmas HMAC para asegurar tus triggers de backend y campanas de frontend en tiempo real.
 ---
 
-Nexus Signal usa **API keys con alcance por entorno**. Credenciales distintas aplican a triggers de servidor frente a componentes del SDK orientados al navegador.
+# Autenticación y seguridad
 
-## Tipos de clave
+Nexus Signal utiliza credenciales de API con alcance por entorno. Las diferentes claves tienen un alcance específico para las solicitudes de trigger del lado del servidor frente a los componentes orientados al navegador, lo que garantiza que las integraciones de tus proveedores se mantengan seguras.
 
-| Clave | Prefijo | Usado por | Exposición |
-|-------|---------|-----------|------------|
-| **Clave secreta** | `sk_*` | Server SDK, triggers de workflow, schedule SDK | **Solo servidor — nunca en el navegador** |
-| **Clave pública** | `pk_*` | React SDK, inbox API, WebSocket join | Segura para incrustar en el frontend |
+---
 
-Las claves secretas se envían como `Authorization: Bearer sk_prd_…` en las peticiones de trigger.
+## Alcance de las claves API
 
-Las claves públicas se envían como `x-nexus-public-key` en las rutas del SDK.
+Cada entorno (Desarrollo, Staging, Producción) tiene un par de claves distinto:
 
-## Autenticación de trigger de workflow
+| Tipo de clave     | Prefijo | Entorno de destino     | Alcance del despliegue                                                                           | Regla de exposición                                                                           |
+| :---------------- | :------ | :--------------------- | :----------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Clave secreta** | `sk_*`  | Específica del entorno | Triggers del lado del servidor, sincronización de flujos de trabajo y scripts de administración. | **Nunca exponer en el código del cliente.** Mantener en variables `.env` seguras del backend. |
+| **Clave pública** | `pk_*`  | Específica del entorno | Inicialización de la campana de notificaciones en React/Next.js/Angular/JS.                      | Segura para incrustar en scripts de frontend y archivos de configuración.                     |
+
+---
+
+## Autenticación de ingestión de flujos de trabajo
+
+Las llamadas de trigger del lado del servidor requieren que la Clave Secreta se envíe como un token Bearer estándar en la cabecera `Authorization`:
 
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_your_secret_key
+Host: api.nexussignal.dev
+Authorization: Bearer sk_prd_your_secret_key_here
 Content-Type: application/json
+
+{
+  "workflowName": "user.welcome",
+  "recipients": [{ "externalId": "usr_992" }]
+}
 ```
 
-La API valida la clave, resuelve el entorno y la organización, y devuelve **202 Accepted** mientras el worker procesa la entrega de forma asíncrona.
+La pasarela de ingestión valida la firma, mapea la solicitud a tu organización, encola la ejecución de entrega y responde con `202 Accepted` en cuestión de milisegundos.
 
-## HMAC para tiempo real (in-app)
+---
 
-Las conexiones WebSocket del navegador no pueden usar claves secretas. En su lugar:
+## Feeds seguros en tiempo real (Firmas HMAC)
 
-1. **Tu backend** genera una firma HMAC con la clave secreta y el ID del suscriptor
-2. **Tu frontend** pasa la firma a `NexusProvider`
+Para evitar que los usuarios se suscriban a los flujos de notificaciones integrados (in-app) de otros usuarios, la conexión del navegador del frontend no puede usar una clave secreta sin procesar. En su lugar, Nexus asegura los feeds de WebSocket en tiempo real mediante **firmas HMAC-SHA256**.
+
+1. **Tu servidor de backend**: Genera una firma cuando se autentica el inicio de sesión del suscriptor.
+2. **Tu cliente de frontend**: Recibe la firma y la pasa junto con la clave pública durante la conexión del handshake de WebSocket.
+
+```mermaid
+sequenceDiagram
+    participant Browser as Navegador del Cliente
+    participant Server as Tu Servidor de Backend
+    participant Nexus as Pasarela de Nexus Signal
+
+    Browser->>Server: 1. Solicitar página (Sesión de Auth de Usuario)
+    activate Server
+    Server->>Server: 2. Generar firma HMAC<br/>HMAC-SHA256(sk_key, subscriberId)
+    Server-->>Browser: 3. Devolver ID de usuario + firma HMAC
+    deactivate Server
+
+    Browser->>Nexus: 4. Conexión WebSocket (pk_key, subscriberId, firma)
+    activate Nexus
+    Nexus->>Nexus: 5. Verificar firma internamente
+    Nexus-->>Browser: 6. Handshake aceptado (Suscrito a eventos en tiempo real)
+    deactivate Nexus
+```
+
+### 1. Generación de firmas en el Backend
+
+#### Utilizando el SDK de Node
 
 ```ts
-// Server — @nexus-signal/node
-const hmac = nexus.auth.generateHmacSignature('user_123');
+import { NexusClient } from '@nexus-signal/node';
 
-// Client — @nexus-signal/react
-<NexusProvider
-  publicKey="pk_prd_…"
-  subscriberId="user_123"
-  hmacSignature={hmac}
-  backendUrl="https://api.nexussignal.dev"
-/>
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+// Generar HMAC para un usuario
+const hmacSignature = nexus.auth.generateHmacSignature('usr_123');
 ```
 
-La plataforma verifica: `HMAC-SHA256(secretKey, subscriberExternalId)`.
+#### Node.js nativo (Alternativa / Sin SDK)
 
-<Callout type="error">
-Regenera el HMAC en cada carga de página o sesión — trátalo como un token de sesión de corta duración derivado de la autenticación de tu backend.
-</Callout>
+Si estás generando firmas en entornos donde el SDK no está instalado, utiliza el módulo nativo `crypto`:
 
-## Autenticación del dashboard
+```ts
+import crypto from 'crypto';
 
-El dashboard web usa sesiones JWT (email/contraseña, magic link, GitHub u OAuth de Google) con MFA opcional. Los miembros del equipo obtienen acceso basado en roles: Owner, Admin, Developer o Marketer.
+function generateHmac(secretKey: string, subscriberExternalId: string): string {
+  return crypto.createHmac('sha256', secretKey).update(subscriberExternalId).digest('hex');
+}
 
-## Rotación de claves
+const hmacSignature = generateHmac(process.env.NEXUS_SECRET_KEY!, 'usr_123');
+```
 
-Rota las claves secretas desde **Settings → API Keys**. Las claves antiguas pueden deprecarse sin downtime si rotas tanto el servidor como la generación de HMAC a la vez.
+### 2. Configuración del Handshake en el Frontend
 
-## Relacionado
+Pasa la firma generada directamente a la inicialización del proveedor del cliente:
 
-- [Autenticación](/docs/platform/getting-started/authentication) — qué clave va dónde
+```tsx
+import { NexusProvider, NotificationFeed } from '@nexus-signal/react';
+
+function App() {
+  return (
+    <NexusProvider
+      publicKey="pk_prd_your_public_key"
+      subscriberId="usr_123"
+      hmacSignature="the_backend_generated_hmac_signature"
+    >
+      <NotificationFeed />
+    </NexusProvider>
+  );
+}
+```
+
+---
+
+## Procedimiento de rotación de claves
+
+Si una clave secreta se filtra accidentalmente, rótala de inmediato desde la sección **Settings → API Keys** del panel de control:
+
+1. **Generar clave secundaria**: Haz clic en **Roll Key** para generar una clave nueva mientras mantienes la clave anterior activa temporalmente (ventana de clave doble).
+2. **Desplegar clave en el backend**: Actualiza tus variables `.env` del lado del servidor con la nueva clave `sk_*`.
+3. **Desactivar clave anterior**: Una vez que tus servidores estén desplegados, haz clic en **Revoke** en la clave anterior dentro del panel de control para desactivarla de forma permanente.

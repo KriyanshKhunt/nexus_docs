@@ -16,13 +16,13 @@ Tenants represent your B2B SaaS customers. This API allows dashboard administrat
 
 ## Endpoint summary
 
-| Method   | Management Path (`sk_*`)     | Dashboard Path (JWT) | Description                               |
-| :------- | :--------------------------- | :------------------- | :---------------------------------------- |
-| `GET`    | `/v1/management/tenants`     | `/v1/tenants`        | List all tenants (paginated, searchable). |
-| `PUT`    | `/v1/management/tenants`     | `/v1/tenants`        | Create or update (upsert) a tenant.       |
-| `GET`    | `/v1/management/tenants/:id` | `/v1/tenants/:id`    | Retrieve a single tenant profile.         |
-| `PATCH`  | —                            | `/v1/tenants/:id`    | Update individual tenant properties.      |
-| `DELETE` | —                            | `/v1/tenants/:id`    | Delete a tenant.                          |
+| Method   | Management Path (`sk_*`) | Dashboard Path (JWT) | Description                               |
+| :------- | :----------------------- | :------------------- | :---------------------------------------- |
+| `GET`    | `/v1/management/tenants` | `/v1/tenants`        | List all tenants (paginated, searchable). |
+| `PUT`    | `/v1/management/tenants` | `/v1/tenants`        | Create or update (upsert) a tenant.       |
+| `GET`    | —                        | `/v1/tenants/:id`    | Retrieve a single tenant profile.         |
+| `PATCH`  | —                        | `/v1/tenants/:id`    | Update individual tenant properties.      |
+| `DELETE` | —                        | `/v1/tenants/:id`    | Delete a tenant.                          |
 
 ---
 

@@ -1,57 +1,88 @@
 ---
 title: Checklist de producción
-description: Verifica tu integración con Nexus Signal antes de cambiar a claves de Production.
+description: Verifica que tu integración con Nexus Signal esté lista antes de cambiar a las claves de Production y dirigir tráfico real.
 ---
 
-Usa este checklist antes de enrutar tráfico real a Production.
+Utiliza esta lista de verificación antes de dirigir el tráfico de usuarios reales a Production. Trabaja en cada sección en orden.
+
+---
 
 ## Claves y entornos
 
-- [ ] Clave secreta de Production (`sk_prd_`) almacenada en gestor de secretos — no en git
-- [ ] Staging probado con `sk_stg_` y claves reales de proveedor
-- [ ] Clave pública (`pk_prd_`) solo en variables de entorno del frontend
+- [ ] Clave secreta de Production (`sk_prd_…`) almacenada en un gestor de secretos (por ejemplo, AWS Secrets Manager, Vault, variables secretas de Railway) — **nunca confirmada en git**.
+- [ ] Entorno de Staging probado de extremo a extremo con `sk_stg_…` y credenciales reales de proveedores.
+- [ ] Clave pública (`pk_prd_…`) almacenada únicamente en variables de entorno del frontend — nunca expuesta en servicios del backend.
+
+---
 
 ## Proveedores
 
-- [ ] Todos los proveedores requeridos conectados y **test connection** superado
-- [ ] Reparto de pesos configurado si usas varios proveedores por capa
-- [ ] Costos unitarios de proveedor definidos para [analítica de costos](/docs/platform/features/cost-analytics)
-- [ ] Presupuesto mensual opcional configurado con email de alerta verificado
+- [ ] Todos los proveedores de canales requeridos conectados bajo el entorno de Production.
+- [ ] Botón de **Test connection** (Probar conexión) superado para cada proveedor.
+- [ ] Distribución de pesos (weight splits) configurada correctamente si utilizas múltiples proveedores por capa de canal.
+- [ ] Costos unitarios de proveedor introducidos para una [analítica de costos](/docs/platform/features/cost-analytics) precisa.
+- [ ] Límite presupuestario mensual configurado y dirección de correo electrónico de alerta verificada.
 
-## Flujos
+---
 
-- [ ] Plantillas promovidas a **Production Active** (no Draft)
-- [ ] Flujos marcados como **active**
-- [ ] Rutas de failover probadas vía modo chaos de Development
-- [ ] Ventanas de entrega definidas para envíos de marketing orientados al usuario
-- [ ] Topics asignados y matriz de preferencias probada
+## Workflows y plantillas
 
-## Integración SDK
+- [ ] Todas las plantillas promovidas a **Production Active** (no en borrador (Draft) o archivadas (Archived)).
+- [ ] Todos los workflows configurados como **Active** en el entorno de Production.
+- [ ] Cadenas de failover probadas — al menos un proveedor secundario por canal crítico.
+- [ ] Ventanas de entrega configuradas para envíos de marketing dirigidos a usuarios y resúmenes (digests).
+- [ ] Temas (Topics) asignados a los workflows apropiados y matriz de preferencias probada de extremo a extremo.
+- [ ] Smart Send-Time habilitado en las campañas donde corresponda.
 
-- [ ] HMAC generado en el servidor por sesión
-- [ ] Circuit breaker / reintentos del SDK Node implementados
-- [ ] `externalId` del suscriptor coincide con tus IDs de usuario de auth
+---
+
+## Integración con el SDK y backend
+
+- [ ] Firma HMAC generada **en el lado del servidor** por cada sesión de suscriptor — nunca calculada en el navegador.
+- [ ] Los valores de `externalId` del suscriptor coinciden exactamente con los IDs de usuario de tu sistema de autenticación.
+- [ ] Manejo de errores del SDK de Node implementado — verifica `result.ok` antes de usar `result.data`.
+- [ ] Claves de idempotencia utilizadas en las llamadas de trigger que puedan reintentarse debido a fallos de red.
+- [ ] Payloads de los triggers validados para asegurar que tienen la estructura correcta de `workflowName`, `recipients` y `data` antes de enviarlos.
+
+---
 
 ## Cumplimiento y operaciones
 
-- [ ] Proceso de purge GDPR documentado (API de eliminación de suscriptor)
-- [ ] Roles de equipo asignados (Owner, Developer, Marketer)
-- [ ] MFA activado para cuentas de administrador
-- [ ] Retención del audit log y plan de monitorización definidos
+- [ ] Proceso de purga de suscriptores para GDPR documentado — utiliza `DELETE /v1/subscribers/:id` para borrar el perfil, los registros y el estado en Redis.
+- [ ] Endpoint de exportación de GDPR probado — `GET /v1/subscribers/:id/export` devuelve el paquete de datos completo.
+- [ ] Roles de equipo asignados (Owner, Admin, Developer, Marketer) — sin credenciales compartidas.
+- [ ] MFA (Autenticación de múltiples factores) habilitado para todas las cuentas de Owner y Admin.
+- [ ] Retención de registros de auditoría (audit log) y plan de monitoreo de guardia definidos.
+
+---
 
 ## Facturación
 
-- [ ] Plan acorde al volumen esperado
-- [ ] Preferencia de límite de gasto configurada
-- [ ] Acceso al portal de facturación Stripe para administradores
+- [ ] El plan de suscripción coincide con el volumen mensual esperado de triggers.
+- [ ] Comportamiento ante excedentes confirmado (límite suave con alerta o detención estricta).
+- [ ] Acceso confirmado al portal de facturación de Stripe para los propietarios (Owners) de la cuenta.
 
-## Puesta en marcha
+---
 
-1. Cambia el entorno del dashboard a **Production**
-2. Despliega el backend con el secreto `sk_prd_`
-3. Envía un trigger canary al equipo interno
-4. Monitoriza **Audit Logs** y **Overview** durante la primera hora
+## Procedimiento de puesta en marcha
+
+1. Cambia el selector de entorno del panel de control a **Production**
+2. Despliega tu backend con las variables de entorno `sk_prd_…` y `pk_prd_…`
+3. Envía primero un trigger canary a un suscriptor del equipo interno
+4. Monitorea los **Audit Logs** y el panel de **Overview** durante la primera hora
+5. Confirma que la tasa de éxito de la entrega esté por encima del umbral esperado antes de eliminar los límites de canary
 
 <Callout type="warn">
-El sandbox de Development **no** funciona en Production. Cada trigger pasa por proveedores reales e incurre en cargos del proveedor.
+  El modo Sandbox de Development **no** se traslada a Production. Cada trigger en Production se
+  envía a través de proveedores reales e incurre en cargos del proveedor. Realiza pruebas
+  exhaustivas en Staging antes de cambiar.
 </Callout>
+
+---
+
+## Relacionado
+
+- [Autenticación y seguridad](/docs/platform/getting-started/authentication) — configuración de HMAC
+- [Guía de entornos](/docs/platform/getting-started/environments) — aislamiento de entornos
+- [Analítica de costos](/docs/platform/features/cost-analytics) — monitoreo de gastos
+- [Característica de Failover](/docs/platform/features/failover) — redundancia de proveedores

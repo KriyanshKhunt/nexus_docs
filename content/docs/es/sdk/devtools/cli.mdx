@@ -1,9 +1,9 @@
 ---
 title: Nexus CLI
-description: "@nexus-signal/cli — descarga/sube recursos, dispara flujos de trabajo, gestiona tenants B2B e intégralo con CI/CD."
+description: '@nexus-signal/cli — descargar/subir recursos, disparar workflows, administrar tenants B2B e integrar con CI/CD.'
 ---
 
-La **CLI de Nexus** envuelve la [API de Gestión](/docs/api/management) para administrar flujos de trabajo (workflows), traducciones y configuraciones desde la terminal o dentro de pipelines de CI/CD.
+La **Nexus CLI** envuelve la [API de Gestión](/docs/api/management) para administrar workflows, locales y configuraciones desde la terminal o dentro de pipelines de CI/CD.
 
 ## Instalación
 
@@ -83,7 +83,7 @@ Crea, descarga y sincroniza rutas de notificación definidas en código.
   ```bash
   nexus workflows get order.shipped
   ```
-- **Descargar definiciones**: Guarda los flujos de trabajo remotos localmente en archivos dentro de `.nexus/workflows/*.json`.
+- **Descargar definiciones**: Guarda los workflows remotos localmente en archivos dentro de `.nexus/workflows/*.json`.
   ```bash
   nexus workflows pull --all
   nexus workflows pull --dir ./custom-workflows-path
@@ -93,7 +93,7 @@ Crea, descarga y sincroniza rutas de notificación definidas en código.
   nexus workflows push --all
   nexus workflows push --dir ./custom-workflows-path
   ```
-- **Disparar workflow**: Ejecuta un flujo de trabajo para las IDs de destinatarios especificadas.
+- **Disparar workflow**: Ejecuta un workflow para las IDs de destinatarios especificadas.
   ```bash
   nexus workflows trigger order.shipped --to user_42,user_43 --data '{"orderId": "123"}' --tenant tenant_acme
   ```
@@ -102,7 +102,7 @@ Crea, descarga y sincroniza rutas de notificación definidas en código.
 
 ### 2. Suscriptores
 
-Gestiona los destinatarios de tus flujos de trabajo de notificación.
+Gestiona los destinatarios de tus workflows de notificación.
 
 - **Listar suscriptores**: Busca o filtra destinatarios.
   ```bash
@@ -175,13 +175,13 @@ Agrupa suscriptores de forma dinámica en función de reglas de segmentación.
 
 ### 6. Broadcasts
 
-Programa o envía flujos de trabajo de notificación masiva única a audiencias.
+Programa o envía workflows de notificación única a audiencias.
 
 - **Listar broadcasts**: Consulta el estado y cantidad de destinatarios.
   ```bash
   nexus broadcasts list
   ```
-- **Crear broadcast**: Prepara un envío de flujo de trabajo a una audiencia específica.
+- **Crear broadcast**: Prepara un envío de workflow a una audiencia.
   ```bash
   nexus broadcasts create --name "Q3 Update" --workflowId <workflow-uuid> --audienceId <audience-uuid> --scheduledAt "2026-10-01T12:00:00Z"
   ```
@@ -243,13 +243,13 @@ Gestiona diccionarios de traducción localizados para las plantillas.
 
 ### 10. Utilidades y Schedules
 
-Verifica conexiones, ejecuta diagnósticos, consulta registros de ejecución y haz seguimiento de tareas programadas.
+Verifica conexiones, realiza diagnósticos, consulta registros de ejecución y haz seguimiento de schedules.
 
 - **Verificar conectividad**: Ejecuta diagnósticos de ping.
   ```bash
   nexus health
   ```
-- **Envío rápido (Quick Send)**: Envío directo de flujo de trabajo de forma abreviada a un solo destinatario.
+- **Envío rápido (Quick Send)**: Acceso directo para enviar un workflow a un solo destinatario.
   ```bash
   nexus send order.shipped --to user_42 --data '{"orderId": "123"}' --tenant tenant_acme
   ```
@@ -257,7 +257,7 @@ Verifica conexiones, ejecuta diagnósticos, consulta registros de ejecución y h
   ```bash
   nexus logs <logId>
   ```
-- **Listar schedules**: Muestra los flujos de trabajo programados cron recurrentes.
+- **Listar schedules**: Muestra los workflows recurrentes programados por cron.
   ```bash
   nexus schedules list
   ```
@@ -304,7 +304,7 @@ Al utilizar los comandos `pull` y `push`, la CLI estructura los archivos en la r
 
 ## Integración con CI/CD
 
-Puedes integrar la CLI en tus flujos de trabajo de GitHub Actions para despliegues automatizados:
+Puedes integrar la CLI en tus pipelines de GitHub Actions para despliegues automatizados:
 
 ```yaml
 name: Deploy Notifications
@@ -333,5 +333,5 @@ jobs:
 ## Enlaces Relacionados
 
 - [API de Gestión](/docs/api/management)
-- [Flujo de trabajo como código](/docs/sdk/workflow/workflow-as-code)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
 - [Servidor MCP de IA](/docs/sdk/devtools/mcp-server)

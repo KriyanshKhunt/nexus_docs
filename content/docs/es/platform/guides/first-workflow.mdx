@@ -1,67 +1,160 @@
 ---
-title: Construye tu primer flujo
-description: Crea un flujo de bienvenida multicanal con plantilla, trigger y campana in-app.
+title: Construye tu primer workflow
+description: Crea un welcome workflow multicanal con email, campana in-app y entrega en tiempo real — paso a paso.
 ---
 
-Esta guía construye un flujo de bienvenida **user.signup**: email + notificación in-app.
+Esta guía te guiará paso a paso a través de la creación de un welcome workflow **`user.signup`** que envía un correo electrónico y una notificación integrada en la aplicación (in-app) en el momento en que un usuario se registra.
 
-## 1. Crear el flujo
+---
 
-Dashboard → **Workflows** → Nuevo flujo llamado `user.signup`.
+## Prerrequisitos
 
-Añade nodos:
+- Un espacio de trabajo de Nexus Signal con al menos un entorno activo.
+- El SDK de Node instalado (`@nexus-signal/node`) e inicializado con una clave secreta.
+- Al menos un proveedor de correo electrónico conectado en **Integrations**.
+
+---
+
+## Paso 1 — Crear el workflow
+
+En el panel de control, navega a **Workflows** → **New Workflow**.
+
+- **Nombre:** `user.signup`
+- **Canales:** Agrega un nodo **Email** y un nodo **In-App**
+
+Tu lienzo debería verse así:
 
 ```
-Trigger → Channel (Email) → Channel (In-App)
+Trigger → Email → In-App
 ```
 
-Activa **Suppress when online** en el nodo Email si quieres entrega consciente de presencia.
+> **Consejo:** Activa **Suppress when online** en el nodo de Email si deseas omitir el envío del correo cuando el usuario esté activo actualmente en tu aplicación.
 
-## 2. Escribir plantillas
+---
 
-Abre **Templates** para este flujo.
+## Paso 2 — Escribir las plantillas
 
-**Email (HTML):**
+Haz clic en cada nodo de canal para abrir el editor de plantillas.
+
+**Plantilla de Email (HTML):**
+
 ```html
 <h1>Welcome, {{ data.name }}!</h1>
-<p>Thanks for joining. Your account ID is {{ subscriber.externalId }}.</p>
+<p>Thanks for joining. Your account ID is <strong>{{ subscriber.externalId }}</strong>.</p>
+<p><a href="{{ data.dashboardUrl }}">Go to your dashboard →</a></p>
 ```
 
-**In-App:**
+**Plantilla In-App:**
+
 ```json
-{ "title": "Welcome!", "body": "Hi {{ data.name }}, glad you're here." }
+{
+  "title": "Welcome, {{ data.name }}!",
+  "body": "Your account is ready. Click to explore.",
+  "redirect": "{{ data.dashboardUrl }}"
+}
 ```
 
-Promueve la plantilla a **Production Active**.
+Al terminar, promueve las plantillas al estado **Production Active**.
 
-## 3. Crear un suscriptor de prueba
+---
 
-**Subscribers** → Añade suscriptor con tu `externalId` de prueba y email.
+## Paso 3 — Crear un suscriptor de prueba
 
-## 4. Disparar desde código
+En el panel de control: **Subscribers** → **Add Subscriber**
+
+Rellena lo siguiente:
+
+- `externalId`: `test_user_01`
+- `email`: `you@example.com`
+
+> Los suscriptores deben crearse **antes** de realizar el trigger. El endpoint del trigger identifica a los destinatarios por su `externalId` — no registra nuevos usuarios en línea (inline).
+
+---
+
+## Paso 4 — Disparar desde tu backend
+
+Instala e inicializa el SDK de Node:
+
+```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+```
+
+Lanza el trigger después de que un usuario se registre:
 
 ```ts
 await nexus.workflows.trigger({
   workflowName: 'user.signup',
-  recipients: [{ externalId: 'test_user', email: 'you@example.com' }],
-  data: { name: 'Test User' },
+  recipients: [{ externalId: 'test_user_01' }],
+  data: {
+    name: 'Test User',
+    dashboardUrl: 'https://app.example.com/dashboard',
+  },
 });
 ```
 
-En Development, el email aparece en **Sandbox**. In-app requiere el SDK React.
+> **Nota:** La matriz `recipients` acepta `externalId` o `subscriberId` para identificar al destinatario. **No** pases datos de contacto sin procesar como `email` o `phoneNumber` aquí — estos corresponden al perfil del suscriptor, no al payload del trigger.
 
-## 5. Añadir campana in-app
+En el entorno de **Development**, los correos electrónicos se capturan en la pestaña de **Sandbox** — no se envían correos reales.
 
-```tsx
-<NexusProvider publicKey="pk_dev_…" subscriberId="test_user" hmacSignature={hmac} …>
-  <NotificationCenterBell />
-</NexusProvider>
+---
+
+## Paso 5 — Añadir la campana in-app a tu frontend
+
+Instala el SDK de React:
+
+```bash
+npm install @nexus-signal/react
 ```
 
-Dispara de nuevo — el badge de la campana se actualiza en tiempo real.
+Envuelve tu aplicación y añade el componente de campana:
+
+```tsx
+import { NexusProvider, NotificationCenterBell } from '@nexus-signal/react';
+
+export function App() {
+  return (
+    <NexusProvider
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
+      subscriberId="test_user_01"
+      hmacSignature={userSession.nexusHmac}
+    >
+      <NotificationCenterBell />
+      {/* rest of your app */}
+    </NexusProvider>
+  );
+}
+```
+
+> **Seguridad:** `hmacSignature` debe generarse en el lado del servidor utilizando tu **Clave Secreta** + el `externalId` del suscriptor. Nunca lo calcules en el navegador. Consulta [Autenticación](/docs/platform/getting-started/authentication) para obtener la fórmula de HMAC.
+
+Dispara el trigger de nuevo — el badge de la campana se incrementará en tiempo real a través de WebSocket.
+
+---
+
+## Qué sucede internamente
+
+```mermaid
+sequenceDiagram
+  participant App as Tu Backend
+  participant Nexus as API de Nexus
+  participant Queue as Worker de BullMQ
+  participant Provider as Proveedor de Email
+
+  App->>Nexus: POST /v1/workflows/trigger
+  Nexus->>Nexus: Validar esquema, resolver suscriptor
+  Nexus-->>App: 202 Accepted
+  Nexus->>Queue: Encolar trabajos de entrega
+  Queue->>Provider: Enviar email (SMTP/API)
+  Queue->>App: Empujar in-app vía WebSocket
+```
+
+---
 
 ## Próximos pasos
 
-- Añade [envío inteligente](/docs/platform/features/smart-send-time) en email
-- Asigna el flujo a un [topic](/docs/platform/features/topics)
-- Añade [ventana de entrega](/docs/platform/features/delivery-windows) para envíos de marketing
+- Añade [Smart Send-Time](/docs/platform/features/smart-send-time) al correo electrónico para optimizar las tasas de apertura.
+- Asigna este workflow a un [Tema (Topic)](/docs/platform/features/topics) para el control de preferencias del usuario.
+- Establece una [Ventana de entrega](/docs/platform/features/delivery-windows) para evitar envíos durante la noche.
+- Añade una [condición de paso](/docs/platform/features/step-conditions) para omitir el correo electrónico cuando el usuario esté en un dispositivo móvil.

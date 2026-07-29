@@ -1,212 +1,317 @@
 ---
-title: SDK Node.js
-description: "@nexus-signal/node — triggers de flujos, schedules y firmas HMAC."
+title: SDK de Node.js
+description: '@nexus-signal/node — triggers de workflows, schedules y firmas HMAC.'
 ---
 
-SDK del lado del servidor para disparar flujos desde tus rutas API, workers o scripts.
+# SDK de Node.js
+
+La librería `@nexus-signal/node` proporciona enlaces del lado del servidor para disparar workflows, administrar tareas programadas (schedules), sincronizar inquilinos (tenants) y validar suscriptores de forma segura.
+
+---
 
 ## Instalación
 
+Agrega el SDK a tu proyecto usando tu gestor de paquetes preferido:
+
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/node ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/node ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/node ```</Tab>
 </Tabs>
 
-## Inicialización
+---
 
-```ts title="nexus.ts"
-import { NexusClient } from "@nexus-signal/node";
+## Inicialización del cliente
 
-const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
-  baseUrl: "https://api.nexussignal.dev",
+Inicializa el `NexusClient` en tu servidor. Evita invocar este constructor dentro del alcance de funciones serverless de forma repetida; en su lugar, exporta una sola instancia para aprovechar las conexiones keep-alive.
+
+```ts title="lib/nexus.ts"
+import { NexusClient } from '@nexus-signal/node';
+
+export const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // ej. sk_prd_...
+  baseUrl: process.env.NEXUS_BASE_URL || 'https://api.nexussignal.dev',
   timeout: 5000,
 });
 ```
 
-### Opciones de cliente
+### Opciones de configuración
 
 <TypeTable
   type={{
     secretKey: {
-      type: "string",
+      type: 'string',
       description:
-        "Tu clave secreta de entorno (ej. sk_dev_..., sk_prd_...). Comienza con sk_ y debe tener al menos 20 caracteres (obligatorio).",
+        'Tu clave secreta de entorno (comienza con sk_ y debe tener al menos 20 caracteres). Obligatorio.',
     },
     baseUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
-      description: "El origen del endpoint de la API de la plataforma Nexus.",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'El origen del endpoint de la URL base de la API de destino.',
     },
     timeout: {
-      type: "number",
-      default: "15000",
-      description:
-        "Límite de tiempo de espera de la solicitud en milisegundos.",
+      type: 'number',
+      default: '5000',
+      description: 'Límite de tiempo de espera de la solicitud en milisegundos.',
     },
     events: {
-      type: "object",
+      type: 'object',
       description:
-        "Devoluciones de llamada opcionales para la auditoría de eventos de resiliencia (onCircuitOpen, onCircuitClose, onBufferOverflow).",
+        'Callbacks opcionales para auditar eventos de resiliencia como onCircuitOpen, onCircuitClose y onBufferOverflow.',
     },
   }}
 />
 
-## Disparar un flujo
+---
 
-```ts title="trigger.ts"
-const result = await nexus.workflows.trigger({
-  workflowName: "billing.invoice_overdue",
-  recipients: [
-    {
-      externalId: "cust_8824",
-      email: "billing@enterprise.com",
-      phoneNumber: "+15550198234",
-      timezone: "America/New_York",
-      locale: "en",
-      slackWebhookUrl: "https://hooks.slack.com/services/…",
+## Disparar workflows
+
+Emite un trigger de evento para iniciar tus rutas de workflows visuales configuradas:
+
+```ts title="routes/order.ts"
+import { nexus } from '../lib/nexus';
+
+export async function handleOrderShipped(orderId: string, userId: string) {
+  const result = await nexus.workflows.trigger({
+    workflowName: 'order.shipped',
+    recipients: [
+      {
+        externalId: userId,
+        email: 'customer@acme.io',
+        phoneNumber: '+15550198234',
+        timezone: 'America/New_York',
+        locale: 'en',
+      },
+    ],
+    data: {
+      orderNumber: orderId,
+      shippingCarrier: 'FedEx',
+      trackingLink: 'https://fedex.com/track/12345',
     },
-  ],
-  data: {
-    invoiceId: "INV-2026-0049",
-    amountDue: "$1,250.00",
-  },
-});
+  });
 
-if (!result.ok) {
-  console.warn(result.error, result.queued ? "(buffered for retry)" : "");
+  if (!result.ok) {
+    console.error('El disparador falló:', result.error);
+    if (result.queued) {
+      console.warn('Payload almacenado localmente en buffer debido a la apertura del circuito.');
+    }
+  }
 }
 ```
 
-### Campos de destinatario
+### Mapeo de parámetros del destinatario
 
 <TypeTable
   type={{
     externalId: {
-      type: "string",
+      type: 'string',
       description:
-        "Tu ID de usuario (obligatorio salvo que se especifique subscriberId).",
+        'El ID de suscriptor único en tu base de datos. Obligatorio a menos que se especifique subscriberId.',
     },
     subscriberId: {
-      type: "string (UUID)",
-      description: "El ID único interno de suscriptor de Nexus.",
+      type: 'string (UUID)',
+      description:
+        'El UUID del suscriptor generado por el sistema dentro de la base de datos de Nexus.',
     },
     email: {
-      type: "string",
+      type: 'string',
       description:
-        "Dirección de correo electrónico del destinatario para el canal de email.",
+        'Dirección de correo electrónico de destino para los canales de entrega de Email.',
     },
     phoneNumber: {
-      type: "string",
+      type: 'string',
       description:
-        "Número de teléfono del destinatario (formato E.164) para los canales SMS y WhatsApp.",
+        'Número de teléfono del destinatario en formato E.164 (+1...) para canales de SMS o WhatsApp.',
     },
     timezone: {
-      type: "string",
+      type: 'string',
       description:
-        "Zona horaria del destinatario (formato IANA) para programar o retrasar notificaciones basadas en horas locales.",
+        'Identificador de zona horaria IANA (ej. America/New_York) para controlar las ventanas de entrega.',
     },
     locale: {
-      type: "string",
+      type: 'string',
       description:
-        "Sobrescritura de la configuración regional del usuario por trigger (formato BCP 47) para el renderizado localizado.",
+        'Sobrescritura del identificador de idioma BCP 47 (ej., es, ja) para la localización dinámica.',
     },
     slackWebhookUrl: {
-      type: "string",
-      description:
-        "URL de webhook de Slack personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+      type: 'string',
+      description: 'URL de webhook entrante de Slack para enrutar directamente payloads de chat.',
     },
     discordWebhookUrl: {
-      type: "string",
-      description:
-        "URL de webhook de Discord personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+      type: 'string',
+      description: 'URL de webhook entrante de Discord para enrutar directamente payloads de chat.',
     },
     teamsWebhookUrl: {
-      type: "string",
+      type: 'string',
       description:
-        "URL de webhook de Microsoft Teams personalizada para enrutar cargas de mensajes directamente a un canal de suscriptor.",
+        'URL de webhook entrante de Microsoft Teams para enrutar directamente payloads de chat.',
     },
   }}
 />
 
-## Firmas HMAC
+---
 
-```ts title="auth.ts"
-const hmac = nexus.auth.generateHmacSignature("cust_8824");
-// Pásalo a NexusProvider de @nexus-signal/react — nunca expongas secretKey en el navegador
+## Generación segura de HMAC
+
+Genera una firma criptográficamente segura para autenticar las notificaciones por websocket:
+
+```ts
+// Devuelve una firma hexadecimal SHA-256 de 64 caracteres
+const signature = nexus.auth.generateHmacSignature('user_active_99');
 ```
 
-También exportado de forma independiente (requiere pasar la clave `secretKey` explícitamente):
+Alternativamente, puedes calcular esto sin inicializar el cliente:
 
-```ts title="standalone-auth.ts"
-import { generateHmacSignature } from "@nexus-signal/node";
+```ts
+import { generateHmacSignature } from '@nexus-signal/node';
 
-const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, "cust_8824");
+const signature = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'user_active_99');
 ```
 
-## Schedules
+---
 
-```ts title="schedule.ts"
-await nexus.schedules.create({
-  name: "Monday digest",
-  workflowId: "workflow-uuid",
-  cronExpression: "0 9 * * 1",
-  timezone: "UTC",
-  recipients: [{ externalId: "user_1" }],
-  data: {},
+## Tenants B2B y personalización de marca
+
+Administra plantillas de correo de marca blanca, estilos de temas integrados en la aplicación (in-app) y valores predeterminados de preferencias para diferentes clientes corporativos:
+
+```ts
+// Crea o actualiza una sobrescritura de personalización de marca de tenant de cliente
+const tenantResult = await nexus.tenants.upsert({
+  externalId: 'tenant_acme_corp',
+  name: 'Acme Corporation',
+  branding: {
+    logo: 'https://cdn.acme.io/logos/logo.png', // Clave de tipo estricta: logo
+    primaryColor: '#0070f3',
+    footerHtml: '<p>Sent by Acme Corp, 123 Main St</p>',
+  },
 });
 
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
+// Dispara un workflow limitado a este contexto de personalización de marca de tenant
+await nexus.workflows.trigger({
+  workflowName: 'invoice.finalized',
+  tenant: 'tenant_acme_corp',
+  recipients: [{ externalId: 'alex_acme' }],
+  data: { amount: '$450.00' },
+});
 ```
 
-## Resiliencia
+---
 
-- **Circuit breaker** — se abre tras 5 fallos, se recupera automáticamente tras 60s
-- **Retry buffer** — peticiones fallidas en cola en memoria (máx. 500)
-- **`flushRetries()`** — reenvía triggers en buffer cuando la plataforma está sana
+## Suscripciones de entidades compartidas (Objetos)
 
-```ts title="resilience.ts"
-const nexus = new NexusClient({
+Envía mensajes a entidades virtuales (canales, tableros de documentos, proyectos) y deja que Nexus resuelva los observadores de forma automática:
+
+```ts
+// Define la entidad
+await nexus.objects.set({
+  collection: 'workspaces',
+  externalId: 'ws_eng_team',
+  name: 'Engineering Workspace',
+});
+
+// Agrega suscriptores
+await nexus.objects.addSubscriptions('workspaces', 'ws_eng_team', {
+  recipients: ['usr_alice_dev', 'usr_bob_ops'],
+});
+
+// Notifica a todos los observadores del espacio de trabajo de ingeniería
+await nexus.workflows.trigger({
+  workflowName: 'workspace.announcement',
+  recipients: [{ collection: 'workspaces', id: 'ws_eng_team' }],
+  data: { msg: 'Scheduled database maintanance tonight.' },
+});
+```
+
+---
+
+## Campañas de Broadcast
+
+Programa y envía campañas a segmentos de suscriptores preconfigurados:
+
+```ts
+const broadcast = await nexus.broadcasts.create({
+  name: 'Platform Feature Update',
+  workflowId: 'wf-uuid-goes-here',
+  audienceId: 'aud-uuid-goes-here',
+  data: { highlight: 'Dynamic Step Conditions are live!' },
+});
+
+if (broadcast.ok && broadcast.data?.broadcast?.id) {
+  // Despacha la ejecución inmediata del broadcast
+  await nexus.broadcasts.send(broadcast.data.broadcast.id);
+}
+```
+
+---
+
+## Schedules recurrentes
+
+Configura despachos de workflows recurrentes de forma programática:
+
+```ts
+// Crea una programación (schedule) recurrente para los lunes
+await nexus.schedules.create({
+  name: 'Weekly Usage Summary',
+  workflowId: 'wf-uuid-goes-here',
+  cronExpression: '0 9 * * 1', // Todos los lunes a las 9:00 AM
+  timezone: 'America/Los_Angeles',
+  recipients: [{ externalId: 'user_analytics' }],
+  data: { reportScope: 'seven_days' },
+});
+
+// Obtiene las programaciones activas
+const list = await nexus.schedules.list({ page: 1, limit: 10 });
+
+// Desactiva o purga programaciones
+await nexus.schedules.update('schedule-uuid', { active: false });
+await nexus.schedules.delete('schedule-uuid');
+```
+
+---
+
+## Sincronización de workflows orientada a código
+
+Puedes sincronizar las definiciones locales de workflows en TypeScript con la plataforma Nexus:
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+const welcomeFlow = defineWorkflow('user.registration')
+  .addChannel('IN_APP')
+  .addDelay({ minutes: 15 })
+  .addChannel('EMAIL')
+  .toDefinition();
+
+const result = await nexus.workflows.sync(welcomeFlow);
+```
+
+---
+
+## Resiliencia y failover del cliente
+
+El SDK de Node incluye un **disyuntor (circuit breaker)** y un **buffer de memoria** local para manejar caídas de la plataforma:
+
+- **Disyuntor (Circuit Breaker)**: Cambia al estado `OPEN` (abierto) después de **5 fallos consecutivos** o tiempos de espera agotados. Durante este periodo, se bloquean los triggers salientes de llamar a la red y se encolan localmente. El circuito intenta recuperarse de forma automática después de **60 segundos**.
+- **Buffer de memoria**: Retiene hasta **500 acciones de trigger** en la memoria local.
+- **Vaciado manual (Flush)**: Si el cliente se recupera, dispara estos reintentos de vuelta a la plataforma usando `flushRetries()`.
+
+```ts
+const resilientClient = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!,
   events: {
-    onCircuitOpen: () => console.warn("Nexus circuit open"),
-    onCircuitClose: () => nexus.workflows.flushRetries(),
-    onBufferOverflow: (p) => console.error("Dropped:", p.workflowName),
+    onCircuitOpen: () => {
+      console.warn('El disyuntor de Nexus se abrió.');
+    },
+    onCircuitClose: async () => {
+      console.info('El circuito de Nexus se cerró. Vaciando buffers...');
+      await resilientClient.workflows.flushRetries();
+    },
+    onBufferOverflow: (failedPayload) => {
+      console.error(
+        '¡Buffer de memoria local lleno! Payload descartado:',
+        failedPayload.workflowName
+      );
+    },
   },
 });
 ```
-
-## Forma de respuesta
-
-```ts
-type NexusResult<T> = {
-  ok: boolean;
-  status: number;
-  data?: T;
-  error?: string;
-  queued?: boolean; // true si se almacenó localmente en buffer
-};
-```
-
-Los triggers exitosos devuelven **HTTP 202** con `{ accepted: true, results: [...] }`.

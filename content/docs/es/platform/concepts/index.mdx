@@ -1,20 +1,67 @@
 ---
-title: Conceptos
-description: Ideas centrales detrás de Nexus Signal — arquitectura, BYOP, workflows y el pipeline de entrega.
+title: Descripción general de los conceptos
+description: Comprende los principios de diseño fundamentales de Nexus Signal — arquitectura, BYOP, workflows y el pipeline de entrega.
 ---
 
-Antes de profundizar en funciones y APIs, estos conceptos explican **cómo está diseñado Nexus Signal** y por qué se comporta como lo hace.
+# Descripción general de los conceptos
+
+Antes de integrar las APIs o los SDKs, es importante entender **cómo está estructurado Nexus Signal** y cómo gestiona las notificaciones a escala.
+
+Nexus está construido sobre un patrón desacoplado y guiado por eventos, diseñado para ofrecerte un control absoluto sobre las plantillas, los canales y los costos de entrega.
+
+---
 
 <Cards>
-  <Card title="Arquitectura" href="/docs/platform/concepts/architecture" description="API, cola, workers, gateway WebSocket." />
-  <Card title="BYOP" href="/docs/platform/concepts/byop" description="Tus claves, tus facturas, cero markup." />
-  <Card title="Workflows" href="/docs/platform/concepts/workflows" description="Nodos del canvas y ejecución de pasos." />
-  <Card title="Pipeline de entrega" href="/docs/platform/concepts/delivery-pipeline" description="Qué ocurre después del trigger." />
+  <Card
+    title="Arquitectura"
+    href="/docs/platform/concepts/architecture"
+    description="Conoce la API de Express, las colas de Redis, los workers en segundo plano y los WebSockets."
+  />
+  <Card
+    title="Modelo BYOP"
+    href="/docs/platform/concepts/byop"
+    description="Por qué usar tus propias credenciales de operadores elimina las tarifas de recargo y el secuestro del proveedor (vendor lock-in)."
+  />
+  <Card
+    title="Flujos de trabajo (Workflows)"
+    href="/docs/platform/concepts/workflows"
+    description="Entiende los nodos del árbol de pasos, los pasos de retraso (delay), las regulaciones (throttles) y las condiciones lógicas."
+  />
+  <Card
+    title="Pipeline de entrega"
+    href="/docs/platform/concepts/delivery-pipeline"
+    description="Sigue el ciclo de vida del disparador de un evento desde su ingestión hasta el callback del operador."
+  />
 </Cards>
 
-## Principios centrales
+---
 
-1. **Asíncrono por defecto** — los triggers responden en milisegundos; los workers gestionan los proveedores
-2. **BYOP** — tus claves, tus facturas, tus datos
-3. **Aislamiento multi-tenant** — organizaciones, entornos y credenciales de proveedores cifradas
-4. **Entrega observable** — cada paso registrado desde la ingestión hasta la respuesta del carrier
+## Pilares arquitectónicos
+
+Nexus Signal está diseñado en torno a **cuatro principios de ingeniería**:
+
+### 1. Procesamiento asíncrono guiado por eventos
+
+Para mantener la velocidad de tu backend, la ingestión está separada de la ejecución de la entrega. La API REST valida y encola los payloads de los eventos en menos de **10 milisegundos**, respondiendo de inmediato con `202 Accepted`. Las operaciones pesadas (compilar plantillas, llamar a pasarelas de operadores de terceros) se ejecutan de forma asíncrona en hilos de workers dedicados.
+
+### 2. Bring Your Own Provider (BYOP)
+
+Nexus no revende ancho de banda de operadores. Conectas tus propias credenciales de API de SendGrid, Twilio, Resend o AWS SNS. Pagas directamente a los operadores a precio de costo, evitando los recargos por mensaje que cobran los motores de notificaciones tradicionales.
+
+### 3. Aislamiento empresarial multi-tenant
+
+Nexus ofrece soporte de primer nivel para multi-tenancy B2B. Puedes limitar preferencias, estilos de diseño de correos electrónicos, campanas integradas (in-app) e incluso reglas de enrutamiento a organizaciones clientes individuales (tenants).
+
+### 4. Observabilidad de extremo a extremo
+
+Cada estado del ciclo de vida de una notificación (`Ingested` → `Queued` → `Processing` → `Dispatched` → `Delivered` → `Read` o `Failed`) se rastrea con telemetría de marca de tiempo precisa, lo que facilita la auditoría de fallas en la entrega o latencias de los proveedores.
+
+---
+
+## Modelo unificado de mensajería de producto
+
+Más allá de los triggers de eventos estándar, Nexus unifica múltiples canales de mensajería de aplicaciones bajo un único plano de control:
+
+- **[Objetos y suscripciones](/docs/platform/features/objects-subscriptions)**: Limita la entrega de notificaciones a entidades que no son usuarios (como espacios de trabajo, proyectos, canales de Slack o tableros de documentos) y gestiona de forma automática los envíos (fan-out) a los suscriptores que los observan.
+- **[Broadcasts y campañas](/docs/platform/features/broadcasts)**: Permite a los miembros de tu equipo despachar anuncios de marketing o del sistema a audiencias directamente desde el panel de control.
+- **[Guías y banners integrados](/docs/platform/features/guides)**: Entrega banners específicos, notificaciones flotantes (toasts) y mensajes modales a los usuarios dentro del producto a través de feeds de WebSocket en tiempo real.

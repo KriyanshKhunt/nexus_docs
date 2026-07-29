@@ -1,106 +1,175 @@
 ---
 title: Inicio rápido
-description: Envía tu primera notificación con Nexus Signal en minutos.
+description: Envía tu primera notificación con Nexus Signal en menos de 5 minutos.
 ---
+
+# Inicio rápido
+
+Esta guía te guiará a través del envío de tu primer evento de notificación y de la verificación de los registros de entrega en tiempo real.
 
 <Steps>
 <Step>
-### Crea un workspace
+### Crear un espacio de trabajo y obtener claves
 
-Inicia sesión en el [dashboard](https://app.nexussignal.dev). Recibirás **tres entornos aislados**:
+Inicia sesión en el [Panel de control de Nexus](https://app.nexussignal.dev). Tu espacio de trabajo viene preconfigurado con **tres entornos completamente aislados**:
 
-| Entorno | Prefijo de clave | Uso |
-|---------|------------------|-----|
-| Development | `pk_dev_` / `sk_dev_` | Pruebas locales + sandbox |
-| Staging | `pk_stg_` / `sk_stg` | Integración de QA |
-| Production | `pk_prd_` / `sk_prd_` | Tráfico en vivo |
+| Entorno         | Prefijo de clave      | Propósito                                                                  |
+| :-------------- | :-------------------- | :------------------------------------------------------------------------- |
+| **Development** | `pk_dev_` / `sk_dev_` | Staging local, sandbox de desarrollo y pruebas simuladas.                  |
+| **Staging**     | `pk_stg_` / `sk_stg_` | Pruebas internas, pipelines de control de calidad (QA) y ramas de staging. |
+| **Production**  | `pk_prd_` / `sk_prd_` | Tráfico de producción y notificaciones de usuarios reales.                 |
+
+Dirígete a **Settings → API Keys** para copiar las claves de tu entorno activo actual.
+
 </Step>
 
 <Step>
-### Crea un workflow
+### Diseñar tu primer flujo de trabajo
 
-**Workflows** → crea `user.signup` → añade nodos de canal Email + In-App → publica la plantilla en **Production**.
+1. Ve a la página de **Workflows** en el panel de control.
+2. Haz clic en **Create Workflow** y nombra el trigger del evento: `user.welcome`.
+3. En el lienzo visual, arrastra y suelta un **Email Channel Node** justo debajo del trigger principal.
+4. Haz clic en el nodo de correo electrónico para configurar su línea de asunto (por ejemplo, `Welcome to Acme, {{ data.name }}!`) y el diseño de la plantilla estándar.
+5. Haz clic en **Publish** para desplegar la plantilla del flujo de trabajo en tu entorno activo.
+
 </Step>
 
 <Step>
-### Conecta un proveedor
+### Conectar un proveedor de entrega (BYOP)
 
-**Integrations** → añade SendGrid o Resend → pega la API key (cifrada en reposo).
+Nexus requiere una pasarela de entrega para despachar las notificaciones.
+
+1. Ve a la pestaña de **Integrations** en el panel de control.
+2. Selecciona el proveedor de tu elección (por ejemplo, **SendGrid**, **Resend** o **Twilio**).
+3. Ingresa las credenciales de la API de tu proveedor. Tus credenciales están completamente cifradas en reposo utilizando AES-256 y se descifran únicamente al momento de la ejecución.
+
 </Step>
 
 <Step>
-### Instala el SDK de Node
+### Instalar los SDKs
+
+Nexus es compatible tanto con SDKs del lado del servidor para disparar flujos de trabajo como con componentes de frontend para feeds en tiempo real dentro de la aplicación:
+
+#### SDK del lado del servidor (Node.js / Express)
 
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/node ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/node ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/node ```</Tab>
 </Tabs>
+
+#### SDK del lado del cliente (React / Next.js)
+
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/react lucide-react ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/react lucide-react ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/react lucide-react ```</Tab>
+</Tabs>
+
 </Step>
 
 <Step>
-### Dispara desde tu servidor
+### Disparar el evento
+
+Crea un script en tu servidor de backend para inicializar el cliente y disparar el flujo de trabajo `user.welcome`:
 
 ```ts title="trigger.ts"
 import { NexusClient } from '@nexus-signal/node';
 
+// Inicializar el cliente con la clave secreta (Solo servidor)
 const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!,
-  baseUrl: 'https://api.nexussignal.dev',
+  secretKey: process.env.NEXUS_SECRET_KEY || 'sk_dev_your_secret_key_here',
 });
 
-const result = await nexus.workflows.trigger({
-  workflowName: 'user.signup',
-  recipients: [{ externalId: 'user_123', email: 'alex@acme.io' }],
-  data: { name: 'Alex' },
-});
+async function main() {
+  const response = await nexus.workflows.trigger({
+    workflowName: 'user.welcome',
+    recipients: [
+      {
+        externalId: 'usr_active_99', // El ID del suscriptor en tu base de datos
+        email: 'alex@acme.io', // Requerido para canales de correo electrónico
+        phoneNumber: '+15550192834', // Requerido para canales de SMS/WhatsApp
+      },
+    ],
+    data: {
+      name: 'Alex',
+      companyName: 'Acme Corp',
+    },
+  });
+
+  console.log('Estado de trigger aceptado:', response.accepted); // true
+}
+
+main().catch(console.error);
 ```
 
-<Callout type="success">
-Una llamada exitosa devuelve **HTTP 202** con `{ accepted: true }`. Revisa **Audit Logs** o el simulador **Sandbox** de Development.
-</Callout>
+Ejecuta este archivo en tu servidor para emitir el trigger del evento.
+
+</Step>
+
+<Step>
+### Verificar registros y Sandbox
+
+Una solicitud de API exitosa devuelve un payload **HTTP 202 Accepted** de inmediato.
+
+- **Registros de auditoría (Audit Logs)**: En el panel de control, haz clic en **Audit Logs** para ver la traza de ejecución en vivo. Verás pasos como `Ingested` → `Queued` → `Compiled` → `Dispatched`.
+- **Simulador de Sandbox**: Mientras estés en el entorno de **Development**, los mensajes salientes (correo electrónico, SMS) no realizan llamadas externas a las APIs de los proveedores. Estos se transmiten al **Simulador de Sandbox** en el panel de control para que puedas ver correos electrónicos y mensajes de prueba de forma gratuita.
+
 </Step>
 </Steps>
+
+---
 
 ## Próximos pasos
 
 <Cards>
-  <Card title="Entornos" href="/docs/platform/getting-started/environments" description="Claves de Dev, Staging y Production." />
-  <Card title="React SDK" href="/docs/sdk/frontend/react" description="Añade la campana in-app." />
-  <Card title="Primer workflow" href="/docs/platform/guides/first-workflow" description="Tutorial multicanal." />
+  <Card
+    title="Entornos"
+    href="/docs/platform/getting-started/environments"
+    description="Entiende el aislamiento de los espacios de trabajo de Desarrollo (Development), Staging y Producción (Production)."
+  />
+  <Card
+    title="Integración de React SDK"
+    href="/docs/sdk/frontend/react"
+    description="Incrusta el feed de la campana de notificaciones en tiempo real directamente en la interfaz de tu aplicación React."
+  />
+  <Card
+    title="Suscripciones a objetos"
+    href="/docs/platform/guides/object-fanout"
+    description="Configura suscriptores para espacios de trabajo colaborativos, canales y equipos."
+  />
+  <Card
+    title="Flujo de trabajo como código"
+    href="/docs/sdk/workflow/workflow-as-code"
+    description="Define, confirma y controla las versiones de tus lienzos de pasos directamente en TypeScript."
+  />
 </Cards>
+
+---
 
 ## FAQ
 
 <Accordions type="single">
-  <Accordion title="¿Necesito los 10 canales?">
-    No. Empieza solo con Email o In-App. Añade canales a medida que conectes proveedores en Integrations.
+  <Accordion title="¿Necesito configurar los 10 canales para comenzar?">
+    No. Puedes comenzar con un solo canal (como correo electrónico o notificaciones integradas).
+    Nexus omitirá cualquier canal de nodo dentro de un flujo de trabajo si no tiene credenciales
+    configuradas.
   </Accordion>
-  <Accordion title="¿Por qué 202 Accepted en lugar de 200?">
-    Nexus es asíncrono por diseño. La API encola el trabajo y responde de inmediato — la entrega ocurre en workers en segundo plano.
+  <Accordion title="¿Por qué la API devuelve 202 Accepted en lugar de 200 OK?">
+    Nexus está construido sobre una arquitectura basada en eventos. La API encola el payload del
+    evento en BullMQ y responde en menos de 10 ms para mantener la velocidad de tu aplicación,
+    mientras que los workers en segundo plano se encargan de las plantillas, las búsquedas de
+    proveedores y los despachos a los operadores.
   </Accordion>
-  <Accordion title="¿Los envíos en Development cuestan dinero?">
-    Los canales externos usan el **simulador sandbox** en Development — sin llamadas reales a APIs de proveedores. In-App usa WebSocket en vivo.
+  <Accordion title="¿Los triggers de la API de Development envían correos electrónicos o SMS reales?">
+    Por defecto, el entorno de **Development** funciona en **Modo Sandbox**. Todos los despachos
+    salientes son interceptados y mostrados en la bandeja de entrada simulada del panel de control.
+    Las notificaciones integradas (In-App) aún se entregan a través de WebSockets en tiempo real a
+    tu aplicación local.
   </Accordion>
-  <Accordion title="¿Dónde obtengo las API keys?">
-    Dashboard → selecciona entorno → **Settings → API Keys**. Usa `sk_dev_` localmente, `sk_prd_` en producción.
+  <Accordion title="¿Dónde localizo mis claves API?">
+    Las claves API tienen un alcance por entorno. Selecciona tu entorno en el menú desplegable de la
+    barra superior del panel de control, luego ve a **Settings → API Keys**. Mantén las claves
+    secretas (`sk_`) en tu servidor y las claves públicas (`pk_`) en el frontend.
   </Accordion>
 </Accordions>

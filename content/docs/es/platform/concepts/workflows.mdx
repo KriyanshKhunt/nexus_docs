@@ -1,50 +1,83 @@
 ---
-title: Workflows
-description: Canvas visual de workflows — triggers, canales, delays, digests, failover y más.
+title: Workflows visuales y plantillas
+description: Lienzo de workflow visual — diseña triggers, canales, retrasos, resúmenes, failovers y rutas de pasos condicionales.
 ---
 
-Un **workflow** es una automatización con nombre (`order.shipped`, `user.signup`) respaldada por un **árbol de pasos** del canvas visual.
+# Workflows visuales y plantillas
 
-## Trigger
+Un **workflow (flujo de trabajo)** es el plan estructural de automatización (`user.welcome`, `billing.payment_failed`) que gestiona los triggers de tus eventos. Los workflows se componen visualmente en el lienzo del panel de control como un **árbol de pasos** de nodos funcionales.
 
-Todo workflow comienza con un nodo **Trigger** que define el namespace del evento. Tu llamada al SDK usa `workflowName` coincidiendo con este identificador.
+---
 
-## Tipos de nodo
+## Eventos desencadenantes (Triggers)
 
-| Nodo | Propósito |
-|------|-----------|
-| **Channel** | Enviar por Email, SMS, Push, In-App, WhatsApp, Slack, Discord, Teams o Webhook |
-| **Delay** | Esperar una duración fija antes del siguiente paso |
-| **Wait Until** | Esperar hasta una marca de tiempo del payload del trigger (p. ej. 24 h antes de la cita) |
-| **Delivery Window** | Entregar solo entre horas en la zona horaria local del suscriptor |
-| **Digest** | Agrupar eventos de alta frecuencia en un resumen (ventana predeterminada de 30 min) |
-| **Throttle** | Limitar la tasa de alertas por suscriptor; desvío opcional a digest |
-| **Failover** | Canal primario → esperar lectura → canal de respaldo |
-| **A/B Split** | División de tráfico por porcentaje con seguimiento de engagement |
-| **Smart Timing** | Activar en nodos de canal — retrasar a la hora pico del suscriptor |
+Cada flujo de trabajo comienza con un único **Nodo Trigger** que define el espacio de nombres (namespace) del evento. Cuando tu servidor de aplicaciones dispara un evento utilizando el SDK, el parámetro `workflowName` debe coincidir con este identificador visual:
 
-## Opciones de nodo de canal
-
-En cualquier nodo **Channel** puedes activar:
-
-- **`suppressWhenOnline`** — omitir canales externos si el usuario tiene WebSocket activo (consulta [reducción de costos](/docs/platform/features/cost-reduction))
-- **`smartTiming`** — optimización de hora de envío con IA (consulta [envío inteligente](/docs/platform/features/smart-send-time))
-
-## Plantillas
-
-Cada workflow tiene **plantillas** versionadas (Draft → Production Active). El contenido admite variables Handlebars:
-
-```html
-<p>Hi {{ subscriber.externalId }}, your order {{ data.orderId }} shipped.</p>
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'user.welcome', // Coincide con el espacio de nombres del nodo trigger
+  recipients: [{ externalId: 'user_12' }],
+  data: { name: 'Alex' },
+});
 ```
 
-Las plantillas multi-locale usan claves de locale — consulta [i18n](/docs/platform/features/i18n).
+---
 
-## Workflow ↔ Topic
+## Catálogo detallado de nodos
 
-Asigna un workflow a un [Topic](/docs/platform/features/topics) para que los suscriptores gestionen preferencias por categoría en lugar de nombres de evento individuales.
+El constructor visual de lienzo admite diez clases de nodos para controlar el tiempo del mensaje, la lógica de ejecución y las opciones de proveedores:
 
-## Relacionado
+| Clase de nodo       | Icono           | Acción y función                                                                                                                                                                                       |
+| :------------------ | :-------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Channel Node**    | `MessageSquare` | Despacha notificaciones a través de correo electrónico, SMS, Web Push, Mobile Push, campana In-App, Slack, Discord, Microsoft Teams, WhatsApp o Webhooks.                                              |
+| **Delay Node**      | `Clock`         | Pausa la ejecución durante una duración relativa (por ejemplo, `24 horas` o `3 días`) antes de ejecutar el siguiente paso.                                                                             |
+| **Wait Until Node** | `Calendar`      | Retiene la ejecución hasta una marca de tiempo ISO-8601 dinámica que se pasa en el payload del trigger (por ejemplo, `data.trialExpirationDate`).                                                      |
+| **Delivery Window** | `Moon`          | Intercepta la entrega y retiene las notificaciones para liberarlas estrictamente durante horas amigables para el suscriptor (por ejemplo, `9:00 AM - 6:00 PM`) coincidiendo con su zona horaria local. |
+| **Digest Node**     | `Archive`       | Colapsa las alertas de alta frecuencia en un solo índice de resumen consolidado (por ejemplo, agrupar 10 notificaciones de comentarios a lo largo de 30 minutos en un solo digest).                    |
+| **Throttle Node**   | `Activity`      | Limita la velocidad de despacho de las notificaciones para evitar saturar de spam a los suscriptores (por ejemplo, máximo `1 correo por hora` por suscriptor).                                         |
+| **Failover Node**   | `RefreshCw`     | Intenta un canal principal, espera un callback de lectura (o duración específica) y recurre automáticamente a canales secundarios si no es leído.                                                      |
+| **A/B Split Node**  | `Split`         | Divide el tráfico de ejecución en dos ramas (por ejemplo, `50% Rama A`, `50% Rama B`) con métricas rastreables de aperturas y clics para optimizar el texto del mensaje.                               |
+| **HTTP Fetch Node** | `Globe`         | Obtiene datos externos de APIs de terceros a mitad del flujo de trabajo. Combina las propiedades de respuesta JSON directamente en las variables de contexto de Handlebars.                            |
+| **AI Node**         | `Brain`         | Ejecuta solicitudes de LLM en tiempo de ejecución (OpenAI/Anthropic) para clasificar eventos entrantes o redactar contenido dinámico coincidiendo con los perfiles de los suscriptores.                |
 
-- [Guía del primer workflow](/docs/platform/guides/first-workflow)
-- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)
+---
+
+## Condiciones de los pasos
+
+Puedes adjuntar reglas booleanas a **cualquier nodo** dentro de tu árbol visual. Si las reglas de condición se evalúan como `false` en tiempo de ejecución, el worker omite ese nodo (y sus nodos hijos) por completo:
+
+```mermaid
+flowchart TD
+    Node[Nodo de Email] --> Check{Condición: data.isAdmin == true}
+    Check -->|Verdadero| Send[Enviar Email]
+    Check -->|Falso| Skip[Omitir y continuar pipeline]
+```
+
+Las reglas de ejemplo comprueban parámetros de:
+
+- **Contexto del payload del trigger**: `data.planType == 'enterprise'`
+- **Perfil del suscriptor**: `subscriber.country == 'ES'`
+- **Detalles del tenant B2B**: `tenant.brandingColor == '#ff0000'`
+
+---
+
+## Sintaxis de plantillas de Handlebars
+
+Los diseños del cuerpo del mensaje admiten **variables de Handlebars (`{{ }}`)** para inyectar propiedades dinámicas en tiempo de ejecución:
+
+```html title="Cuerpo de plantilla de Email"
+<h2>Hi {{ subscriber.firstName }},</h2>
+<p>Your order <strong>#{{ data.orderId }}</strong> has been shipped!</p>
+<p>You can track your package using: <a href="{{ data.trackingUrl }}">Tracking Link</a>.</p>
+
+{{#if tenant}}
+<p>Thank you for shopping at {{ tenant.name }}.</p>
+{{/if}}
+```
+
+### Variables de contexto disponibles durante el renderizado:
+
+- `{{ subscriber }}`: Incluye campos del perfil (`externalId`, `email`, `phone`, `locale`).
+- `{{ data }}`: Los metadatos del payload JSON sin procesar del trigger.
+- `{{ tenant }}`: Parámetros limitados de la organización cliente (`name`, `brandingColor`).
+- `{{ steps }}`: Respuestas combinadas de **Nodos HTTP Fetch** ascendentes (por ejemplo, `{{ steps.fetch_product_data.title }}`).
