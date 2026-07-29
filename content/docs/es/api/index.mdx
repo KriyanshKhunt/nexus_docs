@@ -1,36 +1,109 @@
 ---
 title: Referencia API
-description: API REST de Nexus Signal — triggers, inbox, schedules, suscriptores, analítica y topics.
+description: API REST para Nexus Signal — triggers, objetos, broadcasts, inbox, gestión y analíticas.
 ---
 
 # API de Nexus Signal
 
 **URL base:** `https://api.nexussignal.dev/v1`
 
-Acceso programático a triggers, inbox in-app, schedules, gestión de suscriptores y analítica. Los endpoints de ingestión devuelven **202 Accepted** — la entrega es asíncrona.
+Acceso programático a triggers, mensajería de producto, inbox in-app y analíticas. Los endpoints de ingestión devuelven **202 Accepted** — la entrega es asíncrona.
+
+## Core
 
 <Cards>
-  <Card title="Flujos" href="/docs/api/workflows" description="POST /workflows/trigger — entrega async." />
-  <Card title="SDK" href="/docs/api/sdk" description="Inbox, preferencias y topics para apps browser." />
-  <Card title="Schedules" href="/docs/api/schedules" description="Triggers programados cron o one-shot." />
-  <Card title="Suscriptores" href="/docs/api/subscribers" description="Crear, actualizar y exportar suscriptores." />
-  <Card title="Topics" href="/docs/api/topics" description="Grupos para matrices de preferencias." />
-  <Card title="Analítica" href="/docs/api/analytics" description="Métricas, costos y engagement." />
+  <Card
+    title="Workflows"
+    href="/docs/api/workflows"
+    description="POST /workflows/trigger — entrega asíncrona + síncrona."
+  />
+  <Card
+    title="Suscriptores"
+    href="/docs/api/subscribers"
+    description="Crea, actualiza y exporta suscriptores."
+  />
+  <Card
+    title="SDK (navegador)"
+    href="/docs/api/sdk"
+    description="Inbox, preferencias y guías para aplicaciones cliente."
+  />
+  <Card
+    title="Gestión"
+    href="/docs/api/management"
+    description="API de gestión de recursos para CLI/MCP."
+  />
+</Cards>
+
+## Mensajería de producto
+
+<Cards>
+  <Card
+    title="Objetos"
+    href="/docs/api/objects"
+    description="Objetos, suscripciones y disparadores fan-out."
+  />
+  <Card
+    title="Tenants"
+    href="/docs/api/tenants"
+    description="Branding white-label B2B por cliente."
+  />
+  <Card
+    title="Audiencias"
+    href="/docs/api/audiences"
+    description="Filtros dinámicos de segmentos."
+  />
+  <Card title="Broadcasts" href="/docs/api/broadcasts" description="Envíos únicos a audiencias." />
+  <Card
+    title="Guías"
+    href="/docs/api/guides"
+    description="Banners y modales dentro del producto."
+  />
+</Cards>
+
+## Contenido
+
+<Cards>
+  <Card
+    title="Traducciones"
+    href="/docs/api/translations"
+    description="Archivos de traducción de clave-valor locales."
+  />
+  <Card
+    title="Layouts de email"
+    href="/docs/api/email-layouts"
+    description="Marcos compartidos y parciales."
+  />
+  <Card
+    title="Topics"
+    href="/docs/api/topics"
+    description="Grupos de preferencias por categoría."
+  />
+  <Card
+    title="Schedules"
+    href="/docs/api/schedules"
+    description="Triggers programados cron o one-shot."
+  />
+  <Card
+    title="Analíticas"
+    href="/docs/api/analytics"
+    description="Métricas, costos y engagement."
+  />
 </Cards>
 
 ## Modos de autenticación
 
-| Audiencia | Auth | Endpoints |
-|-----------|------|-----------|
-| Apps servidor | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
-| SDK browser | `x-nexus-public-key: pk_*` | `/sdk/*` |
-| Dashboard | JWT session / Bearer | `/workflows/dashboard`, `/analytics`, `/subscribers`, etc. |
+| Audiencia             | Auth                         | Endpoints                                                 |
+| --------------------- | ---------------------------- | --------------------------------------------------------- |
+| Aplicaciones servidor | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/workflows/sync`, `/schedules/sdk` |
+| SDK de navegador      | `x-nexus-public-key: pk_*`   | `/sdk/*`                                                  |
+| Panel de control      | JWT session / Bearer         | `/workflows/dashboard`, `/broadcasts`, `/audiences`, etc. |
+| CLI / MCP             | `Authorization: Bearer sk_*` | `/management/*`                                           |
 
 ## Convenciones de respuesta
 
-- Los triggers devuelven **202 Accepted** (procesamiento async)
-- Errores: `{ error: string, code?: string, details?: object }`
-- Rate limits según plan
+- Los triggers devuelven **202 Accepted** (procesamiento asíncrono)
+- Los errores devuelven `{ error: string, code?: string, details?: object }`
+- Los límites de tasa (rate limits) se aplican según el nivel de plan
 
 ## Salud y telemetría
 
@@ -50,21 +123,16 @@ GET /v1/telemetry/click/:trackingId
 POST /v1/telemetry/callbacks/:provider
 ```
 
-El click tracking redirige y registra engagement. Los callbacks de carriers actualizan el estado de entrega.
+El click tracking redirige a los usuarios y registra el engagement. Los callbacks del proveedor actualizan el estado de entrega.
 
   </Tab>
 </Tabs>
 
-<Callout type="warn">
-Nunca expongas claves `sk_*` en código del navegador. Usa claves `pk_*` solo en rutas SDK.
-</Callout>
+<SecretKeyAuth />
 
 <Callout type="info">
-¿Integración tipada? Ver [SDK Node](/docs/sdk/backend/node) y [SDK React](/docs/sdk/frontend/react).
+  ¿Prefieres una integración tipada? Consulta [Node SDK](/docs/sdk/backend/node),
+  [CLI](/docs/sdk/devtools/cli) y [Servidor MCP](/docs/sdk/devtools/mcp-server).
 </Callout>
 
-## Stack
-
-Node.js · PostgreSQL · Redis · BullMQ — ingestión en menos de 10 ms, pipeline observable.
-
-**Soporte:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Dashboard](https://app.nexussignal.dev)
+**Soporte:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [Panel de control](https://app.nexussignal.dev)

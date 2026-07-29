@@ -1,65 +1,96 @@
 ---
 title: API de Traducciones
-description: Guarda y gestiona archivos de traducción locales de clave-valor para el helper de plantilla {{ t "key" }}.
+description: Endpoints del lado del servidor y del panel de control para registrar archivos de diccionario de locale para el helper de plantilla {{ t "key" }}.
 ---
 
-<SecretKeyAuth />
+Las traducciones son tablas de cadenas de clave-valor estáticas mapeadas por locale de idioma y namespace. Esto permite que los workflows interpolen cadenas localizadas en tiempo de ejecución de manera dinámica.
 
-Ruta base: `/v1/management/translations`
+---
 
-## Listar traducciones
+## Acceso y rutas
 
-Obtén todos los paquetes de diccionarios de localización que se han subido.
+- **Servidor a Servidor / SDK (autenticación `sk_*`)**: La ruta raíz es `/v1/management/translations`
+- **Frontend del panel de control (autenticación JWT)**: La ruta raíz es `/v1/translations`
 
-```http
-GET /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+---
 
-Devuelve el idioma (locale), el namespace y la cantidad de claves por archivo:
+## Resumen de endpoints
 
-```json
-{
-  "translations": [
-    {
-      "id": "trans_123",
-      "locale": "es",
-      "namespace": "default",
-      "keyCount": 3,
-      "createdAt": "2026-07-26T12:00:00Z"
-    }
-  ]
-}
-```
+| Método   | Ruta de Gestión (`sk_*`)      | Ruta de Panel de Control (JWT) | Descripción                                           |
+| :------- | :---------------------------- | :----------------------------- | :---------------------------------------------------- |
+| `GET`    | `/v1/management/translations` | `/v1/translations`             | Lista todos los paquetes de traducción en el entorno. |
+| `PUT`    | `/v1/management/translations` | `/v1/translations`             | Crea o actualiza (upsert) un paquete de traducción.   |
+| `GET`    | —                             | `/v1/translations/:id`         | Recupera los detalles de una traducción por su UUID.  |
+| `DELETE` | —                             | `/v1/translations/:id`         | Elimina un paquete de traducción.                     |
 
 ---
 
 ## Guardar (Upsert) paquete de traducción
 
-Sube un diccionario JSON que contiene cadenas localizadas para un locale BCP 47.
+Sube o actualiza una tabla de traducción.
 
 ```http
 PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
-  "locale": "es",
-  "namespace": "default",
+  "locale": "es-MX",
+  "namespace": "invoice-labels",
   "content": {
-    "welcome_message": "Bienvenido",
-    "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "title.invoice_overdue": "Factura Vencida",
+    "button.pay_now": "Pagar Ahora",
+    "description.amount_due": "El monto total a pagar es {{amount}}."
   }
 }
 ```
 
-El namespace por defecto es `default`.
+### Campos del cuerpo de la solicitud
+
+- `locale`: string (Requerido). Código de idioma BCP 47 (máx. 35 caracteres, por ejemplo, `es-MX`, `ja`, `pt-BR`).
+- `namespace`: string (Opcional). Etiqueta de categorización que distingue mayúsculas de minúsculas (máx. 64 caracteres). Alfanumérico en minúsculas con guiones/guiones bajos (`/^[a-z][a-z0-9_-]*$/`). Por defecto es `default`.
+- `content`: object (Requerido). Un diccionario plano de pares clave-valor de cadenas (máx. 500 claves).
+  - **Claves**: Deben comenzar con una letra y contener caracteres alfanuméricos, puntos, guiones bajos o guiones (`/^[a-zA-Z][a-zA-Z0-9_.-]*$/`, máx. 128 caracteres).
+  - **Valores**: Cadenas de plantilla sin procesar (máx. 5,000 caracteres). Pueden contener espacios de variables de Handlebars.
 
 ---
 
-## Enlaces Relacionados
+## Listar archivos de traducción
 
-- [Guía de archivos de traducción](/docs/platform/features/translations)
-- [CLI pull/push de traducciones](/docs/sdk/devtools/cli)
+```http
+GET /v1/management/translations
+Authorization: Bearer sk_prd_your_secret_key
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "translations": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "locale": "es-MX",
+      "namespace": "invoice-labels",
+      "keyCount": 3,
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Límites
+
+| Límite                                       | Valor            |
+| :------------------------------------------- | :--------------- |
+| Máximo de paquetes de traducción por entorno | 50               |
+| Máximo de claves por archivo de traducción   | 500              |
+| Longitud máxima de clave                     | 128 caracteres   |
+| Longitud máxima de valor                     | 5,000 caracteres |
+| Longitud máxima de namespace                 | 64 caracteres    |
+
+## Relacionado
+
+- [Guía de la funcionalidad de Traducciones](/docs/platform/features/translations)
+- [Plantillas multi-idioma](/docs/platform/features/i18n)
+- [Push/pull de traducciones mediante la CLI](/docs/sdk/devtools/cli)

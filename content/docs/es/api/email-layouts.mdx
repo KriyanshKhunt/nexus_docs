@@ -1,58 +1,103 @@
 ---
 title: API de Layouts de Email
-description: Marcos de correo compartidos y parciales HTML reutilizables.
+description: Endpoints del lado del servidor y del panel de control para gestionar diseños de marcos HTML y parciales de Handlebars.
 ---
 
-<DashboardAuth />
+Los layouts de email definen la cabecera, el pie de página y los marcos del contenedor exterior para tus correos electrónicos HTML, mientras que los parciales (partials) te permiten reutilizar fragmentos (por ejemplo, botones de llamada a la acción, textos legales estándar) dentro de los cuerpos de las plantillas.
 
-Ruta base: `/v1/email`
+---
 
-## Layouts (Plantillas de Envoltorio)
+## Acceso y rutas
+
+- **Gestión de Servidor / SDK (autenticación `sk_*`)**: Solicitudes `GET` / `POST` bajo `/v1/management/email/layouts`
+- **Frontend del panel de control (autenticación JWT)**: Todas las rutas bajo `/v1/email`
+
+---
+
+## Resumen de endpoints
+
+| Método   | Ruta de Gestión (`sk_*`)       | Ruta de Panel de Control (JWT) | Descripción                                            |
+| :------- | :----------------------------- | :----------------------------- | :----------------------------------------------------- |
+| `GET`    | `/v1/management/email/layouts` | `/v1/email/layouts`            | Lista todos los layouts en el entorno.                 |
+| `POST`   | `/v1/management/email/layouts` | `/v1/email/layouts`            | Crea un nuevo layout HTML.                             |
+| `GET`    | —                              | `/v1/email/layouts/:id`        | Recupera el cuerpo HTML y las variables de un layout.  |
+| `PUT`    | —                              | `/v1/email/layouts/:id`        | Actualiza un layout HTML existente.                    |
+| `DELETE` | —                              | `/v1/email/layouts/:id`        | Elimina un layout HTML.                                |
+| `GET`    | —                              | `/v1/email/partials`           | Lista todos los parciales de Handlebars en el entorno. |
+| `POST`   | —                              | `/v1/email/partials`           | Crea un parcial HTML de Handlebars reutilizable.       |
+| `GET`    | —                              | `/v1/email/partials/:id`       | Recupera los detalles de un parcial.                   |
+| `PUT`    | —                              | `/v1/email/partials/:id`       | Actualiza un parcial.                                  |
+| `DELETE` | —                              | `/v1/email/partials/:id`       | Elimina un parcial.                                    |
+
+---
+
+## Crear layout
+
+Crea un nuevo diseño de marco. El layout HTML debe contener el marcador de posición `{{{content}}}` para compilar las plantillas de mensajes internos.
 
 ```http
-GET    /v1/email/layouts
-GET    /v1/email/layouts/:id
-POST   /v1/email/layouts
-PUT    /v1/email/layouts/:id
-DELETE /v1/email/layouts/:id
-```
+POST /v1/email/layouts
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-Cuerpo para crear un layout:
-
-```json
 {
-  "name": "Default",
-  "html": "<html><body>{{{ content }}}</body></html>",
-  "isActive": true
+  "name": "corporate-newsletter",
+  "htmlBody": "<html><head><style>body { font-family: sans-serif; }</style></head><body><header><img src=\"{{ logo }}\" /></header><main>{{{content}}}</main><footer>{{{footerHtml}}}</footer></body></html>",
+  "variables": {
+    "defaultFooter": "<p>© 2026 Acme Corp</p>"
+  },
+  "isDefault": true
 }
 ```
 
-## Partials (Parciales Reutilizables)
+### Campos del cuerpo de la solicitud
+
+- `name`: string (Requerido). Clave alfanumérica en minúsculas con guiones/guiones bajos (`/^[a-z][a-z0-9_-]*$/`, máx. 64 caracteres).
+- `htmlBody`: string (Requerido). Código HTML sin procesar que contiene `{{{content}}}` (máx. 100 KB).
+- `variables`: object (Opcional). Pares clave-valor personalizados que representan cadenas predeterminadas del layout.
+- `isDefault`: boolean (Opcional). Establece como el layout predeterminado para nuevas plantillas de email.
+
+---
+
+## Crear parcial (Create partial)
+
+Registra un fragmento de subplantilla reutilizable.
 
 ```http
-GET    /v1/email/partials
-GET    /v1/email/partials/:id
-POST   /v1/email/partials
-PUT    /v1/email/partials/:id
-DELETE /v1/email/partials/:id
-```
+POST /v1/email/partials
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-Cuerpo del partial:
-
-```json
 {
-  "name": "cta-button",
-  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+  "name": "action-button",
+  "description": "Standard green CTA button with tracking URL",
+  "htmlBody": "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" bgcolor=\"#10b981\" style=\"border-radius: 4px;\"><a href=\"{{url}}\" target=\"_blank\" style=\"font-size: 14px; font-family: sans-serif; color: #ffffff; text-decoration: none; padding: 12px 24px; border: 1px solid #10b981; display: inline-block; font-weight: bold;\">{{label}}</a></td></tr></table>"
 }
 ```
 
-Referencia dentro de las plantillas: `{{> cta-button url=data.link label="Click here" }}`
+- `name`: string (Requerido). Clave alfanumérica en minúsculas con guiones/guiones bajos (`/^[a-z][a-z0-9_-]*$/`, máx. 64 caracteres).
+- `description`: string (Opcional). Descripción interna del parcial (máx. 256 caracteres).
+- `htmlBody`: string (Requerido). Código HTML sin procesar (máx. 100 KB).
 
-## API de Gestión
+### Uso en plantillas
 
-```http
-GET  /v1/management/email/layouts
-POST /v1/management/email/layouts
+Incluye los parciales registrados dentro de las plantillas de email utilizando la sintaxis estándar de Handlebars:
+
+```html
+<p>Click the link below to verify your email address:</p>
+{{> action-button url=data.verificationLink label="Verify Email" }}
 ```
 
-Ver [Layouts de Email](/docs/platform/features/email-layouts).
+## Límites
+
+| Límite                                          | Valor         |
+| :---------------------------------------------- | :------------ |
+| Máximo de layouts por entorno                   | 20            |
+| Máximo de parciales por entorno                 | 100           |
+| Tamaño máximo del cuerpo HTML de layout/parcial | 100 KB        |
+| Longitud máxima del nombre                      | 64 caracteres |
+
+## Relacionado
+
+- [Guía de la funcionalidad de Layouts de email](/docs/platform/features/email-layouts)
+- [Configuración B2B multi-tenant](/docs/platform/guides/b2b-multi-tenant)

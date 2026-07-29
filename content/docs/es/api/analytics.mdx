@@ -1,49 +1,136 @@
 ---
-title: API de analítica
-description: Analítica del dashboard — overview, tráfico, latencia, salud del pipeline y costos.
+title: API de Analíticas
+description: Endpoints de analíticas del panel de control — tarjetas resumen, tráfico del canal, latencia del pipeline y gasto.
 ---
 
-Requiere JWT de dashboard + contexto de workspace.
+La API de Analíticas recupera métricas agregadas, volúmenes de logs, duraciones de latencia, mapas de calor de errores y costos de proveedores para tus entornos.
 
-## Endpoints
+---
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/v1/analytics/overview` | Tarjetas resumen — triggers, tasa de éxito, ROI |
-| GET | `/v1/analytics/overview/traffic` | Serie temporal de tráfico por canal |
-| GET | `/v1/analytics/overview/latency` | Latencia de ingestión → entrega |
-| GET | `/v1/analytics/overview/pipeline` | Flujo de salud del pipeline |
-| GET | `/v1/analytics/overview/heatmap` | Mapa de calor de errores por proveedor |
-| GET | `/v1/analytics/overview/cost` | Desglose de gasto por proveedor |
+## Autenticación y acceso
 
-### Parámetros de query
+- **Ruta base**: `/v1/analytics`
+- **Autenticación**: Requiere un token de sesión JWT del usuario.
+- **Parámetros de consulta (query)**:
+  - `environment`: `DEVELOPMENT`, `STAGING` o `PRODUCTION` (por defecto `DEVELOPMENT`).
+  - `timeframe`: por ejemplo, `24h`, `7d`, `30d` (admitido por los endpoints de series temporales).
 
+---
+
+## Resumen de endpoints
+
+| Método | Ruta                              | Descripción                                                                                         |
+| :----- | :-------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| `GET`  | `/v1/analytics/overview`          | Estadísticas principales del panel (conteos de ingestión, tasas de éxito de entrega, conversiones). |
+| `GET`  | `/v1/analytics/overview/traffic`  | Conteos cronológicos de series temporales agrupados por canal.                                      |
+| `GET`  | `/v1/analytics/overview/latency`  | Velocidades de procesamiento de extremo a extremo (ingestión hasta recepción del proveedor).        |
+| `GET`  | `/v1/analytics/overview/pipeline` | Estadísticas de éxito de enrutamiento del estado del pipeline.                                      |
+| `GET`  | `/v1/analytics/overview/heatmap`  | Cuadrícula de errores de entrega agrupados por proveedor de integración.                            |
+| `GET`  | `/v1/analytics/overview/cost`     | Análisis de gasto agrupado por capa de proveedor y workflows.                                       |
+
+---
+
+## Métricas generales (Overview metrics)
+
+Obtén las tarjetas de resumen de alto nivel.
+
+```http
+GET /v1/analytics/overview?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
 ```
-?environment=PRODUCTION&timeframe=24h
-```
 
-`environment`: `DEVELOPMENT` | `STAGING` | `PRODUCTION`
-
-### Respuesta de costos (extracto)
+**Cuerpo de la respuesta:**
 
 ```json
 {
-  "totalCostUsd": 423.18,
-  "budgetUsd": 500,
-  "budgetUsedPercent": 85,
-  "budgetExceeded": false,
-  "byProvider": [
-    { "providerId": "twilio", "label": "Twilio", "count": 8200, "costUsd": 410 }
-  ],
-  "byWorkflow": [
-    { "workflowName": "auth.otp", "costUsd": 180.5 }
+  "ingestedTriggers": 12542,
+  "deliverySuccessRate": 99.42,
+  "meanLatencyMs": 348.5,
+  "conversionRoi": 8.45,
+  "environment": "PRODUCTION"
+}
+```
+
+---
+
+## Series temporales de tráfico (Traffic time-series)
+
+Recupera volúmenes de triggers por hora.
+
+```http
+GET /v1/analytics/overview/traffic?environment=PRODUCTION&timeframe=24h
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "traffic": [
+    { "timestamp": "2026-07-28T12:00:00Z", "email": 120, "sms": 45, "push": 320, "total": 485 },
+    { "timestamp": "2026-07-28T13:00:00Z", "email": 140, "sms": 38, "push": 310, "total": 488 }
   ]
 }
 ```
 
-Configura costos unitarios de proveedor vía `PUT /v1/settings/provider-costs`.
+---
+
+## Mapa de calor de errores (Error heatmap)
+
+Recupera tasas de error por proveedor:
+
+```http
+GET /v1/analytics/overview/heatmap?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "heatmap": [
+    { "providerId": "twilio", "errorCount": 12, "lastErrorAt": "2026-07-28T20:45:00Z" },
+    { "providerId": "sendgrid", "errorCount": 2, "lastErrorAt": "2026-07-28T19:30:00Z" }
+  ]
+}
+```
+
+---
+
+## Analíticas de gasto (Resumen de costos)
+
+Analiza el uso del presupuesto y los costos de los canales según los pesos de proveedor configurados:
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "totalCostUsd": 423.18,
+  "budgetUsd": 500.0,
+  "budgetUsedPercent": 84.6,
+  "budgetExceeded": false,
+  "byChannel": [
+    { "channel": "EMAIL", "costUsd": 12.18, "count": 12180 },
+    { "channel": "SMS", "costUsd": 411.0, "count": 27400 }
+  ],
+  "byProvider": [
+    { "providerId": "twilio", "label": "Twilio", "count": 27400, "costUsd": 411.0 },
+    { "providerId": "sendgrid", "label": "SendGrid", "count": 12180, "costUsd": 12.18 }
+  ],
+  "byWorkflow": [
+    { "workflowName": "auth.otp", "costUsd": 411.0 },
+    { "workflowName": "billing.invoice", "costUsd": 12.18 }
+  ]
+}
+```
 
 ## Relacionado
 
-- [Función analítica de costos](/docs/platform/features/cost-analytics)
-- [Audit logs](/docs/platform/concepts/delivery-pipeline) — detalle por entrega
+- [Catálogo de la funcionalidad de Analíticas de Costos](/docs/platform/features/cost-analytics)
+- [Guía de estrategia de Reducción de Costos](/docs/platform/features/cost-reduction)
+- [API de logs de ejecución de Audit Logs](/docs/api/audit-logs)

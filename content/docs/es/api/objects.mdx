@@ -1,91 +1,127 @@
 ---
-title: API de Objetos
-description: Crea objetos, gestiona suscripciones y dispara notificaciones en abanico.
+title: API de Objetos y Suscripciones
+description: Endpoints del lado del servidor para registrar entidades de negocio (objetos) y gestionar las suscripciones de los suscriptores.
 ---
 
-<SecretKeyAuth />
+Los objetos representan entidades de negocio en tu aplicación que producen feeds (por ejemplo, `"projects"`, `"documents"`, `"repositories"`). La gestión de suscripciones te permite emitir alertas a todos los suscriptores que observan una entidad.
 
-Ruta base: `/v1/objects`
+---
 
-## Guardar objeto
+## Acceso y rutas
+
+Estos endpoints admiten tanto sesiones JWT del panel de control como claves secretas del servidor (`sk_*`):
+
+- **Servidor a Servidor / SDK (autenticación `sk_*`)**: La ruta raíz es `/v1/management/objects`
+- **Frontend del panel de control (autenticación JWT)**: La ruta raíz es `/v1/objects`
+
+---
+
+## Resumen de endpoints
+
+| Método   | Ruta de Gestión (`sk_*`)                           | Ruta de Panel de Control (JWT)          | Descripción                                                |
+| :------- | :------------------------------------------------- | :-------------------------------------- | :--------------------------------------------------------- |
+| `PUT`    | `/v1/management/objects/:collection/:externalId`   | `/v1/objects/:collection/:externalId`   | Crea o actualiza (upsert) un objeto.                       |
+| `GET`    | `/v1/management/objects/:collection/:externalId`   | `/v1/objects/:collection/:externalId`   | Recupera el perfil y las propiedades de un objeto.         |
+| `GET`    | `/v1/management/objects`                           | `/v1/objects`                           | Lista todos los objetos.                                   |
+| `POST`   | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Añade suscriptores como observadores al objeto (máx. 100). |
+| `DELETE` | `/v1/management/objects/:col/:extId/subscriptions` | `/v1/objects/:col/:extId/subscriptions` | Elimina observadores del objeto.                           |
+| `GET`    | —                                                  | `/v1/objects/:col/:extId/subscriptions` | Lista todos los suscriptores que observan el objeto.       |
+
+---
+
+## Guardar objeto (Upsert object)
+
+Añade o actualiza una entidad de negocio.
 
 ```http
-PUT /v1/objects/:collection/:externalId
-Authorization: Bearer sk_prd_…
-```
+PUT /v1/management/objects/projects/proj_alpha
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
   "name": "Project Alpha",
-  "properties": { "status": "active", "team": "eng" }
+  "properties": {
+    "status": "active",
+    "ownerTeam": "engineering"
+  }
 }
 ```
 
-## Obtener objeto
+- `:collection`: Debe ser alfanumérico en minúsculas con guiones/guiones bajos (`^[a-z][a-z0-9_-]*$`, máx. 64 caracteres).
+- `:externalId`: Clave de cadena de entidad única (máx. 128 caracteres).
+- `name`: Etiqueta de visualización legible por humanos (máx. 256 caracteres).
+- `properties`: Objeto de metadatos de clave-valor personalizado opcional (máx. 50 claves).
+
+---
+
+## Gestionar suscripciones
+
+Gestiona qué suscriptores observan el objeto.
+
+### 1. Añadir suscripciones
+
+Registra hasta 100 suscriptores para observar el objeto. Los destinatarios deben existir en el entorno:
 
 ```http
-GET /v1/objects/:collection/:externalId
-```
+POST /v1/management/objects/projects/proj_alpha/subscriptions
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-## Listar objetos
-
-```http
-GET /v1/objects?collection=projects&page=1&limit=50
-```
-
-## Añadir suscripciones
-
-```http
-POST /v1/objects/:collection/:externalId/subscriptions
-```
-
-```json
 {
-  "recipients": ["user_alice", "user_bob"]
+  "recipients": ["user_alice", "user_bob"],
+  "properties": {
+    "role": "editor"
+  }
 }
 ```
 
-## Eliminar suscripciones
+- `recipients`: Array de cadenas (que contienen los `externalId`s de los suscriptores) u objetos que contienen `{ "externalId": "..." }`.
+- `properties`: Metadatos opcionales específicos de la suscripción.
+
+### 2. Eliminar suscripciones
+
+Cancela el registro de los observadores del objeto:
 
 ```http
-DELETE /v1/objects/:collection/:externalId/subscriptions
-```
+DELETE /v1/management/objects/projects/proj_alpha/subscriptions
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-```json
 {
   "recipients": ["user_bob"]
 }
 ```
 
-## Listar suscripciones
+- `recipients`: Array de cadenas de `externalId` del suscriptor.
 
-```http
-GET /v1/objects/:collection/:externalId/subscriptions
-```
+---
 
-## Disparar en abanico (Fan-out)
+## Triggers fan-out
 
-Usa los destinatarios de objetos en el [Disparador de Flujos de Trabajo](/docs/api/workflows):
+Para notificar a todos los suscriptores que actualmente observan una entidad, pasa el objeto como destinatario en tu solicitud de trigger de workflow:
 
 ```json
 {
   "workflowName": "project.updated",
-  "recipients": [{ "collection": "projects", "id": "proj_alpha" }],
-  "data": {}
+  "recipients": [
+    {
+      "collection": "projects",
+      "id": "proj_alpha"
+    }
+  ]
 }
 ```
 
-## SDK de Node
+## Límites
 
-```ts
-await nexus.objects.set({
-  collection: "projects",
-  externalId: "proj_alpha",
-  name: "Alpha",
-});
-await nexus.objects.addSubscriptions("projects", "proj_alpha", {
-  recipients: ["user_1"],
-});
-```
+| Límite                                            | Valor             |
+| :------------------------------------------------ | :---------------- |
+| Máximo de objetos por entorno                     | 5,000             |
+| Máximo de observadores (suscripciones) por objeto | 10,000            |
+| Tamaño máximo del lote de añadir/eliminar         | 100 destinatarios |
+| Máximo de claves de propiedades personalizadas    | 50                |
 
-Ver [Objetos y Suscripciones](/docs/platform/features/objects-subscriptions).
+## Relacionado
+
+- [API de trigger de workflow](/docs/api/workflows) — disparar notificaciones en abanico (fan-out)
+- [Concepto de Objetos y Suscripciones](/docs/platform/features/objects-subscriptions)

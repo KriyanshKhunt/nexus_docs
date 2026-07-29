@@ -1,4 +1,9 @@
 {
   "title": "Integraciones",
-  "pages": ["index", "providers", "messaging-channels", "webhooks"]
+  "pages": [
+    "index",
+    "providers",
+    "messaging-channels",
+    "webhooks"
+  ]
 }

@@ -1,99 +1,192 @@
 ---
-title: API de suscriptores
-description: Endpoints de dashboard para gestionar suscriptores — crear, actualizar, exportar y purge GDPR.
+title: API de Suscriptores
+description: Endpoints del panel de control para gestionar suscriptores — listar, crear, actualizar, exportar y purgar.
 ---
 
-Requiere JWT de dashboard + contexto de workspace.
+Los suscriptores son los perfiles de destino que reciben tus notificaciones. Esta API permite a los administradores del panel de control consultar, crear, actualizar y gestionar los datos de los suscriptores, incluyendo sus conexiones de canal e historial de entregas.
 
-## Endpoints
+---
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/v1/subscribers` | Listar suscriptores (paginado, buscable) |
-| POST | `/v1/subscribers` | Crear suscriptor |
-| GET | `/v1/subscribers/:id` | Obtener suscriptor por ID |
-| PUT | `/v1/subscribers/:id` | Actualizar suscriptor |
-| DELETE | `/v1/subscribers/:id` | Purge GDPR — elimina suscriptor e historial de entrega |
-| GET | `/v1/subscribers/:id/export` | Exportar datos del suscriptor (GDPR) |
-| GET | `/v1/subscribers/:id/engagement` | Modelo de engagement — datos de envío inteligente |
+## Autenticación y acceso
 
-Roles: crear/actualizar/eliminar requieren `OWNER`, `ADMIN` o `DEVELOPER`.
+Los suscriptores son accesibles a través de dos rutas autenticadas independientes:
+
+- **Servidor a Servidor / SDK (autenticación `sk_*`)**: La ruta raíz es `/v1/management/subscribers`
+- **Frontend del panel de control (autenticación JWT)**: La ruta raíz es `/v1/subscribers`
+
+---
+
+## Resumen de endpoints
+
+| Método   | Ruta de Gestión (`sk_*`)         | Ruta de Panel de Control (JWT)   | Descripción                                                                  |
+| :------- | :------------------------------- | :------------------------------- | :--------------------------------------------------------------------------- |
+| `GET`    | `/v1/management/subscribers`     | `/v1/subscribers`                | Lista suscriptores (paginados, buscables).                                   |
+| `GET`    | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | Obtiene el perfil de un suscriptor.                                          |
+| `POST`   | `/v1/management/subscribers`     | `/v1/subscribers`                | Crea o identifica un suscriptor (upsert).                                    |
+| `DELETE` | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | Purgado GDPR — elimina el perfil y los logs.                                 |
+| `GET`    | —                                | `/v1/subscribers/:id/export`     | Exportación GDPR — recupera todos los datos almacenados del usuario.         |
+| `GET`    | —                                | `/v1/subscribers/:id/engagement` | Recupera las puntuaciones del mapa de calor de zonas horarias de engagement. |
+
+---
 
 ## Listar suscriptores
 
+Recupera una lista de perfiles de suscriptores en un entorno.
+
 ```http
-GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
-Authorization: Bearer <jwt>
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=25&search=alex
+Authorization: Bearer <jwt_dashboard_token>
 ```
+
+- `environment`: `DEVELOPMENT`, `STAGING` o `PRODUCTION` (por defecto `DEVELOPMENT`).
+- `search`: Filtra por nombre, correo electrónico, número de teléfono o ID externo.
+- `page`: Índice de página (por defecto `1`).
+- `limit`: Límite de tamaño de página (por defecto `25`, máx. `100`).
+
+**Cuerpo de la respuesta:**
 
 ```json
 {
   "subscribers": [
     {
-      "id": "uuid",
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "locale": "en",
-      "timezone": "America/Los_Angeles",
+      "email": "alex@example.com",
+      "phoneNumber": "+14155552671",
+      "pushTokens": ["fcm_token_123"],
+      "deviceCount": 1,
+      "preferences": {},
       "globalUnsubscribed": false,
-      "deliveryCount": 128
+      "timezone": "America/New_York",
+      "locale": "en-US",
+      "deliveryCount": 128,
+      "createdAt": "2026-07-01T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
     }
   ],
   "total": 1,
   "page": 1,
-  "limit": 50,
+  "limit": 25,
   "environment": "PRODUCTION"
 }
 ```
 
+---
+
 ## Crear suscriptor
+
+Registra un nuevo suscriptor en la base de datos.
 
 ```http
 POST /v1/subscribers
+Authorization: Bearer <jwt_dashboard_token>
 Content-Type: application/json
-```
 
-```json
 {
+  "environmentId": "environment-uuid-here",
   "externalId": "user_42",
-  "email": "alex@acme.io",
-  "phoneNumber": "+15551234567",
-  "timezone": "America/Los_Angeles",
-  "locale": "en",
+  "email": "alex@example.com",
+  "phoneNumber": "+14155552671",
+  "pushTokens": ["fcm_token_123"],
+  "timezone": "America/New_York",
+  "locale": "en-US",
   "preferences": {
-    "order.shipped": { "EMAIL": true, "SMS": false }
+    "billing_alerts": { "EMAIL": true, "SMS": false }
+  },
+  "channelConnections": {
+    "slackWebhookUrl": "https://hooks.slack.com/services/...",
+    "discordWebhookUrl": null,
+    "teamsWebhookUrl": null
   }
 }
 ```
 
+- `externalId`: Requerido. ID único que se mapea al ID de usuario de tu aplicación (máx. 128 caracteres).
+- `timezone`: Opcional. Nombre de zona horaria IANA válido (por ejemplo, `America/New_York`).
+- `locale`: Opcional. Identificador de idioma BCP 47 válido (por ejemplo, `en-US`, `es-MX`).
+- `phoneNumber`: Opcional. Debe ser un formato de teléfono E.164 válido (por ejemplo, `+14155552671`).
+- `channelConnections`: Opcional. Configura URLs de enrutamiento de webhooks directo para `slack`, `discord` y `teams`.
+
+---
+
 ## Actualizar suscriptor
 
-```http
-PUT /v1/subscribers/:id
-```
-
-Actualiza `email`, `phoneNumber`, `timezone`, `locale`, `preferences` o `globalUnsubscribed`.
-
-## Exportación y purge GDPR
+Modifica el perfil o las preferencias de un suscriptor existente.
 
 ```http
-GET /v1/subscribers/:id/export
-DELETE /v1/subscribers/:id
+PUT /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "email": "alex-new@example.com",
+  "globalUnsubscribed": true,
+  "preferences": {
+    "billing_alerts": { "EMAIL": false, "SMS": false }
+  }
+}
 ```
 
-La exportación devuelve un bundle JSON del perfil del suscriptor e historial de entrega. El purge elimina permanentemente al suscriptor, limpia el estado de presencia en Redis y escribe una entrada en el audit log.
+_Nota: No puedes modificar `externalId` o `environmentId` a través de la actualización._
 
-## Datos de engagement
+---
+
+## Exportación y purgado GDPR
+
+Garantiza el cumplimiento de GDPR ofreciendo opciones de portabilidad y borrado de datos.
+
+### 1. Exportar datos del suscriptor
 
 ```http
-GET /v1/subscribers/:id/engagement
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/export
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-Devuelve puntuaciones de engagement por canal usadas por [Envío inteligente](/docs/platform/features/smart-send-time).
+Devuelve un paquete JSON completo del perfil del suscriptor, conexiones de canales, matriz de preferencias e historial de logs de entrega.
+
+### 2. Purgar suscriptor
+
+```http
+DELETE /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+- Elimina permanentemente el perfil, preferencias y conexiones del suscriptor.
+- Elimina en cascada todos los logs de ejecución vinculados al usuario.
+- Busca y elimina las claves de Redis, incluidos los registros de presencia (`presence:sub:<subscriberId>`) y las puntuaciones de temporización almacenadas en caché (`engagement:scores:<subscriberId>`).
+- Registra un evento de purga en el audit log de la organización.
+
+---
+
+## Analíticas de engagement
+
+Recupera las matrices de puntuación de engagement por horas calculadas (utilizadas por Smart Send-Time):
+
+```http
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/engagement
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "subscriberId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+  "timezone": "America/New_York",
+  "totalEvents": 42,
+  "optimalHour": 14,
+  "reason": "optimal",
+  "scores": {
+    "1": [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 1, 0, 5, 8, 2, 0, 1, 0, 0, 0, 0, 0, 0],
+    "2": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 2, 6, 7, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}
+```
+
+La respuesta contiene un array de puntuación de 24 horas para cada día de la semana (`1` = Lunes, `2` = Martes, etc.).
 
 ## Relacionado
 
-- [API SDK](/docs/api/sdk) — inbox y preferencias en el navegador
-- [Plantillas multilingües](/docs/platform/features/i18n) — campo `locale`
-- [SDK Node](/docs/sdk/backend/node) — trigger con sobrescritura de `locale`
+- [Referencia de API del SDK](/docs/api/sdk) — feeds de inbox y actualizaciones de suscriptores
+- [Webhooks por suscriptor](/docs/platform/integrations/messaging-channels)
+- [Smart send-time](/docs/platform/features/smart-send-time)

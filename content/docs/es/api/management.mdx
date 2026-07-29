@@ -1,98 +1,120 @@
 ---
 title: API de Gestión
-description: Gestión programática de recursos para CLI, MCP y CI/CD — mismo backend que @nexus-signal/cli.
+description: Endpoints del lado del servidor y herramientas de desarrollo para gestionar workflows, programaciones, entornos y plantillas de forma programática.
 ---
 
-<ManagementAuth />
+La **API de Gestión** alimenta los comandos de sincronización de la CLI, las integraciones de CI/CD y las conexiones de servicio de MCP. Todas las rutas requieren credenciales de clave secreta.
 
-Ruta base: `/v1/management`
+---
 
-La API de Gestión alimenta la [CLI](/docs/sdk/devtools/cli) y el [servidor MCP](/docs/sdk/devtools/mcp-server). Todas las rutas requieren la cabecera `Authorization: Bearer sk_*`.
+## Autenticación y acceso
 
-## Workflows
+- **Ruta base**: `/v1/management`
+- **Autenticación**: Pasa tu clave secreta específica del entorno como un token Bearer:
+  `Authorization: Bearer sk_prd_your_secret_key`
 
-```http
-GET /v1/management/workflows
-GET /v1/management/workflows/:name
-```
+---
 
-## Suscriptores
+## Recursos del espacio de trabajo
 
-```http
-GET    /v1/management/subscribers
-GET    /v1/management/subscribers/:id
-POST   /v1/management/subscribers
-DELETE /v1/management/subscribers/:id
-```
+### 1. Workflows
 
-## Tenants
+- `GET /v1/management/workflows`: Lista todas las claves y nodos de workflows configurados en el entorno.
+- `GET /v1/management/workflows/:name`: Obtiene detalles de un workflow por su nombre de máquina.
 
-```http
-GET /v1/management/tenants
-PUT /v1/management/tenants
-```
+### 2. Suscriptores
 
-## Audiencias
+- `GET /v1/management/subscribers`: Lista los perfiles de suscriptores (paginados, buscables).
+- `GET /v1/management/subscribers/:id`: Obtiene los detalles de un suscriptor por su UUID de base de datos.
+- `POST /v1/management/subscribers`: Registra o identifica a un suscriptor.
+- `DELETE /v1/management/subscribers/:id`: Purga a un suscriptor (cumplimiento de GDPR).
 
-```http
-GET  /v1/management/audiences
-POST /v1/management/audiences
-```
+### 3. Tenants B2B
 
-## Broadcasts
+- `GET /v1/management/tenants`: Lista los tenants B2B.
+- `PUT /v1/management/tenants`: Actualiza o crea (upsert) configuraciones de branding de tenants.
 
-```http
-GET  /v1/management/broadcasts
-POST /v1/management/broadcasts
-POST /v1/management/broadcasts/:id/send
-```
+### 4. Segmentos de audiencia
 
-## Guías
+- `GET /v1/management/audiences`: Lista definiciones de audiencias.
+- `POST /v1/management/audiences`: Crea filtros de segmento.
 
-```http
-GET  /v1/management/guides
-GET  /v1/management/guides/:id
-POST /v1/management/guides
-PUT  /v1/management/guides/:id
-```
+### 5. Broadcasts
 
-## Objetos
+- `GET /v1/management/broadcasts`: Lista todas las campañas.
+- `POST /v1/management/broadcasts`: Crea un borrador o un broadcast programado.
+- `POST /v1/management/broadcasts/:id/send`: Dispara el envío inmediato de un broadcast.
 
-```http
-GET    /v1/management/objects
-PUT    /v1/management/objects/:collection/:externalId
-GET    /v1/management/objects/:collection/:externalId
-POST   /v1/management/objects/:collection/:externalId/subscriptions
-DELETE /v1/management/objects/:collection/:externalId/subscriptions
-```
+### 6. Guías dentro del producto
 
-## Contenido
+- `GET /v1/management/guides`: Lista las campañas de guías activas.
+- `GET /v1/management/guides/:id`: Obtiene los detalles de una guía.
+- `POST /v1/management/guides`: Registra una campaña de guía.
+- `PUT /v1/management/guides/:id`: Actualiza el contenido o la segmentación de una guía.
 
-```http
-GET  /v1/management/email/layouts
-POST /v1/management/email/layouts
-GET  /v1/management/translations
-PUT  /v1/management/translations
-```
+### 7. Objetos de entidad
 
-## Schedules y registros (logs)
+- `GET /v1/management/objects`: Lista los objetos observados.
+- `PUT /v1/management/objects/:collection/:externalId`: Registra o actualiza (upsert) un objetivo de observación en la base de datos.
+- `GET /v1/management/objects/:collection/:externalId`: Recupera un objetivo de observación de objeto.
+- `POST /v1/management/objects/:collection/:externalId/subscriptions`: Suscribe observadores.
+- `DELETE /v1/management/objects/:collection/:externalId/subscriptions`: Cancela la suscripción de observadores.
 
-```http
-GET /v1/management/schedules
-GET /v1/management/logs/:logId
-```
+### 8. Plantillas y layouts de email
 
-## Sincronización de workflows (ruta separada)
+- `GET /v1/management/email/layouts`: Lista los layouts HTML personalizados.
+- `POST /v1/management/email/layouts`: Sube un nuevo layout HTML de contenedor.
 
-Sube tus flujos de trabajo definidos en código:
+### 9. Traducciones
+
+- `GET /v1/management/translations`: Lista los paquetes de idiomas subidos.
+- `PUT /v1/management/translations`: Sube el mapeo de traducciones JSON de locale.
+
+### 10. Schedules (Programaciones)
+
+- `GET /v1/management/schedules`: Lista todas las tareas programadas activas.
+
+---
+
+## Rastreo de logs de entrega
+
+Recupera los resultados de entrega detallados y los logs para fines de auditoría:
 
 ```http
-POST /v1/workflows/sync
-Authorization: Bearer sk_prd_…
+GET /v1/management/logs/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-Ver [Flujo de trabajo como código](/docs/sdk/workflow/workflow-as-code) y [CLI](/docs/sdk/devtools/cli).
+**Cuerpo de la respuesta:**
 
-## Límites de peticiones (Rate limits)
+```json
+{
+  "log": {
+    "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "status": "DELIVERED",
+    "channel": "EMAIL",
+    "payloadOutput": {
+      "title": "Welcome to Acme",
+      "body": "Hi there! Welcome aboard."
+    },
+    "responseMeta": {
+      "messageId": "msg-sg-1284",
+      "provider": "sendgrid"
+    },
+    "executedAt": "2026-07-28T21:00:00.000Z",
+    "workflow": {
+      "name": "user.welcome"
+    },
+    "subscriber": {
+      "externalId": "user_42",
+      "email": "user@example.com"
+    }
+  }
+}
+```
 
-Las rutas de gestión utilizan un limitador dedicado por usuario/clave. Usa la salida `--json` de la CLI para automatización y scripts.
+## Relacionado
+
+- [Herramienta de desarrollo CLI](/docs/sdk/devtools/cli)
+- [Conexión del servidor MCP](/docs/sdk/devtools/mcp-server)
+- [Integraciones de canales de webhook](/docs/platform/integrations/webhooks)

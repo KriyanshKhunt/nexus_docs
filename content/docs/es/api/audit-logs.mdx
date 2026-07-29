@@ -1,0 +1,130 @@
+---
+title: API de Audit Logs
+description: Endpoints del panel de control para ver, buscar y rastrear los logs de ejecución y los ciclos de vida de la entrega.
+---
+
+Los logs de auditoría (audit logs) registran el historial de los workflows disparados y los pasos de entrega, lo que te permite rastrear el estado exacto y los detalles del payload de cada mensaje.
+
+---
+
+## Autenticación y acceso
+
+- **Ruta base**: `/v1/audit-logs`
+- **Autenticación**: Requiere un token de sesión JWT del usuario.
+
+---
+
+## Resumen de endpoints
+
+| Método | Ruta                                    | Descripción                                                                                        |
+| :----- | :-------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| `GET`  | `/v1/audit-logs?environment=PRODUCTION` | Lista y filtra los logs de entrega (paginados, buscables).                                         |
+| `GET`  | `/v1/audit-logs/:id`                    | Obtiene el estado completo, entradas/salidas y métricas de pasos del ciclo de vida del rastreador. |
+
+---
+
+## Listar audit logs
+
+Recupera logs cronológicos que coincidan con tu entorno, filtros o término de búsqueda.
+
+```http
+GET /v1/audit-logs?environment=PRODUCTION&page=1&limit=20&search=alex
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+### Filtros de consulta
+
+- `environment`: `DEVELOPMENT`, `STAGING` o `PRODUCTION` (por defecto `DEVELOPMENT`).
+- `search`: Filtra por correo electrónico del suscriptor, ID externo, ID de log o nombre del workflow (mínimo 3 caracteres).
+- `status`: Filtra por estado de ejecución (por ejemplo, `DELIVERED`, `FAILED`, `BOUNCED`).
+- `channel`: Filtra por canal de entrega (por ejemplo, `EMAIL`, `SMS`, `PUSH`, `WEBHOOK`).
+- `timeRange`: Filtra usando preajustes: `1h`, `6h`, `24h`, `7d`, `30d`.
+- `dateFrom` / `dateTo`: Filtros de rango de fechas personalizados (cadenas ISO).
+- `sortBy`: Campos: `executedAt`, `status`, `channel`, `retryCount`, `workflowName`, `subscriber`.
+- `sortDir`: Orden de clasificación: `asc` o `desc` (por defecto `desc`).
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "logs": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "executedAt": "2026-07-28T21:00:00.000Z",
+      "channel": "EMAIL",
+      "status": "DELIVERED",
+      "retryCount": 0,
+      "workflowName": "billing.invoice",
+      "subscriber": {
+        "externalId": "user_42",
+        "email": "alex@example.com"
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "environment": "PRODUCTION",
+  "sortBy": "executedAt",
+  "sortDir": "desc"
+}
+```
+
+---
+
+## Obtener detalle del log de entrega
+
+Recupera información completa de depuración, incluyendo variables del payload y ciclos de vida del rastreador.
+
+```http
+GET /v1/audit-logs/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "log": {
+    "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "trackingId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "executedAt": "2026-07-28T21:00:00.000Z",
+    "channel": "EMAIL",
+    "status": "DELIVERED",
+    "retryCount": 0,
+    "payloadInput": {
+      "invoiceId": "INV-9901",
+      "amount": 150
+    },
+    "payloadOutput": {
+      "title": "Invoice Paid",
+      "body": "Thank you for paying $150."
+    },
+    "responseMeta": {
+      "messageId": "msg-sg-9812",
+      "provider": "sendgrid",
+      "latencyMs": 142
+    },
+    "lifecycle": [
+      { "step": "INGESTED", "status": "INGESTED", "at": "2026-07-28T21:00:00.000Z" },
+      { "step": "QUEUED", "status": "QUEUED", "at": "2026-07-28T21:00:00.120Z" },
+      { "step": "DELIVERED", "status": "DELIVERED", "at": "2026-07-28T21:00:00.262Z" }
+    ],
+    "subscriber": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "externalId": "user_42",
+      "email": "alex@example.com"
+    },
+    "workflow": {
+      "id": "771e8400-e29b-41d4-a716-446655440000",
+      "name": "billing.invoice",
+      "environment": "PRODUCTION"
+    }
+  }
+}
+```
+
+## Relacionado
+
+- [API de logs de Gestión](/docs/api/management#schedules-y-registros-logs) — obtención de logs con clave secreta
+- [Concepto de telemetría de pipeline](/docs/platform/concepts/delivery-pipeline)

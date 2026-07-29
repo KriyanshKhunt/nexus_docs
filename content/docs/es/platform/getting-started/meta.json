@@ -1,4 +1,9 @@
 {
   "title": "Primeros pasos",
-  "pages": ["index", "quickstart", "environments", "authentication"]
+  "pages": [
+    "index",
+    "quickstart",
+    "environments",
+    "authentication"
+  ]
 }

@@ -1,5 +1,5 @@
 ---
-title: API de topics
+title: API de Topics
 description: Endpoints de dashboard para topics de notificación — agrupa flujos para matrices de preferencias.
 ---
 
@@ -9,15 +9,15 @@ Los topics permiten a los suscriptores optar por entrar o salir de categorías (
 
 ## Endpoints
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/v1/topics` | Listar todos los topics |
-| POST | `/v1/topics` | Crear topic |
-| GET | `/v1/topics/:id` | Obtener topic |
-| PUT | `/v1/topics/:id` | Actualizar topic |
-| DELETE | `/v1/topics/:id` | Eliminar topic |
-| GET | `/v1/topics/:id/stats` | Estadísticas de suscripción |
-| PUT | `/v1/topics/assign/:workflowId` | Asignar flujos a un topic |
+| Método | Ruta                            | Descripción                 |
+| ------ | ------------------------------- | --------------------------- |
+| GET    | `/v1/topics`                    | Listar todos los topics     |
+| POST   | `/v1/topics`                    | Crear topic                 |
+| GET    | `/v1/topics/:id`                | Obtener topic               |
+| PUT    | `/v1/topics/:id`                | Actualizar topic            |
+| DELETE | `/v1/topics/:id`                | Eliminar topic              |
+| GET    | `/v1/topics/:id/stats`          | Estadísticas de suscripción |
+| PUT    | `/v1/topics/assign/:workflowId` | Asignar flujos a un topic   |
 
 Roles: crear/actualizar/eliminar requieren `OWNER`, `ADMIN` o `DEVELOPER`.
 

@@ -1,76 +1,167 @@
 ---
 title: API de Guías
-description: Gestiona banners, modales y tooltips integrados en el producto desde el panel y el SDK.
+description: Endpoints del lado del servidor y orientados al cliente para registrar y rastrear guías in-app (banners, modales, tooltips, tarjetas).
 ---
 
-<DashboardAuth />
+Las guías son componentes interactivos dentro del producto dirigidos a suscriptores o rutas específicas. Esta API admite definiciones en el panel de control, carga de clientes SDK y seguimiento de telemetría de eventos.
 
-Ruta base del panel (Dashboard): `/v1/guides`
+---
 
-SDK (navegador): `GET /v1/sdk/guides`
+## Acceso y rutas
 
-## Listar guías
+Las guías se gestionan desde tres puntos de acceso:
 
-```http
-GET /v1/guides
-Authorization: Bearer <jwt>
-```
+- **Gestión de Servidor / SDK (autenticación `sk_*`)**: Crear, obtener y actualizar bajo `/v1/management/guides`
+- **Frontend del panel de control (autenticación JWT)**: CRUD completo + analíticas bajo `/v1/guides`
+- **Cliente SDK del suscriptor (autenticación `pk_*`)**: Carga y seguimiento bajo `/v1/sdk/guides`
+
+---
+
+## Resumen de endpoints
+
+| Método   | Ruta de Gestión (`sk_*`)    | Ruta de Panel de Control (JWT)   | Descripción                                                              |
+| :------- | :-------------------------- | :------------------------------- | :----------------------------------------------------------------------- |
+| `GET`    | `/v1/management/guides`     | `/v1/guides`                     | Lista todas las campañas de guías en el entorno.                         |
+| `POST`   | `/v1/management/guides`     | `/v1/guides`                     | Crea una nueva campaña de guía (Borrador).                               |
+| `GET`    | `/v1/management/guides/:id` | `/v1/guides/:id`                 | Recupera los detalles de una guía.                                       |
+| `PUT`    | `/v1/management/guides/:id` | `/v1/guides/:id`                 | Actualiza la configuración, segmentación o estado de una guía.           |
+| `DELETE` | —                           | `/v1/guides/:id`                 | Elimina una campaña de guía.                                             |
+| `GET`    | —                           | `/v1/guides/:id/analytics`       | Recupera las analíticas de conversión de eventos de una guía.            |
+| `GET`    | SDK del Cliente (`pk_*`)    | `/v1/sdk/guides`                 | Recupera las guías activas elegibles que coincidan con la ruta/contexto. |
+| `POST`   | SDK del Cliente (`pk_*`)    | `/v1/sdk/guides/:guideId/events` | Registra un evento de telemetría de interacción de guía.                 |
+
+---
 
 ## Crear guía
 
-```http
-POST /v1/guides
-Authorization: Bearer <jwt>
-```
+Define una campaña de guía en el entorno.
 
-```json
+```http
+POST /v1/management/guides
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
-  "name": "Feature launch banner",
-  "type": "banner",
+  "name": "redesigned-analytics-banner",
+  "type": "BANNER",
+  "priority": 10,
   "content": {
-    "title": "New dashboard is live",
-    "body": "Check out the redesigned analytics view.",
-    "ctaLabel": "Explore",
-    "ctaUrl": "/analytics"
+    "title": "Welcome to the new Analytics!",
+    "body": "We redesigned the cost tracking charts. Check it out.",
+    "cta": {
+      "label": "Explore Charts",
+      "url": "/dashboard/analytics",
+      "action": "open_analytics"
+    },
+    "secondaryCta": {
+      "label": "Dismiss",
+      "url": ""
+    },
+    "media": {
+      "url": "https://cdn.nexussignal.dev/assets/analytics-hero.png",
+      "alt": "Analytics chart preview"
+    },
+    "dismissible": true,
+    "theme": "info"
   },
   "targeting": {
-    "pathPatterns": ["/dashboard/*"],
-    "audienceId": null
+    "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+    "rules": [
+      { "field": "role", "operator": "equals", "value": "admin" }
+    ],
+    "logic": "AND"
   },
-  "active": true
+  "activation": {
+    "urlPattern": "/dashboard/analytics",
+    "pageMatch": "starts_with",
+    "frequency": "once_per_session",
+    "delay": 1500
+  }
 }
 ```
 
-## Tipos de Guías
+### Campos del cuerpo de la solicitud
 
-`banner` · `modal` · `tooltip` · `badge`
+- `name`: string (Requerido). Clave alfanumérica en minúsculas con guiones/guiones bajos (`/^[a-z][a-z0-9_-]*$/`, máx. 128 caracteres).
+- `type`: string (Requerido). Debe ser `BANNER`, `MODAL`, `CARD` o `TOOLTIP`.
+- `content.theme`: string. Debe ser `info`, `success`, `warning`, `error` o `neutral`. Por defecto es `info`.
+- `targeting.logic`: string. Operador lógico `AND` u `OR` para las reglas de segmentación.
+- `activation.pageMatch`: string. `exact`, `starts_with`, `contains` o `regex`.
+- `activation.frequency`: string. `once`, `once_per_session` o `always`.
+- `activation.delay`: number. Milisegundos a retrasar la renderización después de la coincidencia de ruta.
 
-## SDK — obtener guías elegibles
+---
 
-<PublicKeyAuth />
+## Endpoints del SDK del Cliente (autenticación pública `pk_*`)
+
+### 1. Obtener guías elegibles
+
+La biblioteca del cliente consulta las guías activas que coinciden con el nombre de ruta de la URL actual del usuario:
 
 ```http
-GET /v1/sdk/guides?pathname=/dashboard
-x-nexus-public-key: pk_prd_…
+GET /v1/sdk/guides?subscriberExternalId=user_42&pathname=/dashboard/analytics
+x-nexus-public-key: pk_prd_your_public_key
 ```
 
-## Registrar eventos de la guía
+### 2. Registrar evento de guía
+
+Guarda eventos de telemetría cuando los suscriptores interactúan con las guías:
 
 ```http
-POST /v1/sdk/guides/:guideId/events
+POST /v1/sdk/guides/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/events
+x-nexus-public-key: pk_prd_your_public_key
+Content-Type: application/json
+
+{
+  "subscriberExternalId": "user_42",
+  "event": "interacted",
+  "metadata": {
+    "clicked": "cta"
+  }
+}
 ```
+
+- `event`: Debe ser `seen`, `interacted` o `archived`.
+- `subscriberExternalId`: Requerido. Identificador externo del suscriptor.
+
+---
+
+## Recuperar analíticas de la guía
+
+Obtén los conteos de eventos y detalles de conversión de una guía:
+
+```http
+GET /v1/guides/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/analytics
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**Cuerpo de la respuesta:**
 
 ```json
-{ "event": "seen" }
+{
+  "analytics": {
+    "guideId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+    "totalSeen": 1500,
+    "totalInteracted": 320,
+    "totalArchived": 80,
+    "uniqueSeenUsers": 1200,
+    "interactionRate": 21.33
+  }
+}
 ```
 
-Eventos: `seen`, `interacted`, `dismissed`
+## Límites
 
-## Analíticas
+| Límite                                    | Valor |
+| :---------------------------------------- | :---- |
+| Máximo de guías por entorno               | 50    |
+| Máximo de guías activas a la vez          | 20    |
+| Valor máximo de prioridad                 | 100   |
+| Máximo de reglas de segmentación por guía | 10    |
+| Tamaño máximo del payload de contenido    | 50 KB |
 
-```http
-GET /v1/guides/:id/analytics
-Authorization: Bearer <jwt>
-```
+## Relacionado
 
-Ver [Guías en el Producto](/docs/platform/features/guides).
+- [Guía de la funcionalidad de Guías en el producto](/docs/platform/features/guides)
+- [Referencia del componente del React SDK](/docs/sdk/frontend/react)
+- [SDK Headless JS](/docs/sdk/frontend/js)

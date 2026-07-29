@@ -1,51 +1,131 @@
 ---
-title: API de schedules
-description: Crea y gestiona triggers de flujo programados vía dashboard o SDK.
+title: API de Schedules
+description: Endpoints del lado del servidor y del panel de control para registrar temporizadores cron recurrentes o despachos futuros de workflows de un único disparo.
 ---
 
-## Rutas SDK (clave secreta)
+Las programaciones (schedules) te permiten disparar workflows automáticamente sin configurar tu propio ejecutor de tareas o daemon de cron.
+
+---
+
+## Acceso y rutas
+
+Nexus aísla la gestión de programaciones según el alcance de acceso:
+
+- **Servidor a Servidor / SDK (autenticación `sk_*`)**: La ruta raíz es `/v1/schedules/sdk`
+- **Frontend del panel de control (autenticación JWT)**: La ruta raíz es `/v1/schedules`
+
+---
+
+## Resumen de endpoints del SDK (autenticación `sk_*`)
+
+| Método   | Ruta                    | Descripción                                                                        |
+| :------- | :---------------------- | :--------------------------------------------------------------------------------- |
+| `GET`    | `/v1/schedules/sdk`     | Lista todas las programaciones (paginadas).                                        |
+| `POST`   | `/v1/schedules/sdk`     | Crea una programación recurrente o de un único disparo.                            |
+| `PUT`    | `/v1/schedules/sdk/:id` | Actualiza las propiedades, el estado activo o la temporización de la programación. |
+| `DELETE` | `/v1/schedules/sdk/:id` | Elimina una programación.                                                          |
+
+---
+
+## Crear programación
+
+Registra una programación en el entorno.
 
 ```http
-Authorization: Bearer sk_prd_…
-```
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-| Método | Ruta | Acción |
-|--------|------|--------|
-| GET | `/v1/schedules/sdk` | Listar schedules |
-| POST | `/v1/schedules/sdk` | Crear schedule |
-| PATCH | `/v1/schedules/sdk/:id` | Actualizar schedule |
-| DELETE | `/v1/schedules/sdk/:id` | Eliminar schedule |
-
-### Cuerpo de creación
-
-```json
 {
-  "name": "Weekly report",
-  "workflowId": "uuid",
+  "name": "Weekly Audit Report",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
   "cronExpression": "0 9 * * 1",
-  "timezone": "America/Chicago",
-  "recipients": [{ "externalId": "user_1" }],
-  "data": { "reportType": "weekly" },
+  "timezone": "America/New_York",
+  "recipients": [
+    { "externalId": "user_42" }
+  ],
+  "data": { "reportType": "audit" },
   "active": true
 }
 ```
 
-Schedule puntual — usa `scheduledAt` en lugar de `cronExpression`:
+- `name`: string (Requerido). Etiqueta para el panel de control (máx. 256 caracteres).
+- `workflowId`: string (Requerido). El UUID del workflow de destino a disparar.
+- `timezone`: string (Opcional). Nombre de zona horaria IANA válido (por defecto `'UTC'`).
+- `recipients`: array de objetos (Requerido). Debe contener `{ externalId }` o `{ subscriberId }` que hagan referencia a suscriptores existentes.
+- `data`: object (Opcional). Contexto de payload JSON dinámico pasado al workflow.
+- `active`: boolean (Opcional). Inicia la programación inmediatamente. Por defecto es `true`.
+
+### Ejecución programada de un único disparo
+
+Para disparar un workflow una sola vez en un timestamp futuro específico, pasa `scheduledAt` en lugar de `cronExpression`:
 
 ```json
 {
-  "scheduledAt": "2026-07-15T10:00:00.000Z"
+  "name": "Delayed Onboarding Checklist",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "scheduledAt": "2026-08-01T14:30:00.000Z",
+  "timezone": "America/New_York",
+  "recipients": [{ "externalId": "user_42" }]
 }
 ```
 
-## Rutas de dashboard
+---
 
-CRUD autenticado con JWT en `/v1/schedules` con historial de ejecución.
+## Actualizar programación
 
-## SDK Node
+Modifica las propiedades de la programación. Ten en cuenta que esto requiere una solicitud **PUT**.
 
-```ts
-await nexus.schedules.create({ … });
+```http
+PUT /v1/schedules/sdk/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
+{
+  "active": false,
+  "data": { "reportType": "consolidated" }
+}
 ```
 
-Consulta [SDK Node](/docs/sdk/backend/node) y la función [Schedules](/docs/platform/features/schedules).
+---
+
+## Listar programaciones
+
+Recupera programaciones activas.
+
+```http
+GET /v1/schedules/sdk?page=1&limit=25
+Authorization: Bearer sk_prd_your_secret_key
+```
+
+**Cuerpo de la respuesta:**
+
+```json
+{
+  "schedules": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "name": "Weekly Audit Report",
+      "type": "recurring",
+      "cronExpression": "0 9 * * 1",
+      "scheduledAt": null,
+      "timezone": "America/New_York",
+      "active": true,
+      "nextFireAt": "2026-08-03T13:00:00.000Z",
+      "lastFiredAt": "2026-07-27T13:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+## Relacionado
+
+- [Resumen de la funcionalidad de Schedules](/docs/platform/features/schedules)
+- [API de triggers de workflows](/docs/api/workflows)
+- [Recurso de Schedules del Node SDK](/docs/sdk/backend/node)
