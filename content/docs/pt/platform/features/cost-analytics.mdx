@@ -3,49 +3,100 @@ title: Análise de Custos
 description: Acompanhe os gastos com provedores por canal, fluxo de trabalho e provedor com alertas de orçamento.
 ---
 
-Saiba exatamente quanto custam suas notificações — algo que a maioria das plataformas de notificação não oferece.
+# Análise de Custos
+
+Saiba exatamente quanto custam suas notificações. O Nexus rastreia os gastos a nível de operadora em todos os canais de mensagens correlacionando as entregas bem-sucedidas com suas tabelas de preços personalizadas de provedores.
+
+## Como Funciona
+
+1. Defina as tarifas unitárias de mensagens do seu provedor em **Settings → Integrations → Provider Costs** (por exemplo, SendGrid a `$0.001` por e-mail, Twilio a `$0.0075` por SMS).
+2. Quando uma notificação é resolvida com status de sucesso, o Nexus referencia a chave do provedor ativo a partir do campo `responseMeta` da execução.
+3. O valor gasto é calculado como `count * costPerMessage` e adicionado ao total do ciclo de faturamento mensal da organização.
 
 ## Configuração
 
-1. **Integrations (Integrações) → Provider costs (Custos do provedor)** — defina o custo por mensagem para cada provedor (ex: SendGrid $0,001, Twilio $0,05).
-2. **Settings (Configurações) → Budget (Orçamento)** — defina um teto mensal opcional `costBudgetUsd`.
+### 1. Definir os Custos dos Provedores
 
-## Painel (Dashboard)
+Navegue até **Integrations → Provider Costs** no painel de controle e especifique os custos unitários personalizados em USD para cada integração ativa.
 
-O card de **Overview (Visão Geral) → Monthly Spend (Gasto Mensal)** mostra:
+### 2. Definir o Teto do Orçamento Mensal
 
-- Gasto total no ciclo de faturamento atual
-- Detalhamento por provedor e por canal
-- Detalhamento por fluxo de trabalho
-- Porcentagem utilizada do orçamento (%) e selo de orçamento excedido
+Navegue até **Settings → General** e especifique um limite mensal de `costBudgetUsd` (por exemplo, `1000` USD) para disparar notificações e alertas quando os gastos excederem os limites.
 
-## API
+## API do Painel de Controle
+
+Recupere o detalhamento dos custos ativos a partir do controlador de análises (analytics):
 
 ```http
 GET /v1/analytics/overview/cost?environment=PRODUCTION
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
 ```
+
+**Corpo da resposta:**
 
 ```json
 {
+  "environment": "PRODUCTION",
+  "billingCycleStart": "2026-07-01T00:00:00.000Z",
   "totalCostUsd": 847.32,
-  "budgetUsd": 1000,
+  "budgetUsd": 1000.0,
   "budgetUsedPercent": 85,
   "budgetExceeded": false,
-  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
-  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+  "byChannel": [
+    { "channel": "EMAIL", "count": 420000 },
+    { "channel": "SMS", "count": 61000 }
+  ],
+  "byProvider": [
+    {
+      "providerId": "sendgrid",
+      "label": "SendGrid",
+      "layer": "email",
+      "count": 420000,
+      "costPerMessage": 0.001,
+      "costUsd": 420.0
+    },
+    {
+      "providerId": "twilio",
+      "label": "Twilio SMS",
+      "layer": "sms",
+      "count": 61000,
+      "costPerMessage": 0.007,
+      "costUsd": 427.0
+    }
+  ],
+  "byWorkflow": [
+    {
+      "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+      "workflowName": "order.shipped",
+      "count": 312500,
+      "costUsd": 312.5
+    }
+  ],
+  "providerCosts": {
+    "sendgrid": 0.001,
+    "twilio": 0.007
+  }
 }
 ```
 
-## Alertas de orçamento
+## Alertas de Orçamento
 
-Quando o gasto excede `costBudgetUsd`, os proprietários da organização recebem um **alerta por e-mail** uma vez por ciclo de faturamento.
+Quando o custo mensal excede o teto de orçamento configurado em `costBudgetUsd`:
 
-## Correlação de ROI
+- O emblema (badge) da organização muda para `Exceeded` na visão geral do painel de controle.
+- Um e-mail de alerta de aviso é enviado automaticamente para todos os administradores da organização uma vez por ciclo de faturamento.
+- Os disparos futuros **não** são bloqueados — as notificações continuam a ser enviadas normalmente, mas os alertas mantêm os administradores informados sobre as tendências de gastos acumulados.
 
-Combine dados de custo com telemetria de conversão (`OPENED`, `CLICKED`) dos logs de auditoria para identificar fluxos de trabalho de alto custo e baixo engajamento.
+## Dicas de Otimização
+
+Combine a análise de custos com as conversões de engajamento (taxas de `seen` e `interacted`) para identificar workflows de alto custo e baixo engajamento. Se um workflow gerar altos custos com Twilio, mas possuir baixas taxas de ação, considere:
+
+- Adicionar a [supressão por presença](/docs/platform/features/cost-reduction) para pular o envio de SMS para usuários ativos no aplicativo.
+- Alterar a ordem de fallback dos canais para priorizar o envio por e-mail ou push antes do SMS.
+- Adicionar uma [janela de agrupamento (digest window)](/docs/platform/features/digest-throttle) para consolidar múltiplos alertas em um único e-mail em lote.
 
 ## Relacionado
 
 - [Redução de custos](/docs/platform/features/cost-reduction)
-- [API de Análises](/docs/api/analytics)
+- [API de Analytics](/docs/api/analytics)
+- [Digest e Throttle](/docs/platform/features/digest-throttle)

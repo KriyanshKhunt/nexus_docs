@@ -1,43 +1,108 @@
 ---
-title: Tópicos
-description: Assinaturas de notificações baseadas em categorias — Marketing, Segurança, Atualizações de Produtos.
+title: Tópicos de Notificação
+description: Preferências de notificação baseadas em categorias — permita que os inscritos ativem ou desativem grupos inteiros de mensagens, como Marketing ou Faturamento, em vez de nomes de workflows brutos.
 ---
 
-Os **Tópicos** permitem que os usuários ativem/desativem **categorias** em vez de gerenciar nomes de eventos de fluxos de trabalho individuais.
+# Tópicos de Notificação
 
-## Modelo
+Os **Tópicos** representam categorias de notificações (por exemplo, `"Billing"`, `"Product Updates"`, `"Marketing"`). Em vez de expor nomes de eventos de workflows brutos de backend aos inscritos, você associa os workflows a um tópico. Os inscritos gerenciam suas preferências no nível do tópico.
 
-| Campo | Descrição |
-|-------|-------------|
-| `name` | Chave de máquina (ex: `marketing`) |
-| `displayName` | Nome de exibição na interface (UI) |
-| `defaultStatus` | `OPTED_IN` (Ativado), `OPTED_OUT` (Desativado) ou `REQUIRED` (Obrigatório) |
-| `sortOrder` | Ordem de exibição na matriz de preferências |
+---
 
-Máximo de **50 tópicos** por ambiente.
+## Modelo de Tópico
 
-## Atribuir fluxos de trabalho
+| Campo           | Tipo   | Obrigatório | Descrição                                                                                                                                                                       |
+| :-------------- | :----- | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`          | string | ✅          | Identificador de máquina exclusivo (por exemplo, `billing_alerts`). Deve ser alfanumérico em letras minúsculas com hífen/sublinhado (`^[a-z][a-z0-9_-]*$`, máx. 64 caracteres). |
+| `displayName`   | string | ✅          | Nome de exibição voltado ao usuário no menu de preferências (máx. 128 caracteres).                                                                                              |
+| `description`   | string | —           | Breve resumo voltado ao usuário descrevendo o conteúdo deste tópico (máx. 256 caracteres).                                                                                      |
+| `defaultStatus` | enum   | ✅          | Estado inicial de assinatura para novos inscritos: `OPTED_IN`, `OPTED_OUT` ou `REQUIRED`.                                                                                       |
+| `sortOrder`     | number | —           | Número inteiro que define a ordem de exibição das linhas nas tabelas de preferências.                                                                                           |
 
-Vincule um fluxo de trabalho a um tópico através do `topicId`. A avaliação de preferências verifica as chaves no formato `topic:{name}` no perfil do inscrito.
+### Explicação dos Status Padrão
 
-## Painel (Dashboard)
+- **`OPTED_IN`**: Os inscritos são inscritos por padrão, mas podem optar explicitamente por sair.
+- **`OPTED_OUT`**: Os inscritos não são inscritos por padrão, mas podem optar explicitamente por entrar.
+- **`REQUIRED`**: Os inscritos são permanentemente inscritos. Representa alertas críticos (por exemplo, redefinições de senha, avisos de falha de faturamento) que não podem ser desativados.
 
-Gerencie tópicos em **Settings (Configurações) → Topics**. Atribua fluxos de trabalho a partir do menu suspenso do editor de fluxos.
+---
 
-## SDK
+## Como as Preferências são Avaliadas
+
+Quando um workflow é disparado:
+
+1. O Nexus verifica se o workflow está associado a um `topicId`. Se não estiver, ele executa as etapas do canal normalmente.
+2. Se estiver associado, o motor de execução verifica a matriz de preferências do inscrito para chaves estruturadas como `topic:<name>`.
+3. Se existir uma preferência explícita definida para o canal (por exemplo, `{ "topic:marketing": { "EMAIL": false } }`), a etapa é ignorada, registrando `PREFERENCE_GATE` no ciclo de vida.
+4. Se nenhuma preferência explícita estiver definida, o motor de execução adota a configuração `defaultStatus` configurada no tópico.
+
+---
+
+## Integração com o SDK
+
+### Buscar Tópicos Ativos
+
+O cliente do inscrito pode buscar a lista de tópicos configurados no ambiente para renderizar menus personalizados:
 
 ```http
 GET /v1/sdk/topics
 x-nexus-public-key: pk_prd_…
 ```
 
-Também incluído em `GET /v1/sdk/notification-events` para a matriz de preferências.
+**Corpo da resposta:**
 
-## SDK para React
+```json
+{
+  "topics": [
+    {
+      "id": "topic-uuid",
+      "name": "billing",
+      "displayName": "Billing & Invoices",
+      "defaultStatus": "REQUIRED"
+    },
+    {
+      "id": "topic-uuid-2",
+      "name": "marketing",
+      "displayName": "Marketing & Promotions",
+      "defaultStatus": "OPTED_OUT"
+    }
+  ]
+}
+```
 
-O componente `<SubscriberPreferenceMatrix groupByTopic />` renderiza tópicos como linhas com caixas de seleção de canais.
+Este endpoint também é incluído em `GET /v1/sdk/notification-events` juntamente com os canais ativos.
+
+---
+
+## Componentes do React SDK
+
+O React SDK fornece um componente pronto para uso que carrega, agrupa e atualiza automaticamente as preferências por tópico:
+
+```tsx
+import { PreferenceMatrix } from '@nexus-signal/react';
+
+function UserSettings() {
+  return (
+    <div className="settings-panel">
+      <h2>Notification Preferences</h2>
+      <PreferenceMatrix />
+    </div>
+  );
+}
+```
+
+O componente renderiza os tópicos como linhas e os canais disponíveis (Email, SMS, Push) como colunas. Quando um usuário alterna uma caixa de seleção, o cliente atualiza o perfil do inscrito (`PUT /v1/sdk/subscribers/:externalId/preferences`) de forma automática.
+
+## Limites
+
+| Limite                                 | Valor          |
+| :------------------------------------- | :------------- |
+| Máximo de tópicos por ambiente         | 50             |
+| Comprimento máximo do nome de máquina  | 64 caracteres  |
+| Comprimento máximo do nome de exibição | 128 caracteres |
 
 ## Relacionado
 
-- [React SDK](/docs/sdk/frontend/react)
-- [API do SDK](/docs/api/sdk)
+- [Componentes do React SDK](/docs/sdk/frontend/react)
+- [Referência da API do SDK](/docs/api/sdk)
+- [Matriz de preferências do inscrito](/docs/platform/features/rich-inbox)

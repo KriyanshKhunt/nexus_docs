@@ -1,70 +1,177 @@
 ---
-title: API de Fluxos de Trabalho
-description: POST /v1/workflows/trigger — ingere eventos de fluxo de trabalho do seu backend.
+title: API de Workflows
+description: Disparadores (triggers) de workflows no lado do servidor e definições de sincronização — POST /v1/workflows/trigger e /v1/workflows/sync.
 ---
 
-## Acionar fluxo de trabalho
+# API de Workflows
+
+Os Workflows são os mapas lógicos que governam a seleção de modelos (templates), condições, controles de custos e roteamento de entregas. Esses endpoints são autenticados com chave secreta (`sk_*`) para chamadas servidor para servidor.
+
+---
+
+## Resumo dos Endpoints
+
+| Método | Caminho                 | Escopo de Auth               | Descrição                                                          |
+| :----- | :---------------------- | :--------------------------- | :----------------------------------------------------------------- |
+| `POST` | `/v1/workflows/trigger` | Segredo do Servidor (`sk_*`) | Ingere eventos de disparo para executar um workflow (assíncrono).  |
+| `POST` | `/v1/workflows/sync`    | Segredo do Servidor (`sk_*`) | Sincroniza definições de esquemas de workflows (Workflow-as-code). |
+
+Para rotas de gerenciamento do painel (criação, exclusão, edição visual), use o caminho do painel autenticado por JWT `/v1/workflows/dashboard`.
+
+---
+
+## Disparar Workflow
+
+Ingere um payload de gatilho para executar um workflow para um ou mais destinatários.
 
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 Content-Type: application/json
-Idempotency-Key: chave-exclusiva-opcional
+Idempotency-Key: opt-idempotency-uuid-here
 ```
 
-### Corpo da requisição (Request body)
+### Campos do Corpo da Requisição
+
+- `workflowName`: string (Obrigatório). O nome de máquina do workflow (por exemplo, `order.shipped`).
+- `tenant`: string (Opcional). O identificador externo do tenant B2B para aplicação de marca no modelo.
+- `recipients`: array de objetos (Obrigatório, mín. 1). Os inscritos de destino para entrega (veja abaixo).
+- `data`: objeto (Opcional). Contexto de payload dinâmico de chave-valor para interpolação nos modelos do Handlebars e etapas condicionais.
+
+### Estrutura do Esquema de Destinatários
+
+Ao contrário do cadastro de usuários, o endpoint de disparo **não** aceita detalhes de contato diretos como `email` ou `phoneNumber` dentro do objeto do destinatário. As entradas de destinatários devem referenciar um inscrito existente já registrado no sistema:
 
 ```json
 {
-  "workflowName": "order.shipped",
+  "workflowName": "invoice.sent",
   "recipients": [
     {
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "timezone": "America/Los_Angeles",
-      "locale": "pt"
+      "timezone": "America/New_York",
+      "locale": "es-MX",
+      "slackWebhookUrl": "https://hooks.slack.com/services/T0/B0/X"
     }
   ],
   "data": {
-    "orderId": "ORD-9912",
-    "trackingUrl": "https://carrier.com/track/9912"
+    "invoiceId": "INV-1092"
   }
 }
 ```
 
-### Resposta — 202 Accepted
+#### Campos de Propriedade do Destinatário:
+
+- `externalId`: string. O ID do usuário da aplicação correspondente ao perfil do inscrito.
+- `subscriberId`: string. O UUID de banco de dados do perfil do inscrito (use `externalId` ou `subscriberId`).
+- `timezone`: string (Opcional). Nome de fuso horário IANA válido. Se fornecido, ele atualizará o fuso horário do inscrito no banco de dados.
+- `locale`: string (Opcional). Localidade BCP 47 válida (por exemplo, `es-MX`). Usado como substituição de tradução para este evento de disparo (não sobrescreve a localidade padrão do perfil do inscrito).
+- `slackWebhookUrl` / `discordWebhookUrl` / `teamsWebhookUrl`: string (Opcional). URLs de webhooks de chat personalizados. Se fornecidos, serão salvos automaticamente nas conexões do inscrito.
+
+---
+
+## Disparar Envio em Leque de Objetos
+
+Para notificar todos os inscritos que estão atualmente associados a uma entidade de dados específica (objeto), passe a `collection` e o `id` do objeto no campo `recipients` em seu lugar:
+
+```json
+{
+  "workflowName": "project.milestone",
+  "recipients": [
+    {
+      "collection": "projects",
+      "id": "proj_alpha"
+    }
+  ],
+  "data": {
+    "milestoneName": "API Beta launch"
+  }
+}
+```
+
+O serviço de disparo expande a lista de observadores do objeto internamente e enfileira as entregas para cada perfil de inscrito resolvido.
+
+---
+
+## Payloads de Resposta
+
+### 202 Accepted (Enfileirado com sucesso)
 
 ```json
 {
   "accepted": true,
-  "workflow": "order.shipped",
+  "workflow": "invoice.sent",
   "environment": "PRODUCTION",
   "results": [
     {
-      "logId": "uuid",
-      "subscriberId": "uuid",
+      "logId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "subscriberId": "550e8400-e29b-41d4-a716-446655440000",
       "status": "queued"
     }
   ],
-  "billing": { "quotaStatus": "ok" }
+  "billing": {
+    "quotaStatus": "ok",
+    "triggerCount": 1284,
+    "limit": 100000
+  }
 }
 ```
 
-### Códigos de erro
+### 400 Bad Request (Validação falhou)
 
-| Status | Significado |
-|--------|---------|
-| 400 | Falha na validação |
-| 401 | Chave secreta inválida ou ausente |
-| 404 | Fluxo de trabalho não encontrado |
-| 409 | Fluxo de trabalho desativado |
-| 402/429 | Cota excedida ou limite de taxa atingido |
+Se as restrições de destinatários forem violadas (por exemplo, se nem `externalId` nem `subscriberId` forem fornecidos), ou se os valores de timezone/locale forem inválidos:
 
-## CRUD de fluxos do painel
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "fieldErrors": {
+      "recipients": ["Each recipient needs subscriberId or externalId"]
+    }
+  }
+}
+```
 
-Rotas autenticadas do painel sob `/v1/workflows/dashboard` para criação, atualização, exclusão, gatilho de teste e estatísticas de A/B.
+### 404 Not Found (Workflow ou Inscrito não encontrado)
 
-## SDK para Node
+Se o nome do workflow não existir:
 
-Prefira [`@nexus-signal/node`](/docs/sdk/backend/node) para gatilhos tipados, tentativas automáticas e disjuntor de resiliência.
+```json
+{ "error": "Workflow \"invoice.sent\" not found" }
+```
+
+Se um destinatário não for encontrado no banco de dados, o campo daquele destinatário retornará um indicador de pulado na lista `results`:
+
+```json
+{
+  "accepted": true,
+  "workflow": "invoice.sent",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "recipient": { "externalId": "non_existent_user" },
+      "status": "skipped",
+      "reason": "subscriber_not_found"
+    }
+  ]
+}
+```
+
+---
+
+## Sincronizar Workflows
+
+Defina a estrutura do seu workflow (nós, canais, disparadores, opções) em código e sincronize o layout durante a implantação:
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+```
+
+Consulte [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) para obter as configurações JSON completas.
+
+## Relacionado
+
+- [API de Inscritos](/docs/api/subscribers) — registrando perfis de usuários primeiro
+- [API de Objetos e Suscrições](/docs/api/objects) — gerenciando grupos de envio em leque
+- [Envios idempotentes](/docs/platform/getting-started/authentication) — proteção contra duplicidade

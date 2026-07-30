@@ -1,43 +1,81 @@
 ---
 title: Janelas de Entrega
-description: Entrega de notificações com base no fuso horário local do inscrito.
+description: Horários de silêncio cientes do fuso horário — retém as notificações na fila até que a janela local permitida do inscrito se abra.
 ---
 
-Os nós de **Janela de Entrega** garantem que as notificações nunca cheguem em horários inadequados (ex: permitido apenas das 9:00 às 21:00 no fuso horário do usuário).
+# Janelas de Entrega
 
-## Configuração na tela (Canvas)
+O nó de **Janela de Entrega** (Delivery Window) verifica o horário local do inscrito antes de despachar as notificações subsequentes no fluxo. Se o horário atual estiver fora da janela permitida (por exemplo, no meio da noite), o Nexus pausa a execução e agenda um job atrasado para retomar quando a janela se abrir.
 
-Adicione um nó de **Janela de Entrega** definindo:
-
-- `windowStart` — `"09:00"`
-- `windowEnd` — `"21:00"`
-- `urgent` — ignora a janela para alertas críticos (opcional)
-
-## Fuso horário do inscrito
-
-Defina no perfil do inscrito ou passe a cada acionamento (trigger):
-
-```ts
-recipients: [{ externalId: 'user_1', timezone: 'Europe/London' }]
+```mermaid
+flowchart TD
+  Trigger[Disparar notificação] --> Check{O horário local está dentro da janela?}
+  Check -->|Sim| Deliver[Entregar imediatamente]
+  Check -->|Não| Delay[Calcular atraso em ms]
+  Delay --> Queue[Agendar job atrasado no BullMQ]
+  Queue -->|Janela se abre| Deliver
 ```
 
-Utiliza identificadores de fuso horário IANA. Caso não seja definido, o fuso padrão adotado é o UTC.
+## Configuração
 
-## Comportamento
+Ao definir um nó de Janela de Entrega no canvas ou por meio do workflow-as-code, especifique os seguintes parâmetros:
 
-| Situação | Ação |
-|-----------|--------|
-| Dentro da janela | Continua o envio imediatamente |
-| Fora da janela | Retém na fila; a tarefa agendada do BullMQ resume no início da próxima janela |
-| `urgent: true` | Entrega imediatamente, independentemente do horário |
+| Campo         | Tipo    | Obrigatório | Descrição                                                                                                       |
+| :------------ | :------ | :---------- | :-------------------------------------------------------------------------------------------------------------- |
+| `windowStart` | string  | ✅          | Horário de início no formato `HH:MM` (24 horas, por exemplo, `"09:00"`)                                         |
+| `windowEnd`   | string  | ✅          | Horário de término no formato `HH:MM` (24 horas, por exemplo, `"21:00"`)                                        |
+| `urgent`      | boolean | —           | Defina como `true` para ignorar completamente a verificação da janela para alertas críticos. O padrão é `false` |
 
-## Casos de uso
+## Como o Fuso Horário do Inscrito é Resolvido
 
-- E-mails de marketing — apenas em horário comercial
-- Notificações push — evite horários de sono
-- SMS — conformidade com horários de silêncio regulamentares
+O horário local do inscrito é determinado na seguinte ordem de prioridade:
+
+1. A propriedade `timezone` passada no objeto do inscrito no momento do disparo:
+   ```ts
+   recipients: [{ externalId: 'user_42', timezone: 'America/New_York' }];
+   ```
+2. A propriedade `timezone` armazenada no perfil do inscrito no banco de dados.
+3. Fallback para **`UTC`** se nenhum fuso horário for resolvido ou se a string fornecida não for um identificador IANA válido.
+
+## Estados de Execução e Ciclo de Vida
+
+A etapa da janela de entrega registra os seguintes eventos no histórico de execução:
+
+### 1. Retenção da Janela de Entrega (`DELIVERY_WINDOW_HOLD`)
+
+Se o horário local do usuário estiver fora da janela permitida:
+
+- O status muda para `QUEUED`.
+- O BullMQ agenda um job atrasado com o `jobId: "deliveryWindow:<logId>:<nodeId>"` com o atraso calculado em milissegundos.
+- Registra metadados exibindo:
+  - `subscriberLocalTime`
+  - `delayMs` (milissegundos restantes até a janela se abrir)
+  - `resumeNodeId` (a próxima etapa no fluxo)
+
+### 2. Aprovação da Janela de Entrega (`DELIVERY_WINDOW_PASS`)
+
+Se o horário local do usuário estiver dentro da janela permitida, ou se `urgent` estiver configurado como `true`:
+
+- O status permanece em `PROCESSING` (executa imediatamente).
+- Registra `reason: "within_window"` ou `reason: "urgent_bypass"`.
+
+## Exemplo de Workflow-as-code
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('invoice.overdue')
+  .addDeliveryWindow({
+    windowStart: '09:00',
+    windowEnd: '18:00',
+    urgent: false,
+  })
+  .addChannel('SMS')
+  .toDefinition();
+```
 
 ## Relacionado
 
-- [Horário de envio inteligente](/docs/platform/features/smart-send-time) — otimiza *qual* é a melhor hora; a janela de entrega define as horas *permitidas*
-- [API de Inscritos](/docs/api/sdk)
+- [Smart send-time](/docs/platform/features/smart-send-time) — otimiza _qual_ é a melhor hora; a janela de entrega define as horas _permitidas_
+- [API de Inscritos](/docs/api/subscribers) — configurando fusos horários de usuários
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

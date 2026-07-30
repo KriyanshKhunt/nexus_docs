@@ -1,60 +1,124 @@
 ---
 title: API de Audiências
-description: Crie e gerencie segmentos dinâmicos de assinantes com regras de filtro.
+description: Endpoints do lado do servidor e do painel de controle para gerenciar regras de segmentação dinâmica de inscritos.
 ---
 
-<DashboardAuth />
+# API de Audiências
 
-Caminho base: `/v1/audiences`
+As Audiências representam subconjuntos dinâmicos da sua lista de inscritos, resolvidos no momento do disparo com base em filtros de regras de segmentos personalizados.
 
-## Listar audiências
+---
+
+## Acesso e Caminhos
+
+- **Servidor para Servidor / SDK (autenticação com `sk_*`)**: Requisições `GET` / `POST` sob `/v1/management/audiences`
+- **Frontend do Painel (autenticação com JWT)**: Requisições sob `/v1/audiences`
+
+---
+
+## Resumo dos Endpoints
+
+| Método   | Caminho de Gerenciamento (`sk_*`) | Caminho do Painel (JWT)     | Descrição                                                |
+| :------- | :-------------------------------- | :-------------------------- | :------------------------------------------------------- |
+| `GET`    | `/v1/management/audiences`        | `/v1/audiences`             | Lista todas as definições de audiências no ambiente.     |
+| `POST`   | `/v1/management/audiences`        | `/v1/audiences`             | Cria uma nova definição de audiência.                    |
+| `GET`    | —                                 | `/v1/audiences/:id`         | Recupera o perfil de uma audiência pelo ID.              |
+| `PUT`    | —                                 | `/v1/audiences/:id`         | Atualiza a definição ou regras de uma audiência.         |
+| `DELETE` | —                                 | `/v1/audiences/:id`         | Exclui uma definição de audiência.                       |
+| `GET`    | —                                 | `/v1/audiences/:id/members` | Recupera uma lista de visualização paginada dos membros. |
+
+---
+
+## Criar Audiência
+
+Registra uma definição de segmento.
 
 ```http
-GET /v1/audiences?page=1&limit=20
-Authorization: Bearer <jwt>
-```
+POST /v1/management/audiences
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-## Criar audiência
-
-```http
-POST /v1/audiences
-Authorization: Bearer <jwt>
-```
-
-```json
 {
-  "name": "Growth active",
+  "name": "Inactive Spanish Accounts",
+  "description": "Subscribers who preferred Spanish and are globally subscribed.",
   "filters": {
     "logic": "AND",
     "rules": [
-      { "field": "properties.plan", "operator": "equals", "value": "growth" },
-      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+      {
+        "field": "locale",
+        "operator": "starts_with",
+        "value": "es"
+      },
+      {
+        "field": "globalUnsubscribed",
+        "operator": "is_false"
+      }
     ]
   }
 }
 ```
 
-## Obter audiência
+### Campos do Corpo da Requisição
+
+- `name`: string (Obrigatório). O nome do segmento exibido no painel de controle (máx. 128 caracteres).
+- `description`: string (Opcional). Descrição interna (máx. 256 caracteres).
+- `filters`: objeto (Obrigatório). Contém as regras lógicas do segmento:
+  - `logic`: `AND` ou `OR` (o padrão é `AND`).
+  - `rules`: Array de até 10 objetos de regras de filtros.
+
+#### Propriedades de Regras Permitidas:
+
+- `field`: Deve ser um dos seguintes 7 campos validados do banco de dados:
+  - `email`, `phoneNumber`, `locale`, `timezone`, `globalUnsubscribed`, `externalId`, `createdAt`.
+- `operator`: A operação de comparação a ser realizada:
+  - `equals`, `not_equals`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `is_true`, `is_false`, `greater_than`, `less_than`.
+- `value`: string, number ou boolean (Opcional). Obrigatório para operadores de correspondência de valores.
+
+---
+
+## Visualizar Membros da Audiência
+
+Avalia as regras em tempo real e retorna os perfis de inscritos correspondentes:
 
 ```http
-GET /v1/audiences/:id
+GET /v1/audiences/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/members?page=1&limit=25
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## Visualizar membros
+**Corpo da resposta:**
 
-```http
-GET /v1/audiences/:id/members?page=1&limit=50
+```json
+{
+  "members": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "externalId": "user_42",
+      "email": "billing@example.com",
+      "phoneNumber": null,
+      "locale": "es-MX",
+      "timezone": "America/Mexico_City"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
+}
 ```
 
-Retorna a lista resolvida de assinantes correspondentes às regras de filtro atuais.
+## Limites
 
-## Atualizar / deletar
+| Limite                                    | Valor          |
+| :---------------------------------------- | :------------- |
+| Máximo de audiências por ambiente         | 50             |
+| Máximo de regras de filtros por audiência | 10             |
+| Comprimento máximo do nome                | 128 caracteres |
+| Comprimento máximo da descrição           | 256 caracteres |
 
-```http
-PUT    /v1/audiences/:id
-DELETE /v1/audiences/:id
-```
+## Relacionado
 
-Requer a função de `OWNER`, `ADMIN` ou `DEVELOPER`.
-
-Veja [Audiências e Segmentação](/docs/platform/features/audiences).
+- [Visão geral do recurso de Audiências e Segmentação](/docs/platform/features/audiences)
+- [API de Broadcasts](/docs/api/broadcasts) — despachando mensagens para audiências
+- [API de Inscritos](/docs/api/subscribers)

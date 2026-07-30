@@ -1,39 +1,56 @@
 ---
 title: Integrações
-description: Conecte seus provedores de e-mail, SMS, push, mensagens e IA ao Nexus Signal.
+description: Conecte seus próprios provedores de e-mail, SMS, push, webhook, chat e IA ao Nexus Signal.
 ---
 
-O Nexus Signal integra-se com **suas contas de provedores existentes**. Configure as chaves uma única vez na central de **Integrations (Integrações)** do painel de controle.
+# Integrações
 
-<Cards>
-  <Card title="Catálogo de provedores" href="/docs/platform/integrations/providers" description="SendGrid, Twilio, FCM, Resend e muito mais." />
-  <Card title="Canais de mensagens" href="/docs/platform/integrations/messaging-channels" description="Webhooks por inscrito do Slack, Discord e Teams." />
-  <Card title="Webhooks" href="/docs/platform/integrations/webhooks" description="Endpoints HTTP personalizados para qualquer payload." />
-</Cards>
+O Nexus atua como um controlador de roteamento que se posiciona à frente das **suas próprias contas de provedores**. Configure as credenciais de API uma única vez na central de **Integrations** no painel de controle, e o Nexus cuidará do roteamento, failover, modelos (templates) e rastreamento de entregas.
 
-## Camadas de integração
+---
 
-| Camada | Exemplos |
-|-------|----------|
-| E-mail | SendGrid, Resend, Amazon SES, Postmark, Mailgun |
-| SMS | Twilio, Vonage, Plivo, Sinch |
-| WhatsApp | Meta Cloud API, Twilio WhatsApp, Infobip |
-| Push | Firebase FCM, Apple APNs |
-| Mensageria | Slack, Discord, Microsoft Teams |
-| Webhook | Endpoints HTTP personalizados |
-| IA | OpenAI, Anthropic (geração de conteúdo) |
+## Camadas de Integração e Provedores
 
-## Configuração de pesos
+| Camada       | Chave                              | Provedores Suportados                           | Descrição                                             |
+| :----------- | :--------------------------------- | :---------------------------------------------- | :---------------------------------------------------- |
+| **Email**    | `email`                            | SendGrid, Resend, Amazon SES, Postmark, Mailgun | E-mails transacionais e de marketing                  |
+| **SMS**      | `sms`                              | Twilio, Vonage, Plivo, Sinch                    | Alertas rápidos por SMS e OTPs                        |
+| **WhatsApp** | `whatsapp`                         | Meta Cloud API, Twilio WhatsApp, Infobip        | Comunicação rica de chat B2C                          |
+| **Push**     | `push`                             | Firebase Cloud Messaging (FCM), Apple APNs      | Notificações push móveis e web                        |
+| **Chat**     | `slack` \| `discord` \| `ms_teams` | Slack, Discord, Microsoft Teams                 | Atualizações diretas em canais de chat                |
+| **Webhooks** | `webhook`                          | Destinos de requisições HTTP personalizados     | Webhooks diretos de backend para backend              |
+| **AI**       | `openai_ai` \| `anthropic_ai`      | OpenAI, Anthropic                               | Geração de conteúdo e nós de LLM em tempo de execução |
 
-Quando existem múltiplos provedores para uma mesma camada, defina os pesos de tráfego (a soma dos pesos deve totalizar 100):
+---
+
+## Configuração de Pesos (Roteamento A/B)
+
+Se você configurar múltiplas integrações para uma única camada, poderá dividir o tráfego entre elas definindo pesos personalizados:
 
 ```http
 PUT /v1/integrations/weights/email
-{ "sendgrid": 70, "resend": 30 }
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "weights": {
+    "sendgrid": 70,
+    "resend": 30
+  }
+}
 ```
 
-Camadas disponíveis: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`
+- **Camadas suportadas**: `email`, `sms`, `whatsapp`, `push`, `webhook`, `slack`, `discord`, `ms_teams`.
+- **Validação**: A soma de todos os pesos dentro de uma camada deve totalizar exatamente **100**.
 
-<Callout type="info">
-Consulte [BYOP](/docs/platform/concepts/byop) para entender por que o Nexus nunca cobra taxas adicionais sobre os custos dos provedores.
-</Callout>
+---
+
+## Segurança
+
+Todas as chaves de API, tokens e segredos de clientes dos provedores são criptografados no lado do servidor usando AES-256-GCM antes de serem gravados no banco de dados. A descriptografia ocorre apenas em nível de memória nos workers de execução ao despachar as entregas de saída.
+
+## Relacionado
+
+- [BYOP (Conceitos)](/docs/platform/concepts/byop) — detalhes de preços sem markup adicional
+- [Catálogo de credenciais de provedores](/docs/platform/integrations/providers)
+- [Configuração de webhooks](/docs/platform/integrations/webhooks)

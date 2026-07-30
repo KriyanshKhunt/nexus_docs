@@ -1,55 +1,104 @@
 ---
 title: Geração de Conteúdo por IA
-description: Gere textos de notificação otimizados por canal a partir de um único prompt usando sua própria chave de IA.
+description: Gere textos de notificação otimizados por canal a partir de um único prompt usando suas próprias chaves de provedores de IA.
 ---
 
-O editor de modelos inclui o recurso **AI Assist** — descreva o que a notificação deve dizer e obtenha textos otimizados para os limites de caracteres de cada canal.
+# Geração de Conteúdo por IA
 
-## Chaves de IA no modelo BYOP
+O editor de modelos no painel de controle inclui o **AI Assist** (Assistente de IA). Descreva o que a notificação deve dizer em linguagem simples e obtenha variações de redação otimizadas para os limites de caracteres de cada canal.
 
-Conecte sua própria chave de API em **Integrations (Integrações)**:
+## Chaves de IA no Modelo BYOP (Bring Your Own Provider)
+
+O Nexus não cobra taxas adicionais sobre o uso de tokens de IA. Você conecta sua própria chave de API em **Settings → Integrations** no painel de controle:
 
 - **OpenAI** (`openai_ai`) — utiliza `gpt-4o-mini`
-- **Anthropic** (`anthropic_ai`) — utiliza `claude-3-haiku`
+- **Anthropic** (`anthropic_ai`) — utiliza `claude-3-haiku-20240307`
 
-O Nexus não cobra por tokens de IA — você paga à sua provedora de IA diretamente.
+As chamadas aos provedores são executadas no lado do servidor utilizando uma restrição de formato JSON. Se nenhuma chave de provedor estiver ativa, o gerador retornará um erro de validação `400`.
 
-## API
+## Endpoint da API do Painel de Controle
+
+A interface do painel de controle gera o conteúdo invocando o endpoint de modelos:
 
 ```http
 POST /v1/templates/ai-generate
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 ```
+
+**Corpo da requisição:**
 
 ```json
 {
-  "prompt": "Notificação de pedido enviado com link de rastreamento",
-  "tone": "friendly",
-  "locale": "pt",
-  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+  "prompt": "Order #4092 shipped with carrier DHL. Include tracking number.",
+  "tone": "casual",
+  "locale": "en"
 }
 ```
 
-Retorna conteúdo estruturado por canal respeitando os limites obrigatórios:
+- `prompt`: Descrição em texto simples do objetivo da mensagem (máx. 1.000 caracteres).
+- `tone`: Tom do estilo visual. Deve ser `professional`, `casual`, `urgent` ou `friendly`. O padrão é `professional`.
+- `locale`: Localidade de destino opcional. Se especificada, o LLM traduzirá e adaptará a redação para esse idioma.
 
-| Canal | Limite |
-|---------|-------|
-| E-mail (Assunto) | 80 caracteres |
-| SMS (Corpo) | 160 caracteres |
-| Push (Título / Corpo) | 50 / 120 caracteres |
-| WhatsApp (Corpo) | 1024 caracteres |
+**Corpo da resposta:**
 
-**Tons disponíveis:** `professional` (profissional), `casual` (casual), `urgent` (urgente), `friendly` (amigável)
+```json
+{
+  "generated": {
+    "email": {
+      "subject": "Your order has shipped! 📦",
+      "html": "Good news! Order #4092 is on its way. You can track your package with DHL..."
+    },
+    "sms": {
+      "body": "Hi! Order #4092 has shipped via DHL. Track it here!"
+    },
+    "push": {
+      "title": "Order Shipped!",
+      "body": "Your order #4092 is on its way via DHL."
+    },
+    "whatsapp": {
+      "body": "Good news! Order #4092 has shipped with DHL."
+    },
+    "slack": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "discord": {
+      "body": "Order #4092 has shipped with DHL."
+    },
+    "ms_teams": {
+      "body": "Order #4092 has shipped with DHL."
+    }
+  },
+  "locale": "en",
+  "message": "Content generated"
+}
+```
 
-## Fluxo de trabalho
+## Limites de Canais Aplicados
 
-1. Abra **Templates (Modelos)** no painel de controle.
-2. Clique no painel **AI Assist**.
-3. Insira o prompt e selecione os canais desejados.
-4. Visualize os textos gerados por canal.
-5. Aceite e importe as alterações para o seu rascunho de modelo.
+Todos os textos gerados são automaticamente truncados no lado do servidor para corresponder aos limites máximos de tamanho de cada canal de mensagens:
+
+| Canal                   | Limite           | Campo gerado              |
+| :---------------------- | :--------------- | :------------------------ |
+| Email subject (Assunto) | 80 caracteres    | `generated.email.subject` |
+| SMS body (Corpo)        | 160 caracteres   | `generated.sms.body`      |
+| Push title (Título)     | 50 characters    | `generated.push.title`    |
+| Push body (Corpo)       | 120 characters   | `generated.push.body`     |
+| WhatsApp body (Corpo)   | 1.024 caracteres | `generated.whatsapp.body` |
+| Slack body (Corpo)      | 2.000 caracteres | `generated.slack.body`    |
+| Discord body (Corpo)    | 2.000 caracteres | `generated.discord.body`  |
+| MS Teams body (Corpo)   | 2.000 caracteres | `generated.ms_teams.body` |
+
+## Fluxo de Trabalho do Construtor de Modelos
+
+1. Acesse **Templates** no painel de controle e crie ou abra um rascunho.
+2. Clique na aba **AI Assist** na barra lateral.
+3. Insira seu prompt, selecione o tom de sua preferência e marque os canais que deseja preencher.
+4. Clique em **Generate** — o conteúdo gerado será exibido em uma visualização prévia.
+5. Clique em **Apply to Draft** para mesclar as strings geradas diretamente nos campos do editor.
 
 ## Relacionado
 
-- [Modelos multilíngues (i18n)](/docs/platform/features/i18n) — gere textos por localidade
-- [Guia do primeiro fluxo de trabalho](/docs/platform/guides/first-workflow)
+- [Modelos i18n](/docs/platform/features/i18n) — localizando variantes por canal
+- [Guia do primeiro workflow](/docs/platform/guides/first-workflow)
+- [Nó de workflow de IA](/docs/platform/features/ai-workflow-node) — execução de LLM em tempo de execução

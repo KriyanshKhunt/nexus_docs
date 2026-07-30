@@ -1,46 +1,77 @@
 ---
-title: Canais de Mensageria
-description: Slack, Discord e Microsoft Teams — webhooks da organização e roteamento por inscrito.
+title: Canais de Mensagens
+description: Atualizações diretas em canais de chat — roteamento de webhooks de entrada do Slack, Discord e Microsoft Teams por inscrito.
 ---
 
-Entregue notificações diretamente em ferramentas de chat de equipe.
+# Canais de Mensagens
 
-## Configuração em nível de organização
+O Nexus inclui nós de canais nativos para **Slack**, **Discord** e **Microsoft Teams**. Você pode configurar canais em nível de organização (por exemplo, enviar alertas do sistema para o Slack da sua própria empresa) ou rotear notificações para webhooks de canais exclusivos e específicos de cada inscrito.
 
-Configure as URLs de webhook recebidas nas **Integrations (Integrações)** para cada plataforma. Todos os inscritos compartilham o webhook da organização, a menos que seja sobrescrito.
+---
 
-## Roteamento por inscrito
+## Hierarquia de Credenciais de Webhook
 
-Passe as URLs de webhook nos destinatários do gatilho para canais específicos de usuários (ex: webhook de DM pessoal do Slack):
+Ao despachar notificações de chat, o Nexus determina qual URL de webhook usar nesta ordem de prioridade:
 
-```ts
-recipients: [
-  {
-    externalId: 'user_1',
-    slackWebhookUrl: 'https://hooks.slack.com/services/T…/B…/…',
-    discordWebhookUrl: 'https://discord.com/api/webhooks/…',
-    teamsWebhookUrl: 'https://outlook.office.com/webhook/…',
-  },
-]
+1. **Webhook do Inscrito**: Verifica o perfil do inscrito para conexões personalizadas (por exemplo, `slackWebhookUrl` em `channelConnections` do inscrito).
+2. **Webhook da Organização**: Faz fallback para as credenciais padrão salvas nas configurações de integração do respectivo provedor no ambiente.
+
+```mermaid
+flowchart TD
+  Trigger[Disparar etapa de chat] --> Sub{Inscrito possui webhook personalizado?}
+  Sub -->|Sim| Custom[Usar URL de conexão do inscrito]
+  Sub -->|Não| Fallback{Integração da organização está ativa?}
+  Fallback -->|Sim| Default[Usar URL de webhook padrão da organização]
+  Fallback -->|Não| Fail[Registrar PROVIDER_ERROR e falhar etapa]
 ```
 
-As URLs dos inscritos **sobrescrevem** as credenciais da organização no momento do envio. As URLs persistem no perfil do inscrito para gatilhos futuros.
+---
 
-## Formatos de payload
+## Roteamento de Webhook por Inscrito
 
-| Canal | Formato |
-|---------|--------|
-| Slack | `{ "text": "…" }` |
-| Discord | `{ "content": "…" }` |
-| Teams | Adaptive Card com texto descritivo |
+Para rotear notificações para canais específicos de inscritos (por exemplo, canais de DMs pessoais do Slack ou canais de workspaces de equipes), passe as URLs de webhooks exclusivas na requisição de disparo:
 
-Os modelos suportam os campos de conteúdo `slack`, `discord` e `ms_teams` com variantes de localização (i18n).
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'billing.invoice',
+  recipients: [
+    {
+      externalId: 'user_42',
+      slackWebhookUrl: 'https://hooks.slack.com/services/{workspace_id}/{channel_id}/{token}',
+      discordWebhookUrl: 'https://discord.com/api/webhooks/{channel_id}/{token}',
+      teamsWebhookUrl:
+        'https://your-org.webhook.office.com/webhookb2/{guid}@{tenant_id}/IncomingWebhook/{id}/{token}',
+    },
+  ],
+  data: { amount: 150 },
+});
+```
 
-## Tela do fluxo de trabalho (Canvas)
+### Persistência Automática
 
-Adicione nós de canal do **Slack**, **Discord** ou **Teams** à árvore de etapas do seu fluxo de trabalho.
+- Quando as URLs de webhooks são passadas no payload de um disparo, o Nexus as extrai automaticamente e as grava no objeto `channelConnections` do inscrito no banco de dados.
+- Disparos futuros para o mesmo inscrito reutilizarão essas URLs de conexão armazenadas em cache — você só precisa passá-las uma única vez (geralmente quando o usuário vincula sua ferramenta de chat na interface de configurações da sua aplicação).
+
+---
+
+## Formatos de Payload Esperados
+
+O Nexus adapta automaticamente o conteúdo em texto de seus modelos para corresponder às especificações de layout de cada plataforma de chat:
+
+| Canal               | Chave      | Formato | Comportamento do adaptador                                                                |
+| :------------------ | :--------- | :------ | :---------------------------------------------------------------------------------------- |
+| **Slack**           | `slack`    | JSON    | Despacha o payload como `{ "text": "..." }`. Suporta o markdown padrão do Slack (mrkdwn). |
+| **Discord**         | `discord`  | JSON    | Despacha o payload como `{ "content": "..." }`.                                           |
+| **Microsoft Teams** | `ms_teams` | JSON    | Compila um bloco JSON de Adaptive Card contendo o título e o corpo da mensagem.           |
+
+## Configuração do Workflow
+
+1. Crie um workflow e adicione um nó de canal do **Slack**, **Discord** ou **Teams** ao canvas.
+2. Nas configurações do nó, selecione a chave do provedor que será usada como fallback.
+3. Salve e dispare o workflow.
 
 ## Relacionado
 
-- [Campos do destinatário no Node SDK](/docs/sdk/backend/node)
-- [Integrações](/docs/platform/integrations)
+- [Cliente do Node SDK](/docs/sdk/backend/node) — documentação do esquema de destinatários (recipients)
+- [Integrações de webhooks](/docs/platform/integrations/webhooks) — envios de payloads personalizados
+- [Arquivos de tradução](/docs/platform/features/translations) — localizando textos de chat

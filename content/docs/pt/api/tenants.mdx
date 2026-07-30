@@ -1,59 +1,100 @@
 ---
 title: API de Tenants
-description: Branding por cliente, substituições de provedores e padrões de preferência para B2B SaaS.
+description: Configurações de branding white-label para B2B — criar, listar e gerenciar tenants de clientes.
 ---
 
-<DashboardAuth />
+# API de Tenants
 
-Caminho base do painel (Dashboard): `/v1/tenants`
+Os Tenants representam seus clientes B2B SaaS. Esta API permite que administradores do painel ou scripts de backend gerenciem o branding e as propriedades específicas de cada tenant.
 
-API de Gerenciamento (CLI/MCP): `GET|PUT /v1/management/tenants`
+---
 
-## Listar tenants
+## Acesso e Caminhos
+
+- **API de Gerenciamento / Node SDK (chave `sk_*`)**: Requisições `PUT` / `GET` / `DELETE` sob `/v1/management/tenants`
+- **API do Painel de Controle (token de sessão JWT)**: Requisições sob `/v1/tenants`
+
+---
+
+## Resumo dos Endpoints
+
+| Método   | Caminho de Gerenciamento (`sk_*`) | Caminho do Painel (JWT) | Descrição                                       |
+| :------- | :-------------------------------- | :---------------------- | :---------------------------------------------- |
+| `GET`    | `/v1/management/tenants`          | `/v1/tenants`           | Lista todos os tenants (paginado, pesquisável). |
+| `PUT`    | `/v1/management/tenants`          | `/v1/tenants`           | Cria ou atualiza (upsert) um tenant.            |
+| `GET`    | —                                 | `/v1/tenants/:id`       | Recupera o perfil de um único tenant.           |
+| `PATCH`  | —                                 | `/v1/tenants/:id`       | Atualiza propriedades individuais de um tenant. |
+| `DELETE` | —                                 | `/v1/tenants/:id`       | Exclui um tenant.                               |
+
+---
+
+## Salvar/Atualizar Tenant (Upsert)
+
+Cria um novo tenant ou atualiza seus campos.
 
 ```http
-GET /v1/tenants
-Authorization: Bearer <jwt>
-```
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-## Salvar (Upsert) tenant
-
-```http
-PUT /v1/tenants
-Authorization: Bearer <jwt>
-```
-
-```json
 {
   "externalId": "tenant_acme",
   "name": "Acme Corp",
   "branding": {
-    "logoUrl": "https://cdn.acme.io/logo.png",
+    "logo": "https://cdn.acme.io/logo.png",
     "primaryColor": "#2563eb",
-    "footerHtml": "<p>© Acme</p>"
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
   },
-  "providerOverrides": {},
-  "preferenceDefaults": {}
+  "properties": {
+    "planTier": "enterprise"
+  }
 }
 ```
 
-## Obter / atualizar / deletar
+- `externalId`: string (Obrigatório). O ID exclusivo que mapeia para a sua conta/tenant SaaS (máx. 128 caracteres).
+- `name`: string (Obrigatório). O nome legível por humanos da empresa cliente (máx. 256 caracteres).
+- `branding`: objeto (Opcional). Dicionário personalizado de chave-valor contendo strings de branding do modelo (máx. 20 chaves). As chaves suportadas incluem `logo`, `primaryColor`, `companyName` e `footerHtml`.
+- `properties`: objeto (Opcional). Filtros de consulta de metadados personalizados de chave-valor (máx. 50 chaves).
+
+---
+
+## Listar Tenants
+
+Recupera todos os tenants configurados no ambiente ativo.
 
 ```http
-GET    /v1/tenants/:id
-PATCH  /v1/tenants/:id
-DELETE /v1/tenants/:id
+GET /v1/tenants?page=1&limit=25&search=acme
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## Disparar com tenant
+**Corpo da resposta:**
 
 ```json
 {
-  "workflowName": "invoice.sent",
-  "tenant": "tenant_acme",
-  "recipients": [{ "externalId": "user_42" }],
-  "data": {}
+  "tenants": [
+    {
+      "id": "771e8400-e29b-41d4-a716-446655440000",
+      "externalId": "tenant_acme",
+      "name": "Acme Corp",
+      "branding": {
+        "logo": "https://cdn.acme.io/logo.png",
+        "primaryColor": "#2563eb"
+      },
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
-Veja [Branding por tenant](/docs/platform/features/tenants).
+## Relacionado
+
+- [Configuração multi-tenant B2B](/docs/platform/guides/b2b-multi-tenant)
+- [Visão geral do recurso de Tenants](/docs/platform/features/tenants)
+- [Layouts de e-mail](/docs/platform/features/email-layouts)

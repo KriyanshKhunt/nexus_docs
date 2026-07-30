@@ -1,83 +1,121 @@
 ---
-title: API do SDK
-description: Endpoints autenticados por chave pública para inbox in-app e preferências de inscritos.
+title: API de Backend do Client SDK
+description: Endpoints de API para navegador e dispositivos móveis autenticados com chave pública para feeds de notificações em tempo real, despacho de guias e preferências.
 ---
 
-Todas as rotas exigem o cabeçalho: `x-nexus-public-key: pk_prd_…`
+# API de Backend do Client SDK
 
-## Notificações (inbox)
+A API do SDK alimenta nossos módulos do lado do cliente ([@nexus-signal/react](/docs/sdk/frontend/react), [@nexus-signal/js](/docs/sdk/frontend/js)). Para proteger as credenciais, essas rotas exigem autenticação de chave pública (`pk_*`) e assinaturas de verificação do inscrito.
 
-### Listar notificações
+---
+
+## Autenticação e Cabeçalhos
+
+Todas as requisições voltadas para o cliente devem incluir:
+
+- Cabeçalho `x-nexus-public-key` contendo uma chave pública de ambiente válida (`pk_dev_*`, `pk_stg_*` ou `pk_prd_*`).
+- Parâmetro `subscriberExternalId` na string de consulta (query string) ou no corpo da requisição para delimitar o escopo da sessão.
+
+Para conexões WebSocket em tempo real ou sinos in-app seguros, você também deve passar a assinatura `hmacSignature` gerada no backend para evitar falsificação de identidade de usuários (consulte [Autenticação e Segurança](/docs/platform/getting-started/authentication)).
+
+---
+
+## Resumo dos Endpoints
+
+| Método   | Caminho                                       | Descrição                                                                       |
+| :------- | :-------------------------------------------- | :------------------------------------------------------------------------------ |
+| `GET`    | `/v1/sdk/notifications`                       | Busca notificações paginadas do inbox in-app.                                   |
+| `GET`    | `/v1/sdk/notifications/count`                 | Recupera contagens de mensagens não lidas/totais.                               |
+| `POST`   | `/v1/sdk/notifications/:logId/read`           | Marca uma notificação como lida.                                                |
+| `POST`   | `/v1/sdk/notifications/:logId/unread`         | Marca uma notificação como não lida.                                            |
+| `POST`   | `/v1/sdk/notifications/:logId/archive`        | Arquiva uma notificação do feed ativo do inbox.                                 |
+| `POST`   | `/v1/sdk/notifications/:logId/unarchive`      | Restaura uma notificação arquivada.                                             |
+| `POST`   | `/v1/sdk/notifications/mark-all-read`         | Marca todas as mensagens do inbox como lidas.                                   |
+| `DELETE` | `/v1/sdk/notifications/:logId`                | Exclui (exclusão lógica) uma notificação.                                       |
+| `GET`    | `/v1/sdk/guides`                              | Recupera guias in-app elegíveis que correspondem à rota da página.              |
+| `POST`   | `/v1/sdk/guides/:guideId/events`              | Registra telemetria de guideSeen, guideInteracted ou guideArchived.             |
+| `GET`    | `/v1/sdk/subscribers/:externalId/preferences` | Recupera a matriz de canais de preferência do inscrito.                         |
+| `PUT`    | `/v1/sdk/subscribers/:externalId/preferences` | Atualiza as preferências do inscrito.                                           |
+| `GET`    | `/v1/sdk/notification-events`                 | Busca esquemas de eventos de workflows ativos para agrupamento de preferências. |
+| `GET`    | `/v1/sdk/topics`                              | Busca tópicos de preferência ativos.                                            |
+
+---
+
+## Listar Notificações
+
+Busca o feed do inbox in-app para o inscrito.
 
 ```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=unread
+GET /v1/sdk/notifications?subscriberExternalId=user_42&filter=unread&page=1&limit=25
+x-nexus-public-key: pk_prd_your_public_key
 ```
 
-| Query | Valores |
-|-------|--------|
-| `filter` | `unread`, `read`, `archived` |
-| `dateFrom` / `dateTo` | Timestamps ISO |
+### Filtros de Consulta
+
+- `subscriberExternalId`: string (Obrigatório).
+- `filter`: string (Opcional). Filtra o estado do feed: `unread`, `read` ou `archived`.
+- `tag` / `tags`: string (Opcional). Lista separada por vírgulas de tags do workflow (por exemplo, `billing,invoices`).
+- `tenantId`: string (Opcional). Filtra pelo UUID do banco de dados do tenant B2B.
+- `dateFrom` / `dateTo`: string (Opcional). Carimbos de data/hora ISO 8601.
+
+**Corpo da resposta:**
 
 ```json
 {
   "notifications": [
     {
-      "logId": "uuid",
-      "title": "Order shipped",
-      "body": "Track your package",
+      "logId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "title": "Invoice Paid",
+      "body": "Thank you! Your payment of $150 was processed.",
+      "workflowName": "billing.invoice",
+      "actor": {
+        "name": "Acme Billing",
+        "avatar": "https://cdn.acme.io/avatar.png"
+      },
+      "actions": [
+        {
+          "label": "Download PDF",
+          "url": "/receipts/pdf/992",
+          "style": "primary"
+        }
+      ],
+      "redirect": "/receipts/992",
+      "tags": ["billing", "receipts"],
       "read": false,
       "archived": false,
-      "at": "2026-07-02T14:00:00.000Z",
-      "workflowName": "order.shipped"
+      "at": "2026-07-28T21:00:00.000Z"
     }
   ],
-  "total": 128,
+  "total": 1,
   "page": 1,
-  "limit": 50,
-  "hasMore": true
+  "limit": 25,
+  "hasMore": false
 }
 ```
 
-### Marcar como lida
+---
+
+## Atualizar Preferências
+
+Recupera ou atualiza as seleções de opt-in/opt-out de um inscrito.
 
 ```http
-POST /v1/sdk/notifications/:logId/read
-POST /v1/sdk/notifications/mark-all-read
-Corpo (Body): { "subscriberExternalId": "user_42" }
-```
+PUT /v1/sdk/subscribers/user_42/preferences
+x-nexus-public-key: pk_prd_your_public_key
+Content-Type: application/json
 
-### Arquivar / excluir
-
-```http
-POST /v1/sdk/notifications/:logId/archive
-DELETE /v1/sdk/notifications/:logId
-```
-
-## Preferências
-
-```http
-GET /v1/sdk/subscribers/:externalId/preferences
-PUT /v1/sdk/subscribers/:externalId/preferences
-```
-
-```json
 {
   "preferences": {
-    "order.shipped": { "EMAIL": true, "SMS": false },
+    "billing.invoice": { "EMAIL": true, "SMS": false },
     "topic:marketing": { "EMAIL": false }
   }
 }
 ```
 
-## Eventos e tópicos
+_Nota: As substituições de preferências personalizadas são salvas no banco de dados na linha do inscrito e ignoram as configurações padrão em disparos futuros._
 
-```http
-GET /v1/sdk/notification-events
-GET /v1/sdk/topics
-```
+## Relacionado
 
-Retorna fluxos de trabalho ativos, lista de tópicos e canais de preferência disponíveis para a matriz do React.
-
-## SDK para React
-
-Estes endpoints alimentam automaticamente os componentes do [`@nexus-signal/react`](/docs/sdk/frontend/react).
+- [Visão geral da caixa de entrada rica in-app](/docs/platform/features/rich-inbox)
+- [Referência de componentes do React SDK](/docs/sdk/frontend/react)
+- [SDK JS Headless](/docs/sdk/frontend/js)

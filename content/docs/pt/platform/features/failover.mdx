@@ -1,37 +1,65 @@
 ---
-title: Failover (Controle de Falhas)
-description: Fallback automático de canal quando a entrega primária falha ou não é lida.
+title: Failover de Provedor
+description: Fallback automático de canal quando a entrega primária falha, o disjuntor (circuit breaker) se abre ou a notificação permanece não lida.
 ---
 
-O nó de **Failover** garante que alertas críticos cheguem aos usuários mesmo se o canal primário falhar.
+# Failover de Provedor
+
+O nó de **Failover** garante que alertas críticos cheguem aos seus inscritos por meio da execução de ramificações alternativas de canais. O failover opera em dois modos: **failover imediato** em caso de falha do provedor e **failover com atraso (timeout)** se uma mensagem permanecer não lida.
+
+```mermaid
+flowchart TD
+  Trigger[Nó do Gatilho] --> FailoverNode[Nó de Failover]
+  FailoverNode --> Primary[Executar canal primário]
+  Primary -->|Sucesso| Check{Existe fallback?}
+  Primary -->|Falha imediata| RunFallback[Executar canal de fallback]
+  Check -->|Sim| Wait[Agendar job de timeout e registrar FAILOVER_WAIT]
+  Wait -->|Confirmação de leitura recebida| Cancel[Cancelar job de timeout e registrar FAILOVER_READ_RECEIVED]
+  Wait -->|Timeout expirou| Timeout[Registrar FAILOVER_TIMEOUT e FAILOVER_FALLBACK]
+  Timeout --> RunFallback
+```
 
 ## Configuração
 
-| Campo | Descrição |
-|-------|-------------|
-| `primaryChannel` | Primeira tentativa (ex: `MOBILE_PUSH`) |
-| `fallbackChannel` | Canal reserva de backup (ex: `SMS`) |
-| `timeoutSeconds` | Tempo de espera pela confirmação de leitura antes do fallback (10–3600, padrão: 120) |
+Ao configurar um nó de Failover, especifique os seguintes parâmetros:
 
-## Fluxo de execução
+| Campo             | Tipo   | Obrigatório | Padrão | Descrição                                                                                       |
+| :---------------- | :----- | :---------- | :----- | :---------------------------------------------------------------------------------------------- |
+| `primaryChannel`  | string | ✅          | —      | Canal primário (por exemplo, `MOBILE_PUSH`, `EMAIL`)                                            |
+| `fallbackChannel` | string | —           | —      | Canal de backup a ser usado se o primário falhar ou não for lido (por exemplo, `SMS`)           |
+| `timeoutSeconds`  | number | —           | `120`  | Segundos a aguardar por uma confirmação de leitura antes de disparar o fallback (de 10 a 3600). |
 
-1. Despacha no canal primário → status `DISPATCHED`.
-2. Inicia um monitoramento de contagem regressiva no Redis aguardando o evento de leitura.
-3. Se o usuário abrir a notificação (via WebSocket ou evento de leitura do SDK) → processo concluído.
-4. Se o tempo limite expirar sem leitura → despacha no canal reserva de fallback.
-5. Ocorre fallback imediato se o envio primário falhar ou se o disjuntor de resiliência (circuit breaker) estiver aberto.
+## Caminhos de Execução
 
-## Exemplo
+### 1. Failover Imediato (Queda do Provedor)
 
-> Envia uma notificação push. Se não for lida em até 120 segundos, envia um SMS.
+Se o envio pelo canal primário falhar (por exemplo, endereço de e-mail inválido ou erro de API do provedor) ou se o [disjuntor (circuit breaker)](/docs/platform/features/cost-reduction) do provedor primário estiver aberto:
 
-Perfeito para senhas de uso único (OTP), alertas de segurança e lembretes de compromissos.
+- O Nexus registra a falha sob a etapa de ciclo de vida `FAILOVER_PRIMARY`.
+- Se o circuito estiver aberto, o status é alterado para `FAILED_PROVIDER_DOWN` com o erro `provider_down`.
+- O Nexus ignora imediatamente o tempo de espera e executa a etapa do `fallbackChannel`, registrando `FAILOVER_FALLBACK` com o motivo `circuit_open_primary` ou `primary_failed`.
 
-## Testes com Modo Caos (Chaos mode)
+### 2. Failover com Atraso (Alertas Não Lidos)
 
-Habilite o **Chaos Mode** nas integrações de Desenvolvimento para simular falhas de provedores e assistir o failover em execução em tempo real nos logs de auditoria.
+Se o canal primário realizar o envio com sucesso, mas houver um canal de fallback configurado:
+
+1. **Agendar Monitoramento (Watch)**: O Nexus agenda um job atrasado no BullMQ chamado `failover:<logId>:<nodeId>` com o atraso configurado em `timeoutSeconds`.
+2. **Gravar Metadados no Redis**: Os parâmetros de monitoramento são armazenados no Redis sob a chave `failover:meta:<logId>` (com tempo de vida TTL de `timeoutSeconds + 60`).
+3. **Registrar WAIT**: A execução registra uma etapa de ciclo de vida `FAILOVER_WAIT` e altera o status do log para `QUEUED`.
+4. **Resolução**:
+   - **Caso A: Usuário lê a mensagem**: Se o usuário abrir ou ler a notificação antes do timeout, o evento de leitura vindo do WebSocket ou do SDK invocará `acknowledgeFailoverWatch`. Isso remove o job agendado no BullMQ, limpa os metadados do Redis, registra `FAILOVER_READ_RECEIVED` e retoma a execução subsequente do fluxo imediatamente.
+   - **Caso B: Timeout expira**: Se o tempo limite expirar sem que haja uma confirmação de leitura (estados `READ` ou `OPENED`), o worker registrará `FAILOVER_TIMEOUT` e `FAILOVER_FALLBACK` (motivo: `read_timeout`), despachando em seguida o `fallbackChannel`.
+
+## Testes com Modo Caos (Chaos Mode)
+
+Para testar seus fluxos de failover sem a necessidade de simular quedas de provedores reais:
+
+1. Navegue até **Integrations** no painel de controle.
+2. Ative o **Chaos Mode** no provedor primário.
+3. Dispare um workflow. O provedor simulará uma falha, e você poderá visualizar o failover imediato em execução em tempo real nos logs de auditoria do painel.
 
 ## Relacionado
 
-- [Redução de custos — disjuntor (circuit breaker)](/docs/platform/features/cost-reduction)
-- [Sandbox](/docs/platform/features/sandbox)
+- [Redução de custos e disjuntores (circuit breakers)](/docs/platform/features/cost-reduction)
+- [Simulador Sandbox](/docs/platform/features/sandbox)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

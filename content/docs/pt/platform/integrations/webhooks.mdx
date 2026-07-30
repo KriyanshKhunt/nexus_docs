@@ -1,45 +1,107 @@
 ---
 title: Canal de Webhook
-description: Envie payloads de notificação compilados para seus próprios endpoints HTTP.
+description: Despache payloads de notificação compilados para endpoints HTTP personalizados para processamento posterior.
 ---
 
-O canal de **Webhook** realiza um POST de JSON estruturado para uma URL que você configurar — ideal para microserviços internos, Zapier ou automações personalizadas.
+# Canal de Webhook
 
-## Configuração
+O canal de **Webhook** despacha payloads JSON estruturados para um endpoint HTTP personalizado configurado por você. Isso é ideal para sincronizar eventos com microserviços internos, disparar fluxos automatizados de terceiros (por exemplo, Zapier, Make) ou acionar fluxos de trabalho personalizados de clientes.
 
-1. Adicione um **Custom Webhook** em Integrations (Integrações) (`webhook_custom`).
-2. Defina a URL, método de autenticação e segredo de assinatura opcional.
-3. Adicione um nó de canal **Webhook** ao seu fluxo de trabalho.
+---
 
-## Payload de saída (Outbound payload)
+## Configuração do Fluxo de Trabalho
+
+1. Navegue até **Integrations** no painel de controle e crie uma integração de **Webhook Personalizado** (`webhook_custom`).
+2. Especifique a URL do endpoint, o método de autenticação opcional e um segredo opcional para assinatura HMAC.
+3. Adicione um nó de canal **Webhook** ao seu canvas de workflow no editor.
+4. Salve e dispare o workflow.
+
+---
+
+## Requisição HTTP de Saída
+
+As requisições de webhooks de saída são enviadas como requisições **POST** com um corpo JSON e cabeçalhos de metadados personalizados.
+
+### Cabeçalhos HTTP
+
+- `Content-Type`: `application/json`
+- `User-Agent`: `NexusSignal-Webhook/1.0`
+- `Idempotency-Key`: Uma string UUID exclusiva representando a tentativa de entrega. Use isso para evitar processamento duplicado.
+- `x-nexus-timestamp`: Carimbo de data/hora epoch do Unix em segundos (presente apenas se `signingSecret` estiver definido).
+- `x-nexus-signature`: A assinatura no formato `sha256=<signature_hash>` (presente apenas se `signingSecret` estiver definido).
+
+### Estrutura do Corpo do Payload
+
+O corpo da requisição contém detalhes sobre o inscrito, o contexto do evento de disparo e o conteúdo do modelo compilado:
 
 ```json
 {
-  "event": "notification.delivered",
-  "workflow": { "id": "…", "name": "order.shipped" },
-  "subscriber": { "id": "…", "externalId": "user_42" },
+  "event": "order.completed",
+  "workflowName": "order.completed",
+  "subscriber": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "externalId": "user_42",
+    "email": "billing@example.com",
+    "phoneNumber": "+14155552671"
+  },
   "channel": "WEBHOOK",
-  "data": { "orderId": "ORD-9912" },
-  "compiled": { "title": "…", "body": "…" }
+  "data": {
+    "orderId": "ORD-9912",
+    "items": ["book", "pen"]
+  },
+  "payload": {
+    "title": "Order Confirmed",
+    "body": "Your order ORD-9912 is complete."
+  },
+  "timestamp": "2026-07-28T21:30:00.000Z"
 }
 ```
 
-## Autenticação
+---
 
-| Método | Cabeçalhos (Headers) |
-|--------|---------|
-| Nenhum | — |
-| Bearer | `Authorization: Bearer …` |
-| Basic | `Authorization: Basic …` |
-| HMAC | `x-nexus-signature`, `x-nexus-timestamp` |
+## Autenticação e Segurança
 
-Verifique o HMAC no seu servidor usando o segredo de assinatura configurado.
+O Nexus suporta três métodos para proteger seus endpoints de webhooks:
 
-## Confiabilidade
+| Método de Autenticação | Como funciona                                                                                                  |
+| :--------------------- | :------------------------------------------------------------------------------------------------------------- |
+| **Bearer**             | Injeta um cabeçalho `Authorization: Bearer <token>` na requisição.                                             |
+| **Basic**              | Injeta um cabeçalho `Authorization: Basic <base64_credentials>`.                                               |
+| **Assinaturas HMAC**   | Calcula um hash HMAC SHA-256 do payload usando seu segredo compartilhado e injeta os cabeçalhos de assinatura. |
 
-Entregas de webhook malsucedidas são tentadas novamente via BullMQ. As respostas são armazenadas no campo `responseMeta` do log de auditoria.
+### Verificando Assinaturas HMAC
+
+Para verificar se um payload de webhook foi de fato enviado pelo Nexus e não foi adulterado no caminho, calcule o HMAC em seu servidor receptor e compare-o com a assinatura do cabeçalho:
+
+1. Recupere o cabeçalho `x-nexus-timestamp` e a string do corpo bruto da requisição.
+2. Monte a string do payload da assinatura como:
+   `signature_payload = timestamp_string + "." + raw_request_body`
+3. Gere o HMAC usando o algoritmo SHA-256 e o seu **Segredo de Assinatura** configurado.
+4. Verifique se o resultado gerado é igual ao valor hash presente no cabeçalho `x-nexus-signature` (após remover o prefixo `sha256=`).
+
+#### Exemplo de verificação em Node.js:
+
+```js
+import crypto from 'crypto';
+
+function verifyWebhook(requestBody, headers, signingSecret) {
+  const timestamp = headers['x-nexus-timestamp'];
+  const expectedSignature = headers['x-nexus-signature'].replace('sha256=', '');
+
+  const signaturePayload = `${timestamp}.${requestBody}`;
+  const computedSignature = crypto
+    .createHmac('sha256', signingSecret)
+    .update(signaturePayload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(computedSignature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+```
 
 ## Relacionado
 
-- [Pipeline de entrega](/docs/platform/concepts/delivery-pipeline)
-- [Catálogo de provedores](/docs/platform/integrations/providers)
+- [Catálogo de credenciais de provedores](/docs/platform/integrations/providers)
+- [Pipeline de execução de workflows](/docs/platform/concepts/delivery-pipeline)

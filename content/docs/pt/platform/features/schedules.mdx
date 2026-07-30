@@ -1,47 +1,96 @@
 ---
 title: Gatilhos Agendados
-description: Agendamentos cron e notificações avulsas sem precisar construir seu próprio executor de tarefas.
+description: Workflows cron e envios agendados únicos sem a necessidade de configurar seu próprio executor de tarefas ou daemon cron.
 ---
 
-Agende disparos de fluxos de trabalho a partir do painel ou do SDK do Node — sem necessidade de serviços externos de cron.
+# Gatilhos Agendados
 
-## Tipos de agendamento
+O Nexus inclui recursos integrados de agendamento. Você pode definir temporizadores recorrentes (Cron) ou enfileirar entregas futuras únicas diretamente a partir do painel de controle ou por meio do Node SDK.
 
-| Tipo | Campo | Exemplo |
-|------|-------|---------|
-| **Recorrente** | `cronExpression` | `0 9 * * 1` (Segundas às 9h) |
-| **Avulso (Único)** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+---
 
-Ambos suportam um `timezone` (fuso horário padrão: UTC) e destinatários estáticos (`recipients`) + dados de payload (`data`).
+## Tipos de Agendamentos
 
-## Painel (Dashboard)
+| Tipo           | Configuração de tempo | Descrição                                                                   |
+| :------------- | :-------------------- | :-------------------------------------------------------------------------- |
+| **Recorrente** | `cronExpression`      | Um padrão cron padrão (por exemplo, `0 9 * * 1` para segundas-feiras às 9h) |
+| **Único**      | `scheduledAt`         | Uma string de data/hora ISO 8601 (por exemplo, `2026-08-01T10:00:00Z`)      |
 
-Página **Schedules (Agendamentos)** — crie, pause, edite e exclua. Visualize `nextFireAt` (próximo disparo) e `lastFiredAt` (último disparo).
+Ambos os tipos de agendamento aceitam um parâmetro `timezone` (o padrão é `'UTC'`) para resolver os horários de execução no fuso horário local do inscrito.
 
-## SDK para Node
+---
+
+## Endpoints de API
+
+Dependendo do contexto do cliente, o Nexus isola o gerenciamento de agendamentos em dois endpoints:
+
+### 1. API do SDK (Scripts do lado do servidor / SDK, chave `sk_*`)
+
+O Node SDK interage com este endpoint para registrar agendamentos criados programaticamente:
+
+```http
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+### 2. API do Painel de Controle (Painel de Controle, autenticação JWT)
+
+O console da web gerencia os agendamentos utilizando tokens de sessão padrão:
+
+```http
+POST /v1/schedules
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+---
+
+## Uso no Node SDK
+
+Crie, edite, liste e exclua agendamentos programaticamente:
 
 ```ts
-await nexus.schedules.create({
-  name: 'Weekly digest',
-  workflowId: 'wf_uuid',
-  cronExpression: '0 9 * * 1',
+// Criar um agendamento recorrente de resumo semanal
+const result = await nexus.schedules.create({
+  name: 'Weekly Digest',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  cronExpression: '0 9 * * 1', // Segundas-feiras às 9h
   timezone: 'America/New_York',
-  recipients: [{ externalId: 'user_1' }],
-  data: { week: '2026-W27' },
+  recipients: [{ externalId: 'user_42' }, { externalId: 'user_109' }],
+  data: { scope: 'weekly_summary' },
+  active: true,
 });
+
+// Atualizar o estado ativo ou os dados do agendamento
+await nexus.schedules.update(scheduleId, {
+  active: false,
+});
+
+// Excluir agendamento
+await nexus.schedules.delete(scheduleId);
 ```
 
-```ts
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
-```
+### Tipos e Estrutura de Agendamentos
 
-## Execução
+O array `recipients` aceita objetos contendo tanto `subscriberId` (UUID do banco de dados) quanto `externalId` (seu ID de usuário).
 
-Um cron worker do sistema avalia os agendamentos vencidos a cada **60 segundos** (máximo de 100 agendamentos ativos por ambiente).
+---
+
+## Mecânica de Execução
+
+- Um agendador cron no worker do workflow varre o banco de dados a cada **60 segundos** para encontrar agendamentos ativos que estejam prontos para entrega.
+- Quando vencido, ele dispara uma execução do workflow usando o `workflowId`, `recipients` e o payload `data` especificados.
+- No painel de controle, você pode acompanhar o histórico, ver o `lastFiredAt` e pré-visualizar o `nextFireAt`.
+
+## Limites
+
+| Limite                              | Valor       |
+| :---------------------------------- | :---------- |
+| Máximo de agendamentos por ambiente | 100         |
+| Intervalo de verificação de jobs    | 60 segundos |
 
 ## Relacionado
 
-- [Referência da API — Agendamentos](/docs/api/schedules)
-- [Node SDK](/docs/sdk/backend/node)
+- [Referência da API de Agendamentos](/docs/api/schedules)
+- [Cliente do Node SDK](/docs/sdk/backend/node)
+- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)

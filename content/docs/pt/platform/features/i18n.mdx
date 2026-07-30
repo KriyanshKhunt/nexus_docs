@@ -1,47 +1,95 @@
 ---
-title: Modelos Multilíngues (i18n)
-description: Modelos cientes de localidade — um único fluxo de trabalho com conteúdo em todas as línguas.
+title: Modelos Multilíngues
+description: Modelos de mensagens localizados — execute um único workflow e entregue automaticamente o texto no idioma do inscrito.
 ---
 
-Envie mensagens para usuários globais sem precisar duplicar seus fluxos de trabalho.
+# Modelos Multilíngues
 
-## Estrutura do modelo (Template)
+O Nexus inclui suporte nativo para internacionalização (i18n). Em vez de duplicar workflows para diferentes idiomas, você armazena o texto específico de cada localidade diretamente dentro de cada nó de canal no modelo do workflow.
 
-Armazene variantes de localidade em `contentTemplates`:
+---
+
+## Estrutura do Modelo
+
+Na definição do modelo de workflow, o objeto `contentTemplates` contém chaves de canais (por exemplo, `email`, `sms`). Se um canal for localizado, seu valor mapeia códigos de localidades (`en`, `es`, `pt`, `ja`) aos seus respectivos modelos de canal.
+
+### Exemplo de Esquema de Conteúdo Localizado
 
 ```json
 {
-  "en": { "email_subject": "Your order shipped", "sms_body": "Shipped!" },
-  "es": { "email_subject": "Tu pedido fue enviado", "sms_body": "¡Enviado!" },
-  "pt": { "email_subject": "Seu pedido foi enviado", "sms_body": "Enviado!" }
+  "email": {
+    "en": {
+      "subject": "Your order has shipped!",
+      "html": "<p>Hi {{ subscriber.first_name }}, your order is on its way.</p>"
+    },
+    "es": {
+      "subject": "¡Tu pedido ha sido enviado!",
+      "html": "<p>Hola {{ subscriber.first_name }}, tu pedido está en camino.</p>"
+    }
+  },
+  "sms": {
+    "en": {
+      "body": "Hi {{ subscriber.first_name }}, your order has shipped."
+    },
+    "es": {
+      "body": "Hola {{ subscriber.first_name }}, tu pedido ha sido enviado."
+    }
+  }
 }
 ```
 
-## Ordem de resolução de localidade
+O compilador verifica se o objeto do canal é localizado testando suas chaves com a regex `LOCALE_KEY_REGEX = /^[a-z]{2,3}$/`. Se houver correspondência, ele extrai o segmento correspondente à localidade resolvida, fazendo fallback para o inglês (`en`) caso não encontre uma correspondência.
 
-1. Substituição de `_locale` por acionamento (no destinatário enviado no trigger).
-2. Campo `locale` definido no perfil do inscrito.
-3. Fallback padrão para `en` (Inglês).
+---
 
-## Definir localidade no acionamento (Trigger)
+## Cadeia de Resolução de Localidade
 
-```ts
-recipients: [{ externalId: 'user_1', locale: 'pt' }]
-```
+Para cada entrega, o Nexus determina o idioma de destino nesta ordem de prioridade estrita:
 
-## Localidades suportadas
+1. **Substituição por disparo**: A propriedade `_locale` passada no objeto `data` do gatilho:
+   ```ts
+   data: {
+     _locale: 'es';
+   }
+   ```
+2. **Propriedade do inscrito**: O campo `locale` no perfil do inscrito:
+   ```ts
+   recipients: [{ externalId: 'user_42', locale: 'es-MX' }];
+   ```
+3. **Padrão do ambiente**: Faz fallback para o inglês **`en`**.
 
-`en`, `es`, `fr`, `de`, `pt`, `it`, `ja`, `ko`, `zh`, `ar`, `hi`, `nl`, `pl` — validadas como tags BCP 47.
+### Regras de Validação
 
-## Editor de modelos
+- As strings de localidade do inscrito são validadas usando o padrão BCP 47 (`/^[a-z]{2,3}(-[a-zA-Z0-9]{1,8})*$/`). Isso permite localidades regionais como `en-US`, `es-MX` e `pt-BR`.
+- Ao corresponder as chaves no objeto `contentTemplates`, o compilador remove os sufixos regionais (por exemplo, `es-MX` resolve para a chave base `es`).
 
-Utilize as **abas de localidade** no estúdio de modelos do painel para adicionar/remover idiomas. O emulador de dispositivo pré-visualiza cada localidade.
+---
 
-## Geração por IA
+## Localidades Base Suportadas
 
-A geração de conteúdo por IA aceita um parâmetro de `locale` para produzir textos traduzidos em uma única etapa.
+O Nexus possui suporte de localização integrado para as seguintes localidades base:
+
+| Código | Idioma    | Código | Idioma                |
+| :----- | :-------- | :----- | :-------------------- |
+| `en`   | Inglês    | `nl`   | Holandês (Nederlands) |
+| `es`   | Espanhol  | `tr`   | Turco                 |
+| `fr`   | Francês   | `hi`   | Hindi                 |
+| `de`   | Alemão    | `ar`   | Árabe                 |
+| `pt`   | Português | `ja`   | Japonês               |
+| `it`   | Italiano  | `zh`   | Chinês                |
+| `ko`   | Coreano   |        |                       |
+
+---
+
+## Arquivos de Tradução vs Modelos Localizados
+
+Para uma organização ideal, combine arquivos de tradução e modelos localizados:
+
+- **Use modelos localizados** (este recurso) para layouts estruturais específicos de canais, e-mails com conteúdo rico em HTML ou quando houver diferenças de layouts estruturais entre os idiomas.
+- **Use [Arquivos de Tradução](/docs/platform/features/translations)** com o helper `{{ t "key" }}` para strings simples de chave-valor compartilhadas (por exemplo, rodapés, rótulos de botões, links de suporte) referenciadas em múltiplos workflows.
 
 ## Relacionado
 
-- [Fluxos de Trabalho](/docs/platform/concepts/workflows)
-- [Tópicos](/docs/platform/features/topics)
+- [Workflows](/docs/platform/concepts/workflows)
+- [Arquivos de tradução](/docs/platform/features/translations)
+- [Geração de conteúdo por IA](/docs/platform/features/ai-content)

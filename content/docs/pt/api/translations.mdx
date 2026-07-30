@@ -1,65 +1,100 @@
 ---
 title: API de Traduções
-description: Salve arquivos de tradução de chave-valor por local para o helper de template {{ t "key" }}.
+description: Endpoints do lado do servidor e do painel de controle para registrar arquivos de dicionário de localidade para o helper de modelo {{ t "key" }}.
 ---
 
-<SecretKeyAuth />
+# API de Traduções
 
-Caminho base: `/v1/management/translations`
+As Traduções são tabelas estáticas de strings de chave-valor mapeadas por localidade de idioma e namespace. Isso permite que os workflows interpolem strings localizadas dinamicamente em tempo de disparo.
 
-## Listar traduções
+---
 
-Busca todos os pacotes de dicionário de localização carregados.
+## Acesso e Caminhos
+
+- **Servidor para Servidor / SDK (autenticação com `sk_*`)**: O caminho raiz é `/v1/management/translations`
+- **Frontend do Painel (autenticação com JWT)**: O caminho raiz é `/v1/translations`
+
+---
+
+## Resumo dos Endpoints
+
+| Método   | Caminho de Gerenciamento (`sk_*`) | Caminho do Painel (JWT) | Descrição                                        |
+| :------- | :-------------------------------- | :---------------------- | :----------------------------------------------- |
+| `GET`    | `/v1/management/translations`     | `/v1/translations`      | Lista todos os pacotes de tradução no ambiente.  |
+| `PUT`    | `/v1/management/translations`     | `/v1/translations`      | Cria ou atualiza (upsert) um pacote de tradução. |
+| `GET`    | —                                 | `/v1/translations/:id`  | Recupera detalhes da tradução por UUID.          |
+| `DELETE` | —                                 | `/v1/translations/:id`  | Exclui um pacote de tradução.                    |
+
+---
+
+## Criar/Atualizar Pacote de Tradução (Upsert)
+
+Carrega ou atualiza uma tabela de tradução.
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+```
+
+```json
+{
+  "locale": "es-MX",
+  "namespace": "invoice-labels",
+  "content": {
+    "title.invoice_overdue": "Factura Vencida",
+    "button.pay_now": "Pagar Ahora",
+    "description.amount_due": "El monto total a pagar es {{amount}}."
+  }
+}
+```
+
+### Campos do Corpo da Requisição
+
+- `locale`: string (Obrigatório). Código de idioma BCP 47 (máx. 35 caracteres, por exemplo, `es-MX`, `ja`, `pt-BR`).
+- `namespace`: string (Opcional). Rótulo de categorização com distinção de maiúsculas/minúsculas (máx. 64 caracteres). Alfanumérico em letras minúsculas com hífen/sublinhado (`/^[a-z][a-z0-9_-]*$/`). O padrão é `default`.
+- `content`: objeto (Obrigatório). Um dicionário plano de pares chave-valor de string (máx. 500 chaves).
+  - **Chaves**: Devem começar com uma letra e conter caracteres alfanuméricos, pontos, sublinhados ou hifens (`/^[a-zA-Z][a-zA-Z0-9_.-]*$/`, máx. 128 caracteres).
+  - **Valores**: Strings de modelos brutas (máx. 5.000 caracteres). Podem conter slots de variáveis do Handlebars.
+
+---
+
+## Listar Arquivos de Tradução
 
 ```http
 GET /v1/management/translations
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-Retorna o local, namespace e contagem de chaves por arquivo:
+**Corpo da resposta:**
 
 ```json
 {
   "translations": [
     {
-      "id": "trans_123",
-      "locale": "es",
-      "namespace": "default",
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "locale": "es-MX",
+      "namespace": "invoice-labels",
       "keyCount": 3,
-      "createdAt": "2026-07-26T12:00:00Z"
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
     }
   ]
 }
 ```
 
----
+## Limites
 
-## Salvar (Upsert) pacote de tradução
+| Limite                                     | Valor            |
+| :----------------------------------------- | :--------------- |
+| Máximo de pacotes de tradução por ambiente | 50               |
+| Máximo de chaves por arquivo de tradução   | 500              |
+| Comprimento máximo da chave                | 128 caracteres   |
+| Comprimento máximo do valor                | 5.000 caracteres |
+| Comprimento máximo do namespace            | 64 caracteres    |
 
-Carrega um dicionário JSON contendo strings localizadas para um local BCP 47.
+## Relacionado
 
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
-
-```json
-{
-  "locale": "es",
-  "namespace": "default",
-  "content": {
-    "welcome_message": "Bienvenido",
-    "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
-  }
-}
-```
-
-O namespace padrão é `default`.
-
----
-
-## Links Relacionados
-
-- [Guia de arquivos de tradução](/docs/platform/features/translations)
-- [Puxar/enviar traduções da CLI](/docs/sdk/devtools/cli)
+- [Guia do recurso de Traduções](/docs/platform/features/translations)
+- [Modelos multilíngues (i18n)](/docs/platform/features/i18n)
+- [Envio/busca (push/pull) de traduções via CLI](/docs/sdk/devtools/cli)
