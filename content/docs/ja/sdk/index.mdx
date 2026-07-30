@@ -1,91 +1,148 @@
 ---
-title: SDK
-description: 公式 Nexus Signal SDK — サーバートリガー用 Node.js とアプリ内 UI 用 React。
+title: SDKs
+description: Nexus Signal の公式パッケージ — Node、React、headless JS、Angular、CLI、および MCP サーバー。
 ---
 
-# Nexus Signal SDK
+# Nexus Signal SDKs
 
-バックエンドからワークフローをトリガーし、ブラウザでアプリ内通知をレンダリングするための公式パッケージ。
+Nexus Signal を開発スタックに統合するための、公式のライブラリ、クライアントコンポーネント、コマンドラインインターフェイス、および AI 開発ツールキットを提供しています。
+
+---
+
+## クライアント & サーバーライブラリ
+
+トリガー、サブスクライバー、およびインターフェイス状態を管理するために、主要なクライアント側およびサーバー側のライブラリにアクセスします。
 
 <Cards>
-  <Card title="Node.js SDK" href="/docs/sdk/backend/node" description="トリガー、スケジュール、HMAC — サーバーサイド専用。" />
-  <Card title="React SDK" href="/docs/sdk/frontend/react" description="ベル、受信箱、設定 — ブラウザ UI。" />
-  <Card title="API リファレンス" href="/docs/api" description="生の HTTP をお好みの方向けの REST エンドポイント。" />
+  <Card
+    title="Node.js SDK"
+    href="/docs/sdk/backend/node"
+    description="バックエンドのワークフロートリガー、マルチテナントスコープ、スケジュール（Schedules）、および暗号化 HMAC 署名。"
+  />
+  <Card
+    title="React SDK"
+    href="/docs/sdk/frontend/react"
+    description="すぐに使える通知ベル、フルフィードのインボックス、ユーザーの環境設定マトリクス、およびリアルタイムガイド。"
+  />
+  <Card
+    title="Headless JS SDK"
+    href="/docs/sdk/frontend/js"
+    description="Vue、Svelte、またはバニラ HTML5 用の、特定のスタイルに依存しないフレームワークに依存しないクライアント。"
+  />
+  <Card
+    title="Angular SDK"
+    href="/docs/sdk/frontend/angular"
+    description="リアクティブな通知センター（Angular 17+）用のスタンドアロンコンポーネントとネイティブの Signals。"
+  />
 </Cards>
 
-## 統合フロー
+---
+
+## 開発ツール
+
+ワークフローの状態、CI/CD 統合、およびローカルのテンプレートバンドルを管理します。
+
+<Cards>
+  <Card
+    title="ワークフロー・アズ・コード"
+    href="/docs/sdk/workflow/workflow-as-code"
+    description="TypeScript で通知ステップを定義し、ダッシュボードにプログラムで同期します。"
+  />
+  <Card
+    title="Nexus CLI"
+    href="/docs/sdk/devtools/cli"
+    description="ターミナルまたはランナーから、リソースのプル/プッシュ、サブスクライバーの管理、およびテンプレートの同期を行います。"
+  />
+  <Card
+    title="MCP サーバー"
+    href="/docs/sdk/devtools/mcp-server"
+    description="Cursor や Claude などの AI コーディングアシスタントを、自然言語を使用してワークスペースツールに接続します。"
+  />
+  <Card
+    title="API リファレンス"
+    href="/docs/api"
+    description="任意のプログラミング言語でのカスタム HTTP 統合のための、ダイレクトな REST API エンドポイント。"
+  />
+</Cards>
+
+---
+
+## 統合アーキテクチャフロー
+
+次の図は、サーバー側の発送、ユーザーエージェントソケット、および外部プロバイダーのリレーの間のトランザクション境界を示しています。
 
 ```mermaid
-flowchart LR
-  BE[バックエンド] -->|sk_* トリガー| API[Nexus API]
-  BE -->|HMAC| FE[React アプリ]
-  API --> W[ワーカー]
-  W -->|WebSocket| FE
-  W --> P[プロバイダー]
+flowchart TD
+  subgraph Server Environment [サーバー環境]
+    App[アプリサーバー] -->|1. sk_* でSDKを初期化| SDK[Node.js SDK]
+    SDK -->|2. ワークフローをトリガー| API[Nexus REST API]
+    SDK -->|3. HMAC署名を生成| App
+  end
+
+  subgraph Client Environment [クライアント環境]
+    App -->|4. subscriberId + HMACを渡す| FE[ブラウザアプリケーション]
+    FE -->|5. pk_* でWebSocket接続| WebHost[Socket.IO ゲートウェイ]
+  end
+
+  subgraph Background Processing [バックグラウンド処理]
+    API -->|6. ジョブをキューイング| Q[(Redisキュー)]
+    Q -->|7. ワーカーによる処理| Workers[非同期ワーカー]
+    Workers -->|8. ライブイベントの送信| WebHost
+    Workers -->|9. プロバイダーの呼び出し| Carriers[プロバイダー (Twilio/SendGrid)]
+  end
+
+  WebHost -->|10. フィードへのストリーム配信| FE
 ```
 
-1. バックエンドは**シークレットキー** (`sk_*`) でワークフローをトリガー
-2. バックエンドはログイン中ユーザーの **HMAC** を生成
-3. フロントエンドは**公開キー + HMAC** で `NexusProvider` をアプリにラップ
-4. アプリ内通知が `NotificationCenterBell` にストリーミング
+---
 
-## クイックトリガー例
+## パッケージ互換性マトリクス
 
-```ts
-import { NexusClient } from '@nexus-signal/node';
+ターゲットのランタイムが最小環境要件を満たしていることを確認してください。
 
-const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!,
-  baseUrl: 'https://api.nexussignal.dev',
-});
+| パッケージ名前空間             | コアランタイム    | ピア依存関係（Peer Deps）   | 主な役割                                                                       |
+| :----------------------------- | :---------------- | :-------------------------- | :----------------------------------------------------------------------------- |
+| **`@nexus-signal/node`**       | Node.js >= 18.0.0 | なし（ネイティブ Fetch）    | バックエンドのトリガー、スケジュール、オブジェクトの同期、ワークフローの同期。 |
+| **`@nexus-signal/react`**      | React >= 18.0.0   | `socket.io-client >= 4.8.0` | スタイル適用済みのベル、フルページフィード、環境設定。                         |
+| **`@nexus-signal/js`**         | ES6 / HTML5       | `socket.io-client >= 4.8.0` | フレームワークに依存しないストアハンドラー、WebSocket エミッター。             |
+| **`@nexus-signal/angular`**    | Angular >= 17.0.0 | `socket.io-client >= 4.8.0` | リアクティブな Signals、スタンドアロンコンポーネントラッパー。                 |
+| **`@nexus-signal/cli`**        | Node.js >= 18.0.0 | なし                        | ローカルスキーマの同期、CI/CD プロモーションパイプライン。                     |
+| **`@nexus-signal/mcp-server`** | Node.js >= 18.0.0 | なし                        | AI コーディングアシスタント用の自然言語によるツール呼び出し。                  |
 
-await nexus.workflows.trigger({
-  workflowName: 'order.shipped',
-  recipients: [{ externalId: 'user_42', email: 'alex@acme.io' }],
-  data: { trackingNumber: '1Z999AA10123456784' },
-});
-```
+---
 
-## 要件
+## インストール方法
 
-| SDK | 必要条件 |
-|-----|---------|
-| Node | Node.js 18 以上 |
-| React | React 18/19, `socket.io-client` ^4.8 |
+アプリケーションの統合箇所に応じてライブラリをインストールします。
 
-## インストール
-
-<Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-npm install @nexus-signal/react socket.io-client
-```
-
+<Tabs items={['サーバー側', 'React クライアント', '開発ツール']}>
+  <Tab value="サーバー側">
+    バックエンドルートからトリガーを実行し、ワークフローを同期する場合：
+    ```bash
+    npm install @nexus-signal/node
+    ```
   </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-pnpm add @nexus-signal/react socket.io-client
-```
-
+  <Tab value="React クライアント">
+    React ツリー内にアプリ内通知センターとユーザー設定をマウントする場合：
+    ```bash
+    npm install @nexus-signal/react socket.io-client
+    ```
   </Tab>
-  <Tab value="yarn">
+  <Tab value="開発ツール">
+    ローカルの同期メカニズムを使用するか、MCP インスタンスを起動する場合：
+    ```bash
+    # CLIをグローバルにインストール
+    npm install -g @nexus-signal/cli
 
-```bash
-yarn add @nexus-signal/node
-yarn add @nexus-signal/react socket.io-client
-```
+    # MCPサーバーをその場で実行
+    npx -y @nexus-signal/mcp-server@latest
+    ```
 
   </Tab>
 </Tabs>
 
-<Callout type="info">
-REST のみの統合をお望みですか？React SDK をスキップして、HTTP クライアントで [API リファレンス](/docs/api) をご利用ください。
-</Callout>
-
 <Callout type="warn">
-ブラウザコードに `sk_*` シークレットキーを公開しないでください。SDK ルートには `pk_*` 公開キーのみを使用してください。
+  **キー露出ルール**: `sk_`
+  で始まるシークレットキーは、クライアント側のコード、シングルページアプリケーション（SPA）、またはバンドルスクリプトには決して埋め込まないでください。パブリックなルートでは、必ずサーバー側で生成された
+  HMAC 署名によって検証されたパブリックキー（`pk_`）を使用する必要があります。
 </Callout>

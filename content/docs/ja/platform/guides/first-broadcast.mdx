@@ -1,36 +1,49 @@
 ---
 title: 最初のブロードキャスト
-description: コードのデプロイを必要とせず、ダッシュボードから動的なオーディエンスセグメントに1回限りの製品発表を送信します。
+description: ダッシュボードの設定から Node SDK の自動化まで、動的なオーディエンスセグメントに対して1回限りのプロダクトアナウンスを送信するガイド。
 ---
 
-**ブロードキャスト**を使用すると、製品およびマーケティングチームはエンジニアの介入なしに **セグメント** にマルチチャネルメッセージを送信できます。
+ブロードキャストを使用すると、プロダクトチームやマーケティングチームは、新しいコードをデプロイすることなく、フィルタリングされたオーディエンスセグメントにクロスチャネルのメッセージを送信できます。このガイドでは、その全体的なフローを順を追って説明します。
+
+---
 
 ## 前提条件
 
-- Email + In-App チャネルを持つ公開済みのワークフロー（例： `product.announcement`）
-- 定義済みの [オーディエンス](/docs/platform/features/audiences) セグメント
+- 少なくとも1つのアクティブなチャネルノードを持つ、公開済みのワークフロー（例: `product.announcement`）
+- ワークスペースにあらかじめ登録されているサブスクライバー
+- 少なくとも1つの接続されたメールまたはプッシュ通知のプロバイダー
 
-## ステップ 1 — オーディエンスの作成
+---
 
-ダッシュボード： **Audiences** → **New audience**
+## ステップ 1 — オーディエンスセグメントの定義
 
-フィルター例：
+**Audiences** → **New Audience** に移動します。
 
-| 規則              | 演算子      | 値       |
-| ----------------- | ----------- | -------- |
-| `properties.plan` | equals      | `growth` |
-| `lastActiveAt`    | within days | `30`     |
+オーディエンスに名前（例: `Growth Plan Users`）を付け、フィルタールールを追加します。例：
 
-保存し、アクティブなメンバー数のプレビューを確認します。
+| フィールド           | 演算子        | 値   |
+| :------------------- | :------------ | :--- |
+| `locale`             | `starts_with` | `ja` |
+| `globalUnsubscribed` | `is_false`    | —    |
+
+> サポートされているフィルターフィールド: `email`、`phoneNumber`、`locale`、`timezone`、`globalUnsubscribed`、`externalId`、`createdAt`。すべての演算子については [オーディエンス](/docs/platform/features/audiences) を参照してください。
+
+セグメントを保存すると、ダッシュボードにリアルタイムのメンバー数がプレビュー表示されます。
+
+---
 
 ## ステップ 2 — ブロードキャストの作成
 
-ダッシュボード： **Broadcasts** → **New broadcast**
+**Broadcasts** → **New Broadcast** に移動します。
 
-1. **名前:** "Q3 Feature Launch"
-2. **ワークフロー:** `product.announcement` を選択
-3. **オーディエンス:** Growth セグメントを選択
-4. **データ:** テンプレート変数のためのオプションの JSON:
+| フィールド   | 値                                                 |
+| :----------- | :------------------------------------------------- |
+| **Name**     | `Q3 Feature Launch`                                |
+| **Workflow** | `product.announcement` を選択                      |
+| **Audience** | 作成したセグメントを選択                           |
+| **Data**     | テンプレート変数用のオプションの JSON コンテキスト |
+
+ペイロードデータの例：
 
 ```json
 {
@@ -39,65 +52,99 @@ description: コードのデプロイを必要とせず、ダッシュボード�
 }
 ```
 
-5. **スケジュール:** 今すぐ送信するか、将来の日時を選択
+| スケジュールオプション | 動作                                                                                  |
+| :--------------------- | :------------------------------------------------------------------------------------ |
+| **Send now**           | 配信ジョブを即座にキューイングします。                                                |
+| **Schedule at**        | 将来の ISO 日時を設定します。バックグラウンドジョブがその日時に自動送信を実行します。 |
+
+---
 
 ## ステップ 3 — プレビューと送信
 
-オーディエンスの規模とワークフローチャネルを確認します。 **Send** をクリック（またはスケジュール）します。
+推定されるオーディエンスのサイズと、実行されるチャネルを確認します。**Send**（または **Schedule**）をクリックします。
 
-ブロードキャストのステータスが進行します： `DRAFT` → `SENDING` → `COMPLETED`
+ブロードキャストのライフサイクル状態：
+
+| ステータス  | 意味                                                                                 |
+| :---------- | :----------------------------------------------------------------------------------- |
+| `DRAFT`     | 保存済み、未発送。自由に編集可能です。                                               |
+| `SCHEDULED` | 将来の送信のためにキューに入れられた状態。編集可能です。                             |
+| `SENDING`   | 配信キューにジョブをアクティブにプッシュしている状態。編集やキャンセルはできません。 |
+| `COMPLETED` | すべてのオーディエンスメンバーの処理が完了した状態。                                 |
+| `CANCELLED` | 実行前または実行中に停止された状態。                                                 |
+| `FAILED`    | 致命的なエラーにより発送が中断された状態。                                           |
+
+---
 
 ## ステップ 4 — 結果の監視
 
-チャネルごとの配信統計を表示するには、ブロードキャスト詳細ビューを開きます。個別の失敗については **Audit Logs** を参照してください。
+ブロードキャストの詳細ビューを開き、チャネルごとの配信統計を確認します。個々の配信エラーやバウンス（不達）の詳細は、**Audit Logs（監査ログ）** を参照してください。
 
-## API による代替案
+---
+
+## API による実行（ダッシュボード JWT）
+
+認証されたセッションからダッシュボードの REST API を使用します。
 
 <DashboardAuth />
 
 ```http
 POST /v1/broadcasts
-Authorization: Bearer <jwt>
-```
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-```json
 {
   "name": "Q3 Feature Launch",
-  "workflowId": "workflow-uuid-from-dashboard",
-  "audienceId": "audience-uuid",
-  "data": { "featureName": "Smart Analytics" }
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+  "data": { "featureName": "Smart Analytics" },
+  "scheduledAt": "2026-09-01T09:00:00.000Z"
 }
 ```
 
-送信：
+その後、送信を実行します。
 
 ```http
-POST /v1/broadcasts/:id/send
+POST /v1/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/send
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
 <Callout type="info">
-  `workflowId` と `audienceId`
-  は、ダッシュボードまたは管理APIのリストエンドポイントから取得したUUIDです —
-  ワークフロー名の文字列ではありません。
+  `workflowId` と `audienceId` は UUID 文字列です。これらはダッシュボードの URL、または Management
+  API のリストエンドポイントから取得してください。ワークフロー名文字列ではありません。
 </Callout>
 
-## Node SDK
+---
+
+## Node SDK による実行（シークレットキー）
+
+CI/CD またはスクリプトによるブロードキャストの自動化に Node SDK を使用します。
 
 ```ts
+import { NexusClient } from '@nexus-signal/node';
+
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY });
+
+// ブロードキャストを作成します
 const created = await nexus.broadcasts.create({
-  name: "Q3 Launch",
-  workflowId: "uuid",
-  audienceId: "uuid",
-  data: { featureName: "Smart Analytics" },
+  name: 'Q3 Feature Launch',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  audienceId: '771e8400-e29b-41d4-a716-446655440000',
+  data: { featureName: 'Smart Analytics' },
 });
 
+// 即座に送信します
 if (created.ok) {
   await nexus.broadcasts.send(created.data!.broadcast.id);
 }
 ```
 
+> Node SDK は `/v1/management/broadcasts`（シークレットキー認証）を呼び出します。ダッシュボードの JWT パスではありません。
+
+---
+
 ## 関連リンク
 
-- [ブロードキャスト機能](/docs/platform/features/broadcasts)
-- [オーディエンス](/docs/platform/features/audiences)
-- [Broadcasts API](/docs/api/broadcasts)
+- [ブロードキャスト機能の概要](/docs/platform/features/broadcasts)
+- [オーディエンス](/docs/platform/features/audiences) — セグメンテーションルールの作成
+- [ブロードキャスト API リファレンス](/docs/api/broadcasts)

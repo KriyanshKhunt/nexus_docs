@@ -1,80 +1,238 @@
 ---
 title: Angular SDK
-description: "@nexus-signal/angular — 通知ベル、インボックス、およびガイド用のスタンドアロンコンポーネントとシグナル。"
+description: '@nexus-signal/angular — 通知ベル、インボックス、およびガイド用のスタンドアロンコンポーネントと Signals。'
+---
+
+# Angular SDK
+
+`@nexus-signal/angular` パッケージは、アプリ内通知、動的なガイド、およびサブスクライバーの設定マトリクス用のリアクティブな Angular バインディングを提供します。**Angular 17+** が必要で、ネイティブの Angular Signals を活用しています。
+
 ---
 
 ## インストール
 
-```bash
-npm install @nexus-signal/angular socket.io-client
-```
+パッケージをそのピア依存関係と一緒にインストールします。
 
-**Angular 17+** （スタンドアロンコンポーネント、シグナル）が必要です。
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/angular socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/angular socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/angular socket.io-client ```</Tab>
+</Tabs>
 
-## 設定
+---
 
-```ts
-// app.config.ts
-import { provideNexus } from "@nexus-signal/angular";
+## ワークスペースの構成
 
-export const appConfig = {
+アプリケーション設定内でグローバルプロバイダーを構成します。
+
+```ts title="app.config.ts"
+import { ApplicationConfig } from '@angular/core';
+import { provideNexus } from '@nexus-signal/angular';
+
+export const appConfig: ApplicationConfig = {
   providers: [
     provideNexus({
-      publicKey: "pk_prd_...",
-      subscriberId: "user-123",
-      hmacSignature: hmacFromBackend,
-      apiBaseUrl: "https://api.nexussignal.dev",
-      onNotification: (n) => console.log(n.title),
+      publicKey: 'pk_prd_your_public_key', // pk_dev_... または pk_prd_...
+      subscriberId: 'user_active_99',
+      hmacSignature: 'your_computed_hmac_hex',
+      apiBaseUrl: 'https://api.nexussignal.dev',
     }),
   ],
 };
 ```
 
-## コンポーネント
+### 構成オプション
 
-```html
-<!-- ポップオーバーベル -->
-<nexus-notification-bell />
+<TypeTable
+  type={{
+    publicKey: {
+      type: 'string',
+      description: '環境のパブリックキー（pk_dev_... または pk_prd_...）。必須。',
+    },
+    subscriberId: {
+      type: 'string',
+      description: 'バックエンドのトリガーペイロードと一致する一意のサブスクライバー ID。必須。',
+    },
+    hmacSignature: {
+      type: 'string',
+      description: 'サーバー側で生成された HMAC 検証署名。必須。',
+    },
+    apiBaseUrl: {
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: 'Nexus プラットフォーム API のベース URL オリジン。',
+    },
+    onNotification: {
+      type: '(notification: NexusNotification) => void',
+      description: 'リアルタイムでメッセージを受信するたびに呼び出されるオプションのコールバック。',
+    },
+  }}
+/>
 
-<!-- タグフィルター付きの全ページインボックス -->
-<nexus-notification-inbox tag="updates" [maxItems]="20" />
+---
 
-<!-- リアルタイムのトーストポップアップ -->
-<nexus-notification-toast position="top-right" [duration]="5000" />
-```
+## コンポーネントのインポート
 
-## ヘッドレササービス
+スタンドアロン（standalone）コンポーネントにコンポーネントシンボルをインポートします。
 
-カスタムUI用のサービスを注入します：
-
-```ts
-import { NexusNotificationsService } from "@nexus-signal/angular";
+```ts title="components/dashboard.component.ts"
+import { Component } from '@angular/core';
+import {
+  NexusNotificationBellComponent,
+  NexusNotificationInboxComponent,
+  NexusNotificationToastComponent,
+} from '@nexus-signal/angular';
 
 @Component({
+  selector: 'app-dashboard',
+  standalone: true,
+  imports: [
+    NexusNotificationBellComponent,
+    NexusNotificationInboxComponent,
+    NexusNotificationToastComponent,
+  ],
   template: `
-    <p>未読: {{ notifications.unread() }}</p>
-    @for (item of notifications.items(); track item.logId) {
-      <div (click)="notifications.markRead(item.logId)">{{ item.title }}</div>
-    }
+    <!-- トップナビに配置するポップオーバー通知ベル -->
+    <nexus-notification-bell variant="ghost" position="bottom-end" />
+
+    <!-- タグフィルター付きのフルページインボックスフィード -->
+    <nexus-notification-inbox tag="billing" [maxItems]="50" />
+
+    <!-- トースト通知オーバーレイ -->
+    <nexus-notification-toast position="top-right" />
   `,
 })
-export class InboxComponent {
-  notifications = inject(NexusNotificationsService);
+export class DashboardComponent {}
+```
+
+---
+
+## ヘッドレスサービス & Signals
+
+カスタムのテンプレートインターフェイスを構築する場合は、サービスを直接インジェクションします。
+
+### 1. アプリ内通知サービス (`NexusNotificationsService`)
+
+```ts title="components/custom-feed.component.ts"
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { NexusNotificationsService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-custom-feed',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <div class="header">
+      <h4>通知 (未読: {{ notifications.unread() }} 件)</h4>
+      <button (click)="notifications.markAllRead()">すべて既読にする</button>
+    </div>
+
+    <div class="list">
+      <div
+        *ngFor="let item of notifications.items()"
+        [class.unread]="!item.read"
+        (click)="item.logId && notifications.markRead(item.logId)"
+      >
+        <h5>{{ item.title }}</h5>
+        <p>{{ item.body }}</p>
+      </div>
+    </div>
+
+    <button *ngIf="notifications.hasMore()" (click)="notifications.loadMore()">
+      {{ notifications.loadingMore() ? '読み込み中...' : 'さらに読み込む' }}
+    </button>
+  `,
+})
+export class CustomFeedComponent {
+  readonly notifications = inject(NexusNotificationsService);
 }
 ```
 
-| サービス                    | シグナル                                |
-| --------------------------- | --------------------------------------- |
-| `NexusNotificationsService` | `items`, `unread`, `loading`, `hasMore` |
-| `NexusGuidesService`        | `guides`, `loading`                     |
-| `NexusPreferencesService`   | `preferences`, `topics`, `loading`      |
+#### 監視可能なサービスの Signals
 
-## スタイリング
+| シグナル署名    | 返り値の型            | 説明                                                            |
+| :-------------- | :-------------------- | :-------------------------------------------------------------- |
+| `items()`       | `NexusNotification[]` | 読み込まれた通知のリアクティブなリスト。                        |
+| `unread()`      | `number`              | 未読のアクティブな通知の計算カウンター。                        |
+| `loading()`     | `boolean`             | 初回のフィード要求が取得中である場合に true。                   |
+| `loadingMore()` | `boolean`             | ページネーション要求がアクティブである場合に true。             |
+| `hasMore()`     | `boolean`             | データベース内に追加の過去ログが利用可能である場合に true。     |
+| `connected()`   | `boolean`             | WebSocket 接続（ハンドシェイク）がアクティブである場合に true。 |
 
-Reactと同じCSS変数を使用します（`--nexus-theme-accent`、`--nexus-theme-border` など）。
+---
 
-## 関連リンク
+### 2. ガイドインターセプターサービス (`NexusGuidesService`)
 
-- [React SDK](/docs/sdk/frontend/react)
-- [Headless JS SDK](/docs/sdk/frontend/js)
-- [プロダクト内ガイド](/docs/platform/features/guides)
+プログラムでアプリ内メッセージを取得し、却下（非表示）します。
+
+```ts
+import { Component, inject, OnInit } from '@angular/core';
+import { NexusGuidesService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-guides',
+  standalone: true,
+  template: `
+    <div *ngFor="let g of guidesService.guides()" class="guide-banner">
+      <h6>{{ g.content.title }}</h6>
+      <p>{{ g.content.body }}</p>
+      <button (click)="guidesService.markSeen(g.id)">了解</button>
+      <button (click)="guidesService.dismiss(g.id)">閉じる</button>
+    </div>
+  `,
+})
+export class GuidesComponent implements OnInit {
+  readonly guidesService = inject(NexusGuidesService);
+
+  ngOnInit() {
+    // 現在のパスにスコープされたガイドを取得します
+    this.guidesService.fetch({ pathname: window.location.pathname });
+  }
+}
+```
+
+---
+
+### 3. 環境設定サービス (`NexusPreferencesService`)
+
+Signals を使用して、カスタマイズされた環境設定フォームを作成します。
+
+```ts
+import { Component, inject } from '@angular/core';
+import { NexusPreferencesService } from '@nexus-signal/angular';
+
+@Component({
+  selector: 'app-user-preferences',
+  standalone: true,
+  template: `
+    <div *ngFor="let topic of prefService.topics()">
+      <span>{{ topic.displayName }}</span>
+      <input
+        type="checkbox"
+        [checked]="prefService.preferences()[topic.id]?.['EMAIL']"
+        (change)="toggleEmail(topic.id, $event)"
+      />
+    </div>
+  `,
+})
+export class UserPreferencesComponent {
+  readonly prefService = inject(NexusPreferencesService);
+
+  toggleEmail(topicId: string, event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    this.prefService.updatePreference(topicId, 'EMAIL', checked);
+  }
+}
+```
+
+---
+
+## スタイリング & テーマ
+
+Angular コンポーネントは、React と同様にカスタム CSS カスタムプロパティを使用してスタイルをオーバーライドできます。
+
+- `--nexus-theme-panel`: ベル、ドロップダウン、およびカードの背景。
+- `--nexus-theme-text`: プライマリテキストの色。
+- `--nexus-theme-accent`: バッジカウントなどのアクセントカラー。
+- `--nexus-theme-border`: コンポーネントの境界線。

@@ -1,25 +1,66 @@
 ---
 title: ガイド
-description: Nexus Signal の一般的な統合タスクのためのステップバイステップガイド。
+description: Nexus Signal の一般的な統合タスクに関するステップバイステップのガイド。
 ---
 
-クイックスタートを超えた実践的なウォークスルー。
+クイックスタートから一歩進んだ、実践的な統合の手順を説明します。
+
+## はじめに
 
 <Cards>
-  <Card title="最初のワークフロー" href="/docs/platform/guides/first-workflow" description="マルチチャンネルワークフローをゼロから構築。" />
-  <Card title="本番チェックリスト" href="/docs/platform/guides/production-checklist" description="本番キーに切り替える前に確認すること。" />
+  <Card
+    title="最初のワークフロー"
+    href="/docs/platform/guides/first-workflow"
+    description="マルチチャネルワークフローを一から構築します。"
+  />
+  <Card
+    title="オブジェクトファンアウト"
+    href="/docs/platform/guides/object-fanout"
+    description="エンティティを監視している全員に通知します。"
+  />
+  <Card
+    title="最初のブロードキャスト"
+    href="/docs/platform/guides/first-broadcast"
+    description="ダッシュボードからオーディエンスに送信します。"
+  />
+  <Card
+    title="B2B マルチテナント"
+    href="/docs/platform/guides/b2b-multi-tenant"
+    description="顧客ごとのホワイトレーベル設定。"
+  />
+  <Card
+    title="本番環境チェックリスト"
+    href="/docs/platform/guides/production-checklist"
+    description="本番環境（Production）キーに切り替える前の準備。"
+  />
 </Cards>
 
-## 本番前に
+## 目的から選ぶ
+
+| 目的                                              | 開始ページ                                                        |
+| :------------------------------------------------ | :---------------------------------------------------------------- |
+| コードからのトランザクション通知の送信            | [最初のワークフロー](/docs/platform/guides/first-workflow)        |
+| DB クエリを実行せずに「すべての監視者に通知」する | [オブジェクトファンアウト](/docs/platform/guides/object-fanout)   |
+| デプロイせずにプロダクトアナウンスを送信する      | [最初のブロードキャスト](/docs/platform/guides/first-broadcast)   |
+| 顧客ごとにブランディングされたメールを送信する    | [B2B マルチテナント](/docs/platform/guides/b2b-multi-tenant)      |
+| ワークフロー定義をバージョン管理する              | [ワークフロー・アズ・コード](/docs/sdk/workflow/workflow-as-code) |
+| CI/CD からの同期を自動化する                      | [CLI](/docs/sdk/devtools/cli)                                     |
+
+## 本番環境へ移行する前に
 
 <Accordions type="single">
-  <Accordion title="開発環境でテストしましたか？">
-    本番プロバイダーキーを接続する前に、開発環境とサンドボックスシミュレーターを使用してください。
+  <Accordion title="開発環境（Development）でテストを行いましたか？">
+    本番環境のプロバイダーキーを接続する前に、必ず開発環境とサンドボックスシミュレーターを使用してください。
   </Accordion>
-  <Accordion title="プロバイダーの認証情報は本番環境のみにありますか？">
-    ステージングは本番をミラーリングできますが、git にコミットされたローカルの `.env` ファイルに本番キーを再使用しないでください。
+  <Accordion title="プロバイダー資格情報は本番環境のみに設定されていますか？">
+    ステージング環境は本番環境をミラーリングできますが、Git にコミットされるローカルの `.env`
+    ファイルで本番環境のキーを再利用しないでください。
   </Accordion>
-  <Accordion title="HMAC はサーバーサイドで生成されていますか？">
-    React SDK セッションはバックエンドから動的に生成された HMAC が必要です — [認証](/docs/platform/getting-started/authentication)をご覧ください。
+  <Accordion title="HMAC はサーバー側で生成されていますか？">
+    クライアント SDK セッションには、バックエンドから生成された新しい HMAC 署名が必要です。詳細は
+    [認証](/docs/platform/getting-started/authentication) を参照してください。
+  </Accordion>
+  <Accordion title="オブジェクトファンアウトとブロードキャストのテストを行いましたか？">
+    製品メッセージング機能を使用している場合は、まずステージング環境でオーディエンスの解決とオブジェクト購読を検証してください。
   </Accordion>
 </Accordions>

@@ -1,65 +1,124 @@
 ---
-title: 認証
-description: セキュアな Nexus Signal 統合のためのシークレットキー、公開キー、HMAC 署名。
+title: 認証とセキュリティ
+description: シークレットキー、パブリックキー、および HMAC 署名を管理して、バックエンドトリガーとリアルタイムのフロントエンドベルを保護します。
 ---
 
-Nexus Signal は**環境スコープの API キー**を使用します。サーバートリガーとブラウザ向け SDK コンポーネントには異なる資格情報が適用されます。
+# 認証とセキュリティ
 
-## キーの種類
+Nexus Signal は、環境でスコープされた API 資格情報を使用します。プロバイダー統合のセキュリティを維持するために、サーバー側のトリガーリクエストとブラウザ向けのコンポーネントでは異なるキーがスコープされています。
 
-| キー | プレフィックス | 使用者 | 公開範囲 |
-|-----|----------|-------|--------|
-| **シークレットキー** | `sk_*` | サーバー SDK、ワークフロートリガー、スケジュール SDK | **サーバーのみ — ブラウザでは絶対使用しない** |
-| **公開キー** | `pk_*` | React SDK、受信箱 API、WebSocket 接続 | フロントエンドへの埋め込みが安全 |
+---
 
-シークレットキーはトリガーリクエストで `Authorization: Bearer sk_prd_…` として送信されます。
+## API キーのスコープ
 
-公開キーは SDK ルートで `x-nexus-public-key` として送信されます。
+すべての環境（Development、Staging、Production）には、それぞれ異なるペアのキーがあります。
 
-## ワークフロートリガー認証
+| キーの種類           | 接頭辞 | 対象環境 | デプロイスコープ                                                 | 露出ルール                                                                                                  |
+| :------------------- | :----- | :------- | :--------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------- |
+| **シークレットキー** | `sk_*` | 環境固有 | サーバー側のトリガー、ワークフローの同期、および管理スクリプト。 | **クライアント側のコードには絶対に露出させないでください。** 安全なバックエンドの `.env` 変数に保管します。 |
+| **パブリックキー**   | `pk_*` | 環境固有 | React/Next.js/Angular/JS の通知ベルの初期化。                    | フロントエンドスクリプトや設定ファイルに安全に埋め込むことができます。                                      |
+
+---
+
+## ワークフロー取り込みの認証
+
+サーバー側のトリガー呼び出しでは、`Authorization` ヘッダーに標準の Bearer トークンとしてシークレットキーを渡す必要があります。
 
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_your_secret_key
+Host: api.nexussignal.dev
+Authorization: Bearer sk_prd_your_secret_key_here
 Content-Type: application/json
+
+{
+  "workflowName": "user.welcome",
+  "recipients": [{ "externalId": "usr_992" }]
+}
 ```
 
-API はキーを検証し、環境と組織を解決してから、ワーカーが非同期で配信を処理する間に **202 Accepted** を返します。
+取り込みゲートウェイは、署名を検証し、リクエストを組織に関連付け、配信実行をキューに入れ、数ミリ秒で `202 Accepted` を返します。
 
-## リアルタイム（アプリ内）用 HMAC
+---
 
-ブラウザの WebSocket 接続はシークレットキーを使用できません。代わりに:
+## 安全なリアルタイムフィード（HMAC 署名）
 
-1. **バックエンド**がシークレットキーとサブスクライバー ID で HMAC 署名を生成
-2. **フロントエンド**が署名を `NexusProvider` に渡す
+ユーザーが他のユーザーのアプリ内通知ストリームを傍受するのを防ぐため、フロントエンドのブラウザ接続では未加工のシークレットキーを使用できません。代わりに、Nexus は **HMAC-SHA256 署名** を使用してリアルタイムの WebSocket フィードを保護します。
+
+1. **あなたのバックエンドサーバー**: サブスクライバーのログインが認証されたときに署名を生成します。
+2. **あなたのフロントエンドクライアント**: 署名を受け取り、WebSocket ハンドシェイク接続時にパブリックキーと一緒に渡します。
+
+```mermaid
+sequenceDiagram
+    participant Browser as クライアントブラウザ
+    participant Server as バックエンドサーバー
+    participant Nexus as Nexus Signalゲートウェイ
+
+    Browser->>Server: 1. ページをリクエスト (ユーザー認証セッション)
+    activate Server
+    Server->>Server: 2. HMAC署名を生成<br/>HMAC-SHA256(sk_key, subscriberId)
+    Server-->>Browser: 3. ユーザーID + HMAC署名を返す
+    deactivate Server
+
+    Browser->>Nexus: 4. WebSocket接続 (pk_key, subscriberId, signature)
+    activate Nexus
+    Nexus->>Nexus: 5. 内部で署名を検証
+    Nexus-->>Browser: 6. ハンドシェイク承認 (リアルタイムイベント購読)
+    deactivate Nexus
+```
+
+### 1. バックエンドでの署名生成
+
+#### Node SDK の使用
 
 ```ts
-// サーバー — @nexus-signal/node
-const hmac = nexus.auth.generateHmacSignature('user_123');
+import { NexusClient } from '@nexus-signal/node';
 
-// クライアント — @nexus-signal/react
-<NexusProvider
-  publicKey="pk_prd_…"
-  subscriberId="user_123"
-  hmacSignature={hmac}
-  backendUrl="https://api.nexussignal.dev"
-/>
+const nexus = new NexusClient({ secretKey: process.env.NEXUS_SECRET_KEY! });
+
+// ユーザーの HMAC を生成
+const hmacSignature = nexus.auth.generateHmacSignature('usr_123');
 ```
 
-プラットフォームは `HMAC-SHA256(secretKey, subscriberExternalId)` を検証します。
+#### ネイティブ Node.js（SDK を使用しない代替方法）
 
-<Callout type="error">
-ページロードまたはセッションごとに HMAC を再生成してください — バックエンド認証から派生した短命のセッショントークンとして扱ってください。
-</Callout>
+SDK がインストールされていない環境で署名を生成する場合は、ネイティブの `crypto` モジュールを使用します。
 
-## ダッシュボード認証
+```ts
+import crypto from 'crypto';
 
-Web ダッシュボードはオプションの MFA 付きの JWT セッション（メール/パスワード、マジックリンク、GitHub、または Google OAuth）を使用します。チームメンバーはロールベースのアクセスを取得します: オーナー、管理者、開発者、またはマーケター。
+function generateHmac(secretKey: string, subscriberExternalId: string): string {
+  return crypto.createHmac('sha256', secretKey).update(subscriberExternalId).digest('hex');
+}
 
-## キーのローテーション
+const hmacSignature = generateHmac(process.env.NEXUS_SECRET_KEY!, 'usr_123');
+```
 
-**設定 → API キー**からシークレットキーをロールします。サーバーと HMAC 生成を同時にローテーションすれば、ダウンタイムなしで古いキーを廃止できます。
+### 2. フロントエンドのハンドシェイク構成
 
-## 関連
+生成された署名をクライアントプロバイダーの初期化に直接渡します。
 
-- [認証](/docs/platform/getting-started/authentication) — どのキーをどこで使うか
+```tsx
+import { NexusProvider, NotificationFeed } from '@nexus-signal/react';
+
+function App() {
+  return (
+    <NexusProvider
+      publicKey="pk_prd_your_public_key"
+      subscriberId="usr_123"
+      hmacSignature="the_backend_generated_hmac_signature"
+    >
+      <NotificationFeed />
+    </NexusProvider>
+  );
+}
+```
+
+---
+
+## キーのローテーション手順
+
+万が一シークレットキーが漏洩した場合は、ダッシュボードの **Settings → API Keys** セクションから即座にローテーションを行ってください。
+
+1. **セカンダリキーの生成**: **Roll Key** をクリックして新しいキーを生成します。このとき、古いキーは一時的にアクティブなままになります（デュアルキーウィンドウ）。
+2. **バックエンドキーのデプロイ**: サーバー側の `.env` 変数を新しい `sk_*` キーで更新します。
+3. **古いキーの無効化**: サーバーがデプロイされたら、ダッシュボードの古いキーの **Revoke** をクリックして、古いキーを完全に無効化します。

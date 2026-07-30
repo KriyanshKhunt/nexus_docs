@@ -1,209 +1,311 @@
 ---
 title: Node.js SDK
-description: "@nexus-signal/node — ワークフロートリガー、スケジュール、HMAC 署名。"
+description: '@nexus-signal/node — ワークフロートリガー、スケジュール、および HMAC 署名。'
 ---
 
-API ルート、ワーカー、スクリプトからワークフローをトリガーするサーバーサイド SDK。
+# Node.js SDK
+
+`@nexus-signal/node` ライブラリは、ワークフローのトリガー、スケジュールされたタスクの管理、テナントの同期、および安全なサブスクライバーの検証を行うためのサーバー側バインディングを提供します。
+
+---
 
 ## インストール
 
+好みのパッケージマネージャーを使用して、SDK をプロジェクトに追加します。
+
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/node
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/node
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/node ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/node ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/node ```</Tab>
 </Tabs>
 
-## 初期化
+---
 
-```ts title="nexus.ts"
-import { NexusClient } from "@nexus-signal/node";
+## クライアントの初期化
 
-const nexus = new NexusClient({
-  secretKey: process.env.NEXUS_SECRET_KEY!, // sk_prd_…
-  baseUrl: "https://api.nexussignal.dev",
+サーバー側で `NexusClient` を初期化します。サーバーレス関数のスコープ内でこのコンストラクタを繰り返し呼び出すことは避け、キープアライブ接続を利用するために単一のインスタンスをエクスポートして使い回すようにしてください。
+
+```ts title="lib/nexus.ts"
+import { NexusClient } from '@nexus-signal/node';
+
+export const nexus = new NexusClient({
+  secretKey: process.env.NEXUS_SECRET_KEY!, // 例: sk_prd_...
+  baseUrl: process.env.NEXUS_BASE_URL || 'https://api.nexussignal.dev',
   timeout: 5000,
 });
 ```
 
-### クライアントオプション
+### 構成オプション
 
 <TypeTable
   type={{
     secretKey: {
-      type: "string",
-      description:
-        "環境シークレットキー（例: sk_dev_..., sk_prd_...）。sk_ で始まり、20文字以上が必要（必須）。",
+      type: 'string',
+      description: '環境のシークレットキー（sk_ で始まり、20文字以上である必要があります）。必須。',
     },
     baseUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
-      description: "Nexus プラットフォーム API エンドポイントのオリジン。",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: '対象の API ベース URL エンドポイントのオリジン。',
     },
     timeout: {
-      type: "number",
-      default: "15000",
-      description: "リクエストタイムアウト制限（ミリ秒）。",
+      type: 'number',
+      default: '5000',
+      description: 'リクエストのタイムアウト制限（ミリ秒単位）。',
     },
     events: {
-      type: "object",
+      type: 'object',
       description:
-        "レジリエンスイベント監査用オプションコールバック（onCircuitOpen、onCircuitClose、onBufferOverflow）。",
+        'onCircuitOpen、onCircuitClose、onBufferOverflow などの回復力イベントを監査するためのオプションのコールバック。',
     },
   }}
 />
 
+---
+
 ## ワークフローのトリガー
 
-```ts title="trigger.ts"
-const result = await nexus.workflows.trigger({
-  workflowName: "billing.invoice_overdue",
-  recipients: [
-    {
-      externalId: "cust_8824",
-      email: "billing@enterprise.com",
-      phoneNumber: "+15550198234",
-      timezone: "Asia/Tokyo",
-      locale: "ja",
-      slackWebhookUrl: "https://hooks.slack.com/services/…",
-    },
-  ],
-  data: {
-    invoiceId: "INV-2026-0049",
-    amountDue: "¥125,000",
-  },
-});
+イベントトリガーを送信して、構成済みのビジュアルワークフローパスを開始します。
 
-if (!result.ok) {
-  console.warn(result.error, result.queued ? "（リトライのためバッファ済み）" : "");
+```ts title="routes/order.ts"
+import { nexus } from '../lib/nexus';
+
+export async function handleOrderShipped(orderId: string, userId: string) {
+  const result = await nexus.workflows.trigger({
+    workflowName: 'order.shipped',
+    recipients: [
+      {
+        externalId: userId,
+        email: 'customer@acme.io',
+        phoneNumber: '+15550198234',
+        timezone: 'America/New_York',
+        locale: 'ja',
+      },
+    ],
+    data: {
+      orderNumber: orderId,
+      shippingCarrier: 'FedEx',
+      trackingLink: 'https://fedex.com/track/12345',
+    },
+  });
+
+  if (!result.ok) {
+    console.error('トリガーに失敗しました:', result.error);
+    if (result.queued) {
+      console.warn('サーキットが開いたため、ペイロードがメモリ内にバッファリングされました。');
+    }
+  }
 }
 ```
 
-### 受信者フィールド
+### 宛先（Recipient）パラメータのマッピング
 
 <TypeTable
   type={{
     externalId: {
-      type: "string",
-      description: "ユーザー ID（subscriberId が指定されていない場合は必須）。",
+      type: 'string',
+      description:
+        'データベース内の一意のサブスクライバー ID。subscriberId が指定されていない場合は必須。',
     },
     subscriberId: {
-      type: "string (UUID)",
-      description: "Nexus 内部のサブスクライバー固有 ID。",
+      type: 'string (UUID)',
+      description: 'Nexus データベース内でシステムによって生成されたサブスクライバーの UUID。',
     },
     email: {
-      type: "string",
-      description: "メールチャンネル用の受信者メールアドレス。",
+      type: 'string',
+      description: 'Email 配信チャネルの宛先メールアドレス。',
     },
     phoneNumber: {
-      type: "string",
-      description:
-        "SMS および WhatsApp チャンネル用の受信者電話番号（E.164 形式）。",
+      type: 'string',
+      description: 'SMS または WhatsApp チャネルの E.164 形式（+1...）の受信者電話番号。',
     },
     timezone: {
-      type: "string",
-      description:
-        "ローカル時間に基づいて通知をスケジュール・遅延させる受信者のタイムゾーン（IANA 形式）。",
+      type: 'string',
+      description: '配信ウィンドウを制御するための IANA タイムゾーン識別子（例: Asia/Tokyo）。',
     },
     locale: {
-      type: "string",
-      description:
-        "ローカリゼーションレンダリング用のトリガーごとのユーザーロケールオーバーライド（BCP 47 形式）。",
+      type: 'string',
+      description: '動的なローカライズのための BCP 47 言語識別子のオーバーライド（例: ja、en）。',
     },
     slackWebhookUrl: {
-      type: "string",
-      description:
-        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Slack webhook URL。",
+      type: 'string',
+      description: 'チャットペイロードを直接ルーティングするための Slack 受信 Webhook URL。',
     },
     discordWebhookUrl: {
-      type: "string",
-      description:
-        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Discord webhook URL。",
+      type: 'string',
+      description: 'チャットペイロードを直接ルーティングするための Discord 受信 Webhook URL。',
     },
     teamsWebhookUrl: {
-      type: "string",
+      type: 'string',
       description:
-        "メッセージペイロードをサブスクライバーチャンネルに直接ルーティングするカスタム Microsoft Teams webhook URL。",
+        'チャットペイロードを直接ルーティングするための Microsoft Teams 受信 Webhook URL。',
     },
   }}
 />
 
-## HMAC 署名
+---
 
-```ts title="auth.ts"
-const hmac = nexus.auth.generateHmacSignature("cust_8824");
-// @nexus-signal/react の NexusProvider に渡します — ブラウザに secretKey を公開しないでください
+## セキュアな HMAC 生成
+
+WebSocket 通知を認証するための暗号化された安全な署名を生成します。
+
+```ts
+// 64文字の SHA-256 hex 署名を返します
+const signature = nexus.auth.generateHmacSignature('user_active_99');
 ```
 
-スタンドアロンとしてもエクスポートされています（`secretKey` を明示的に渡す必要があります）:
+または、クライアントを初期化せずに計算することも可能です。
 
-```ts title="standalone-auth.ts"
+```ts
 import { generateHmacSignature } from '@nexus-signal/node';
 
-const hmac = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'cust_8824');
+const signature = generateHmacSignature(process.env.NEXUS_SECRET_KEY!, 'user_active_99');
 ```
 
-## スケジュール
+---
 
-```ts title="schedule.ts"
-await nexus.schedules.create({
-  name: "月曜ダイジェスト",
-  workflowId: "workflow-uuid",
-  cronExpression: "0 9 * * 1",
-  timezone: "Asia/Tokyo",
-  recipients: [{ externalId: "user_1" }],
-  data: {},
+## B2B テナント & ブランディング
+
+企業顧客ごとに、ホワイトレーベルのメールテンプレート、アプリ内のテーマスタイル、およびデフォルトの環境設定を管理します。
+
+```ts
+// 顧客テナントのブランディングオーバーライドを作成または更新します
+const tenantResult = await nexus.tenants.upsert({
+  externalId: 'tenant_acme_corp',
+  name: 'Acme Corporation',
+  branding: {
+    logo: 'https://cdn.acme.io/logos/logo.png', // 厳密なキー名: logo
+    primaryColor: '#0070f3',
+    footerHtml: '<p>Sent by Acme Corp, 123 Main St</p>',
+  },
 });
 
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
+// このテナントのブランディングコンテキストにスコープされたワークフローをトリガーします
+await nexus.workflows.trigger({
+  workflowName: 'invoice.finalized',
+  tenant: 'tenant_acme_corp',
+  recipients: [{ externalId: 'alex_acme' }],
+  data: { amount: '$450.00' },
+});
 ```
 
-## レジリエンス
+---
 
-- **サーキットブレーカー** — 5回の失敗後に開放、60秒後に自動回復
-- **リトライバッファ** — 失敗したリクエストをメモリにキュー（最大500件）
-- **`flushRetries()`** — プラットフォームが正常なときにバッファされたトリガーを再送
+## 共有エンティティの購読 (Objects)
 
-```ts title="resilience.ts"
-const nexus = new NexusClient({
+仮想エンティティ（チャネル、ドキュメントボード、プロジェクトなど）にメッセージを送信し、Nexus に監視サブスクライバーへのファンアウトを自動的に解決させます。
+
+```ts
+// エンティティを定義します
+await nexus.objects.set({
+  collection: 'workspaces',
+  externalId: 'ws_eng_team',
+  name: 'Engineering Workspace',
+});
+
+// サブスクライバーを追加します
+await nexus.objects.addSubscriptions('workspaces', 'ws_eng_team', {
+  recipients: ['usr_alice_dev', 'usr_bob_ops'],
+});
+
+// エンジニアリングワークスペースのすべての監視者に通知します
+await nexus.workflows.trigger({
+  workflowName: 'workspace.announcement',
+  recipients: [{ collection: 'workspaces', id: 'ws_eng_team' }],
+  data: { msg: 'Scheduled database maintanance tonight.' },
+});
+```
+
+---
+
+## ブロードキャストキャンペーン
+
+設定済みのサブスクライバーセグメントに対してキャンペーンをスケジュールして送信します。
+
+```ts
+const broadcast = await nexus.broadcasts.create({
+  name: 'Platform Feature Update',
+  workflowId: 'wf-uuid-goes-here',
+  audienceId: 'aud-uuid-goes-here',
+  data: { highlight: 'Dynamic Step Conditions are live!' },
+});
+
+if (broadcast.ok && broadcast.data?.broadcast?.id) {
+  // ブロードキャストの実行を即座に発送します
+  await nexus.broadcasts.send(broadcast.data.broadcast.id);
+}
+```
+
+---
+
+## スケジュール (Schedules)
+
+繰り返し実行されるワークフローの発送をプログラムで構成します。
+
+```ts
+// 毎週月曜日の定期スケジュールを作成します
+await nexus.schedules.create({
+  name: 'Weekly Usage Summary',
+  workflowId: 'wf-uuid-goes-here',
+  cronExpression: '0 9 * * 1', // 毎週月曜日の午前9:00
+  timezone: 'Asia/Tokyo',
+  recipients: [{ externalId: 'user_analytics' }],
+  data: { reportScope: 'seven_days' },
+});
+
+// アクティブなスケジュールを取得します
+const list = await nexus.schedules.list({ page: 1, limit: 10 });
+
+// スケジュールを無効化または削除します
+await nexus.schedules.update('schedule-uuid', { active: false });
+await nexus.schedules.delete('schedule-uuid');
+```
+
+---
+
+## ワークフロー・アズ・コードの同期
+
+ローカルの TypeScript ワークフロー定義を Nexus プラットフォームと同期させることができます。
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+const welcomeFlow = defineWorkflow('user.registration')
+  .addChannel('IN_APP')
+  .addDelay({ minutes: 15 })
+  .addChannel('EMAIL')
+  .toDefinition();
+
+const result = await nexus.workflows.sync(welcomeFlow);
+```
+
+---
+
+## クライアントの回復力 & フェイルオーバー
+
+Node SDK には、プラットフォームの停止や障害を処理するための**サーキットブレーカー**とローカルの**メモリバッファ**が含まれています。
+
+- **サーキットブレーカー**: **5回連続して失敗**するかリクエストがタイムアウトすると、状態が `OPEN` にトリップします。この期間中、外部へのトリガー送信はネットワーク呼び出しを行わずにブロックされ、ローカルにキューイングされます。サーキットは **60秒**後に自動的に復旧を試みます。
+- **メモリバッファ**: ローカルメモリ内に最大 **500個のトリガーアクション**を保持します。
+- **手動フラッシュ**: クライアントが復旧した場合は、`flushRetries()` を使用してこれらの再試行をプラットフォームに送信（フラッシュ）します。
+
+```ts
+const resilientClient = new NexusClient({
   secretKey: process.env.NEXUS_SECRET_KEY!,
   events: {
-    onCircuitOpen: () => console.warn("Nexus サーキット開放"),
-    onCircuitClose: () => nexus.workflows.flushRetries(),
-    onBufferOverflow: (p) => console.error("ドロップ:", p.workflowName),
+    onCircuitOpen: () => {
+      console.warn('Nexusのサーキットブレーカーが開きました。');
+    },
+    onCircuitClose: async () => {
+      console.info('Nexusのサーキットが閉じました。バッファをフラッシュしています...');
+      await resilientClient.workflows.flushRetries();
+    },
+    onBufferOverflow: (failedPayload) => {
+      console.error(
+        'ローカルメモリバッファがいっぱいです！ペイロードを破棄しました:',
+        failedPayload.workflowName
+      );
+    },
   },
 });
 ```
-
-## レスポンス形状
-
-```ts
-type NexusResult<T> = {
-  ok: boolean;
-  status: number;
-  data?: T;
-  error?: string;
-  queued?: boolean; // ローカルにバッファされた場合は true
-};
-```
-
-成功したトリガーは `{ accepted: true, results: [...] }` で **HTTP 202** を返します。

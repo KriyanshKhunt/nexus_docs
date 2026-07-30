@@ -1,88 +1,224 @@
 ---
-title: ヘッドレス JS SDK
-description: "@nexus-signal/js — Vue、Svelte、またはバニラJS向けのフレームワークに依存しない通知、ガイド、および優先設定。"
+title: Headless JS SDK
+description: '@nexus-signal/js — Vue、Svelte、またはバニラ JS 用の、フレームワークに依存しない通知、ガイド、および環境設定。'
 ---
 
-ReactやAngularを使用していない場合は、**`@nexus-signal/js`** を使用します。React SDKと同じWebSocket + RESTスタックですが、UIコンポーネントは含まれていません。独自のフィードを構築できます。
+# Headless JS SDK
+
+`@nexus-signal/js` ライブラリは、アプリ内通知、環境設定、およびガイドを管理するための、特定のフレームワークに依存しないクライアントラッパーです。ブラウザのネイティブ環境を使用するため、バンドルされた UI スタイルの制約を受けずに、**Vue 3**、**Svelte**、**SolidJS**、または **Vanilla JS** アプリケーションに統合するのに最適です。
+
+---
 
 ## インストール
 
-```bash
-npm install @nexus-signal/js
-```
+パッケージを socket.io のピア依存関係と一緒にインストールします。
 
-## クイックスタート
+<Tabs items={['npm', 'pnpm', 'yarn']}>
+  <Tab value="npm">```bash npm install @nexus-signal/js socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/js socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/js socket.io-client ```</Tab>
+</Tabs>
+
+---
+
+## 初期化オプション
+
+クライアントの読み込み時に、クライアントのインスタンスを作成します。
 
 ```ts
-import { NexusClient } from "@nexus-signal/js";
+import { NexusClient } from '@nexus-signal/js';
 
 const nexus = new NexusClient({
-  publicKey: "pk_prd_...",
-  subscriberId: "user-123",
-  hmacSignature: hmacFromYourBackend,
-  onNotification: (n) => console.log(n.title),
+  publicKey: 'pk_prd_your_public_key', // pk_dev_... または pk_prd_...
+  subscriberId: 'user_active_99',
+  hmacSignature: 'computed_hmac_hex_signature',
+  apiBaseUrl: 'https://api.nexussignal.dev',
 });
 
+// WebSocket転送を開始し、初期状態をフェッチします
 await nexus.connect();
-console.log(nexus.notifications.unread);
 ```
 
-## サブクライアント
+### コンストラクタオプション
 
-| クライアント          | 目的                                                       |
-| --------------------- | ---------------------------------------------------------- |
-| `nexus.notifications` | インボックスリスト、既読にする、アーカイブ、タグフィルター |
-| `nexus.guides`        | プロダクト内ガイドの取得と追跡                             |
-| `nexus.preferences`   | トピック/チャネル設定の切り替え                            |
-| `nexus.events`        | 配信イベント履歴                                           |
+<TypeTable
+  type={{
+    publicKey: {
+      type: 'string',
+      description: '環境のパブリックキー（pk_dev_ または pk_prd_ で始まります）。必須。',
+    },
+    subscriberId: {
+      type: 'string',
+      description: 'バックエンドのワークフロートリガーペイロードと一致する一意の受信者 ID。必須。',
+    },
+    hmacSignature: {
+      type: 'string',
+      description: 'セキュリティのためにバックエンドで生成された HMAC-SHA256 署名。必須。',
+    },
+    apiBaseUrl: {
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
+      description: '対象の API ベース URL エンドポイントのオリジン。',
+    },
+    onNotification: {
+      type: '(notification: Notification) => void',
+      description: 'リアルタイム通知の受信時にトリガーされるオプションのコールバック。',
+    },
+  }}
+/>
 
-## タグフィルタリング
+---
+
+## エミッターイベント
+
+リアルタイムの状態変更リスナーを登録します。`.on()` メソッドは、リスナー解除（クリーンアップ）用の関数を返します。
 
 ```ts
-await nexus.notifications.refetch({ tags: ["billing"] });
-await nexus.notifications.loadMore({ tags: ["mention"] });
+// 新しいメッセージをリッスンする
+const unsubscribe = nexus.on('notification.received', (notification) => {
+  console.log('New notification received:', notification.title);
+  alert(`Alert: ${notification.body}`);
+});
+
+// コンポーネント破棄時にリスナーを解除する
+unsubscribe();
 ```
 
-## イベント
+### イベントレジストリ
+
+<TypeTable
+  type={{
+    'notification.received': {
+      type: '(notification: Notification) => void',
+      description: 'WebSocket 経由で新しいリアルタイムメッセージが到着したときにトリガーされます。',
+    },
+    'notification.read': {
+      type: '(logId: string) => void',
+      description:
+        '特定のメッセージが既読としてマークされた（セッション間で同期された）ときにトリガーされます。',
+    },
+    'notification.archived': {
+      type: '(logId: string) => void',
+      description: 'メッセージがアーカイブに移動されたときにトリガーされます。',
+    },
+    'notifications.count_changed': {
+      type: '(unreadCount: number) => void',
+      description: '更新された未読通知数のバッジ値をエミットします。',
+    },
+    'connection.connected': {
+      type: '() => void',
+      description: 'WebSocket 接続が確立されたときにトリガーされます。',
+    },
+    'connection.disconnected': {
+      type: '() => void',
+      description: 'WebSocket の接続が切断されたときにトリガーされます。',
+    },
+  }}
+/>
+
+---
+
+## サブクライアントインスタンス
+
+`NexusClient` は、基礎となる構造を管理するための専用名前空間を提供します。
+
+### 1. インボックス (`nexus.notifications`)
+
+リスト、既読状態、およびタグフィルターを管理します。
 
 ```ts
-const unsub = nexus.on("notification.received", (n) => {
-  /* ... */
-});
-nexus.on("notifications.count_changed", (count) => {
-  /* badge */
-});
-unsub();
+// アクティブな通知の取得
+const list = nexus.notifications.items; // 現在の通知の配列
+const count = nexus.notifications.unread; // 未読数
+
+// 状態の更新
+await nexus.notifications.markRead('log-uuid-here');
+await nexus.notifications.markAllRead();
+await nexus.notifications.archive('log-uuid-here');
+
+// タグでフィードをフィルタリングする
+await nexus.notifications.refetch({ tags: ['billing'] });
 ```
 
-## Vue 3 の例
+### 2. ガイド (`nexus.guides`)
 
-```vue
+ダッシュボードバナーまたはモーダルを取得して非表示にします。
+
+```ts
+// パスでスコープされたガイドを取得します
+await nexus.guides.fetch({ pathname: window.location.pathname });
+
+const activeGuides = nexus.guides.guides;
+
+// 表示およびアクションイベントをトリガーします
+await nexus.guides.markSeen('guide-uuid-here');
+await nexus.guides.markInteracted('guide-uuid-here');
+await nexus.guides.dismiss('guide-uuid-here');
+```
+
+### 3. 環境設定 (`nexus.preferences`)
+
+チャンネルの選択値を取得および更新します。
+
+```ts
+// 環境設定の読み込み
+await nexus.preferences.fetch();
+
+const topics = nexus.preferences.topics;
+const settings = nexus.preferences.preferences; // 例: { topic_id: { EMAIL: true } }
+
+// 環境設定の値を更新します
+await nexus.preferences.updatePreference('billing_topic_id', 'EMAIL', false);
+```
+
+---
+
+## フレームワーク統合の例
+
+### 1. Vue 3 (Composition API)
+
+```vue title="components/NotificationFeed.vue"
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
-import { NexusClient } from "@nexus-signal/js";
+import { ref, onMounted, onUnmounted } from 'vue';
+import { NexusClient } from '@nexus-signal/js';
+
+const props = defineProps<{ hmac: string; userId: string }>();
 
 const nexus = new NexusClient({
-  publicKey: "pk_...",
-  subscriberId: "user-1",
-  hmacSignature: "...",
+  publicKey: 'pk_dev_your_public_key',
+  subscriberId: props.userId,
+  hmacSignature: props.hmac,
 });
-const unread = ref(0);
+
+const unreadCount = ref(0);
+const messages = ref<any[]>([]);
+let countUnsub: () => void;
 
 onMounted(async () => {
   await nexus.connect();
-  unread.value = nexus.notifications.unread;
-  nexus.on("notifications.count_changed", (c) => {
-    unread.value = c;
+  unreadCount.value = nexus.notifications.unread;
+  messages.value = nexus.notifications.items;
+
+  // リアクティブな更新をバインドする
+  countUnsub = nexus.on('notifications.count_changed', (count) => {
+    unreadCount.value = count;
+    messages.value = [...nexus.notifications.items];
   });
 });
-onUnmounted(() => nexus.disconnect());
+
+onUnmounted(() => {
+  if (countUnsub) countUnsub();
+  nexus.disconnect();
+});
 </script>
+
+<template>
+  <div class="inbox">
+    <span>Unread notifications: {{ unreadCount }}</span>
+    <div v-for="msg in messages" :key="msg.logId" class="item">
+      <h6>{{ msg.title }}</h6>
+      <button @click="nexus.notifications.markRead(msg.logId)">Mark Read</button>
+    </div>
+  </div>
+</template>
 ```
-
-## 関連リンク
-
-- [React SDK](/docs/sdk/frontend/react) — 構築済みのUIコンポーネント
-- [Angular SDK](/docs/sdk/frontend/angular)
-- [リッチインボックス](/docs/platform/features/rich-inbox)
-- [SDK API](/docs/api/sdk)

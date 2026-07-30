@@ -1,22 +1,22 @@
 ---
-title: AI MCP サーバー
-description: "@nexus-signal/mcp-server — Nexusのツール、リソース、およびプロンプトをAIコーディングアシスタントに公開します。"
+title: AI MCP Server
+description: '@nexus-signal/mcp-server — AI コーディングアシスタントに Nexus のツール、プロンプト、およびリソースを公開します。'
 ---
 
-**Model Context Protocol (MCP)** を使用すると、AIコーディングアシスタント（Cursor、Claude Desktop、Windsurfなど）は、自然言語を使用してエディターからワークフロー、購読者、オブジェクト、ブロードキャスト、およびガイドを直接管理できます。
+**Model Context Protocol (MCP)** サーバーを使用すると、AI コーディングアシスタント（Cursor、Claude Desktop、Windsurf など）が、自然言語を使用してエディタから直接、ワークフロー、サブスクライバー、オブジェクト、ブロードキャスト、およびガイドを管理できます。
 
 ---
 
-## IDE の設定
+## IDE でのセットアップ & 構成
 
-エディターのMCP設定ファイルにサーバーを設定します。
+エディタの MCP 設定ファイルにサーバーを構成します。
 
 ### 環境変数
 
-| 変数               | 必須     | 説明                               | デフォルト              |
-| :----------------- | :------- | :--------------------------------- | :---------------------- |
-| `NEXUS_SECRET_KEY` | **はい** | 環境のAPIシークレットキー (`sk_*`) |                         |
-| `NEXUS_BASE_URL`   | いいえ   | APIエンドポイントのベースURL       | `http://localhost:5000` |
+| 変数               | 必須     | 説明                                      | デフォルト              |
+| :----------------- | :------- | :---------------------------------------- | :---------------------- |
+| `NEXUS_SECRET_KEY` | **はい** | 環境固有のシークレット API キー（`sk_*`） |                         |
+| `NEXUS_BASE_URL`   | いいえ   | API エンドポイントのベース URL            | `http://localhost:5000` |
 
 ---
 
@@ -24,7 +24,7 @@ description: "@nexus-signal/mcp-server — Nexusのツール、リソース、�
 
 #### 1. Claude Desktop
 
-グローバル設定ファイルに設定を追加します：
+グローバル設定ファイルに設定を追加します。
 
 - **macOS / Linux**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -46,16 +46,16 @@ description: "@nexus-signal/mcp-server — Nexusのツール、リソース、�
 
 #### 2. Cursor
 
-**Settings → Features → MCP** に移動し、**Add New MCP Server** をクリックして以下を構成します：
+**Settings → Features → MCP** に移動し、**Add New MCP Server** をクリックして以下のように構成します。
 
 - **Name**: `nexus-signal`
 - **Type**: `command`
 - **Command**: `npx -y @nexus-signal/mcp-server@latest`
-- **Environment Variables**: `NEXUS_SECRET_KEY` と `NEXUS_BASE_URL` をキー値ペアとして追加します。
+- **Environment Variables**: キーと値のペアとして `NEXUS_SECRET_KEY` と `NEXUS_BASE_URL` を追加します。
 
 #### 3. Windsurf
 
-`~/.codeium/windsurf/mcp_config.json` に設定を追加します：
+`~/.codeium/windsurf/mcp_config.json` に以下を追加します。
 
 ```json
 {
@@ -76,91 +76,91 @@ description: "@nexus-signal/mcp-server — Nexusのツール、リソース、�
 
 ## MCP プリミティブ
 
-サーバーは、モデルが通知設定を探索および実行できるように、**30のツール**、**4つのリソース**、および**5つのプロンプト**を公開しています。
+サーバーは、LLM が通知設定を探索および実行できるように、**30種類のツール**、**4種類のリソース**、および**5種類のプロンプト**を公開しています。
 
 ### 1. ツール (Tools)
 
-ツールを使用すると、AIエージェントはワークスペースで読み取り/書き込み操作を実行できます：
+ツールを使用すると、AI エージェントはワークスペースに対して書き込み/読み取り操作を実行できます。
 
-#### ワークフロー
+#### ワークフロー (Workflows)
 
-- `nexus_list_workflows` — 現在の環境のワークフローを一覧表示します。
-- `nexus_get_workflow` — 名前でワークフローのステップ設定を取得します。
-- `nexus_trigger_workflow` — 複数の受信者に対してワークフローをトリガーします。
-- `nexus_send_notification` — 単一の受信者にワークフロー通知を送信します。
-- `nexus_sync_workflows` — コード定義のワークフローを同期します。
-- `nexus_get_delivery_status` — ログUUIDで配信ステータスを検査します。
+- `nexus_list_workflows` — 現在の環境のワークフローをリストします。
+- `nexus_get_workflow` — 指定した名前のワークフロー構成ステップを取得します。
+- `nexus_trigger_workflow` — 複数の受信者に対してワークフローを実行します。
+- `nexus_send_notification` — 単一の受信者にワークフローを送信します。
+- `nexus_sync_workflows` — コードで定義されたワークフロー定義をプッシュします。
+- `nexus_get_delivery_status` — ログ UUID の配信状態を検査します。
 
-#### 購読者
+#### サブスクライバー (Subscribers)
 
-- `nexus_list_subscribers` — 受信者を検索してフィルターします。
-- `nexus_get_subscriber` — IDで購読者の詳細を取得します。
-- `nexus_create_subscriber` — 購読者フィールドをアップサートします。
-- `nexus_delete_subscriber` — 購読者と履歴を削除します。
+- `nexus_list_subscribers` — 受信者を検索します。
+- `nexus_get_subscriber` — ID でサブスクライバーの詳細を取得します。
+- `nexus_create_subscriber` — サブスクライバーの連絡先フィールドを作成/更新します。
+- `nexus_delete_subscriber` — サブスクライバーとその履歴を永久に削除します。
 
-#### オブジェクト
+#### オブジェクト (Objects)
 
 - `nexus_set_object` — ユーザー以外のエンティティを作成または更新します。
-- `nexus_get_object` — オブジェクトの詳細と購読者数を取得します。
-- `nexus_subscribe_to_object` — オブジェクトを監視する購読者を追加します。
-- `nexus_unsubscribe_from_object` — オブジェクトから購読者を削除します。
+- `nexus_get_object` — オブジェクトの詳細とサブスクライバー数を取得します。
+- `nexus_subscribe_to_object` — オブジェクトを監視するサブスクライバーを追加します。
+- `nexus_unsubscribe_from_object` — オブジェクトの監視サブスクライバーを解除します。
 
-#### B2Bテナント
+#### B2B テナント (B2B Tenants)
 
-- `nexus_list_tenants` — テナントのブランド設定を取得します。
-- `nexus_create_or_update_tenant` — テナント設定をアップサートします。
+- `nexus_list_tenants` — テナントのブランディング情報を取得します。
+- `nexus_create_or_update_tenant` — テナント構成を作成/更新します。
 
-#### オーディエンスとセグメント
+#### オーディエンス & セグメント (Audiences & Segments)
 
 - `nexus_list_audiences` — 動的なオーディエンスセグメントを取得します。
-- `nexus_create_audience` — 論理ルールに基づいてセグメントを作成します。
+- `nexus_create_audience` — 論理ルールを使用してセグメントを作成します。
 
-#### ブロードキャスト
+#### ブロードキャスト (Broadcasts)
 
-- `nexus_list_broadcasts` — ブロードキャストとその状態を照会します。
-- `nexus_create_broadcast` — オーディエンスへのワークフロー送信を準備します。
-- `nexus_send_broadcast` — ブロードキャストを即座に送信します。
+- `nexus_list_broadcasts` — ブロードキャストとステータスを表示します。
+- `nexus_create_broadcast` — オーディエンスへのワークフロー送信を設定します。
+- `nexus_send_broadcast` — ブロードキャストを即座に配信します。
 
-#### コンテンツとレイアウト
+#### コンテンツ & レイアウト (Content & Layouts)
 
-- `nexus_list_layouts` — 共有メールレイアウトを取得します。
+- `nexus_list_layouts` — メールの HTML ラッパーレイアウトを取得します。
 - `nexus_create_or_update_layout` — 共有メールレイアウトを作成します。
-- `nexus_list_translations` — 翻訳辞書とローカル言語を表示します。
-- `nexus_upsert_translation` — ローカル言語のキー値翻訳辞書をアップサートします。
+- `nexus_list_translations` — ローカライズバンドルをリストします。
+- `nexus_upsert_translation` — ローカライズのキー値辞書を作成または更新します。
 
-#### プロダクト内ガイド
+#### アプリ内ガイド (In-Product Guides)
 
-- `nexus_list_guides` — プロダクト内ガイド（バナー、モーダル、ツールチップ）をリスト表示します。
-- `nexus_get_guide` — ガイドの設計スキーマを取得します。
-- `nexus_create_or_update_guide` — ガイド属性をアップサートします。
+- `nexus_list_guides` — アプリ内バナー/モーダル/ツールチップの設定をリストします。
+- `nexus_get_guide` — ガイドのレイアウトスキーマを取得します。
+- `nexus_create_or_update_guide` — ガイド属性を作成/更新します。
 
-#### スケジュールとシステム
+#### スケジュール & システム (Schedules & System)
 
-- `nexus_list_schedules` — アクティブな反復cronワークフローをリスト表示します。
-- `nexus_check_health` — APIとの接続状態を確認します。
+- `nexus_list_schedules` — アクティブな定期実行 cron ワークフローを表示します。
+- `nexus_check_health` — API 接続ステータスを確認します。
 
 ---
 
 ### 2. リソース (Resources)
 
-リソースは、AIモデルに読み取り可能なコンテキストドキュメントを提供します：
+リソースは、読み取り専用のコンテキストドキュメントを AI モデルに提供します。
 
-- `nexus://docs/integration-guide` — Node.jsのクイックスタート。
-- `nexus://docs/step-types` — delay、digest、channel、およびhttpFetchステップのリファレンススキーマ。
-- `nexus://docs/channels` — サポートされているチャネルと必須の連絡先フィールド。
-- `nexus://workflows/{name}` — アクティブなワークフローの設定JSON。
+- `nexus://docs/integration-guide` — Node.js のクイックスタート例。
+- `nexus://docs/step-types` — delay、digest、channel、および httpFetch の参照スキーマ。
+- `nexus://docs/channels` — サポートされているチャネルと必要な連絡先フィールド。
+- `nexus://workflows/{name}` — 構成されたワークフローのライブ JSON スキーマ。
 
 ---
 
 ### 3. プロンプト (Prompts)
 
-プロンプトは、モデルがタスクを構造化するのに役立つ事前構成されたテンプレートです：
+プロンプトは、モデルがタスクを調整するのに役立つ事前構成されたテンプレートとして機能します。
 
-- `setup-transactional-workflow` — チャネルフォールバックと遅延を備えたトランザクションフローの設計を支援します。
-- `setup-digest-workflow` — 通知のバッチ処理とインapp/メールダイジェストを準備します。
-- `setup-escalation-workflow` — 優先度に基づいてエスカレーションチェーン (`in-app` → `email` → `SMS`) を作成します。
-- `setup-object-fanout` — オブジェクトの作成、購読者の追加、およびワークフローのトリガーを行います。
-- `debug-delivery` — ログと優先設定を使用して、失敗した配信をデバッグするようにモデルをガイドします。
+- `setup-transactional-workflow` — チャネルフォールバックと遅延を備えたトランザクションパスの設計を支援します。
+- `setup-digest-workflow` — 通知のバッチ処理とメール/アプリ内の要約の構造を作成します。
+- `setup-escalation-workflow` — 優先度に基づいてエスカレーションチェーン（`アプリ内` → `メール` → `SMS`）を作成します。
+- `setup-object-fanout` — オブジェクトを作成し、サブスクライバーを追加して、ワークフローをトリガーします。
+- `debug-delivery` — ログ ID と環境設定から失敗した配信をデバッグするようにモデルを案内します。
 
 ---
 
@@ -168,4 +168,4 @@ description: "@nexus-signal/mcp-server — Nexusのツール、リソース、�
 
 - [Nexus CLI](/docs/sdk/devtools/cli)
 - [Management API](/docs/api/management)
-- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
+- [ワークフロー・アズ・コード](/docs/sdk/workflow/workflow-as-code)

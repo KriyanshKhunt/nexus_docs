@@ -1,20 +1,67 @@
 ---
-title: コンセプト
-description: Nexus Signal の基本概念 — アーキテクチャ、BYOP、ワークフロー、配信パイプライン。
+title: コンセプト概要
+description: Nexus Signal のコア設計原則 — アーキテクチャ、BYOP、ワークフロー、および配信パイプラインについて理解します。
 ---
 
-機能や API に深入りする前に、これらのコンセプトが **Nexus Signal の設計方法**とその動作理由を説明します。
+# コンセプト概要
+
+API や SDK を統合する前に、**Nexus Signal がどのように設計されているか**、および通知配信がどのようにスケールするかを理解することが重要です。
+
+Nexus は、テンプレート、チャンネル、および配信コストを完全に制御できるように設計された、イベント駆動型で疎結合なパターンに基づいて構築されています。
+
+---
 
 <Cards>
-  <Card title="アーキテクチャ" href="/docs/platform/concepts/architecture" description="API、キュー、ワーカー、WebSocket ゲートウェイ。" />
-  <Card title="BYOP" href="/docs/platform/concepts/byop" description="あなたのキー、あなたの請求、手数料ゼロ。" />
-  <Card title="ワークフロー" href="/docs/platform/concepts/workflows" description="キャンバスノードとステップ実行。" />
-  <Card title="配信パイプライン" href="/docs/platform/concepts/delivery-pipeline" description="トリガー後に何が起こるか。" />
+  <Card
+    title="アーキテクチャ"
+    href="/docs/platform/concepts/architecture"
+    description="Express API、Redis キュー、バックグラウンドワーカー、および WebSocket について学びます。"
+  />
+  <Card
+    title="BYOP モデル"
+    href="/docs/platform/concepts/byop"
+    description="独自の通信事業者の資格情報を持ち込むことで、手数料やベンダーロックインを回避できる理由。"
+  />
+  <Card
+    title="ワークフロー"
+    href="/docs/platform/concepts/workflows"
+    description="ステップツリーノード、遅延ステップ、スロットル、および条件ロジックについて理解します。"
+  />
+  <Card
+    title="配信パイプライン"
+    href="/docs/platform/concepts/delivery-pipeline"
+    description="イベントトリガーの取り込みからプロバイダーコールバックまでのライフサイクルを追跡します。"
+  />
 </Cards>
 
-## 基本原則
+---
 
-1. **デフォルトで非同期** — トリガーはミリ秒で返す；ワーカーがプロバイダーを処理
-2. **BYOP** — あなたのキー、あなたの請求、あなたのデータ
-3. **マルチテナント分離** — 組織、環境、暗号化されたプロバイダー認証情報
-4. **観測可能な配信** — 取り込みからキャリアレスポンスまでの全ステップをログ記録
+## 設計の柱
+
+Nexus Signal は、次の **4つの設計原則** に基づいて構築されています。
+
+### 1. 非同期のイベント駆動型処理
+
+バックエンドの処理速度を高速に維持するために、イベントの取り込みと配信の実行は分離されています。REST API は **10ミリ秒未満**でイベントペイロードを検証してキューに入れ、即座に `202 Accepted` を返します。テンプレートのコンパイルやサードパーティのプロバイダー API の呼び出しなどの重い処理は、専用のワーカーで非同期に実行されます。
+
+### 2. Bring Your Own Provider (BYOP)
+
+Nexus は、通信事業者の回線を再販しません。独自の SendGrid、Twilio、Resend、または AWS SNS の API 資格情報を直接接続します。通信事業者への支払いは実費のみとなり、従来の通知エンジンのようなメッセージごとのマークアップ手数料を回避できます。
+
+### 3. マルチテナントの企業分離
+
+Nexus は B2B マルチテナンシーを強力にサポートしています。ユーザーの環境設定、メールレイアウトのスタイル、アプリ内ベル、さらには配信ルーティングルールを、個々の顧客組織（テナント）ごとにスコープ設定できます。
+
+### 4. エンドツーエンドの観測可能性
+
+通知のすべてのライフサイクル状態（`Ingested` → `Queued` → `Processing` → `Dispatched` → `Delivered` → `Read` または `Failed`）は、正確なタイムスタンプテレメトリで追跡されます。これにより、配信エラーやプロバイダーの遅延を簡単に監査できます。
+
+---
+
+## 統合されたアプリケーションメッセージングモデル
+
+標準のイベントトリガーにとどまらず、Nexus は複数のアプリケーションメッセージングチャンネルを単一のコントロールプレーンに統合します。
+
+- **[オブジェクトと購読](/docs/platform/features/objects-subscriptions)**: ワークスペース、プロジェクト、Slack チャンネル、ドキュメントボードなどの非ユーザーエンティティに通知配信のスコープを設定し、監視しているサブスクライバーへのファンアウト配信を自動的に処理します。
+- **[ブロードキャストとキャンペーン](/docs/platform/features/broadcasts)**: チームメンバーがダッシュボードから直接、マーケティングやシステムの案内を特定のオーディエンスに配信できるようにします。
+- **[アプリ内ガイドとバナー](/docs/platform/features/guides)**: リアルタイム WebSocket フィードを介して、ターゲットユーザーに直接バナー、トーストメッセージ、およびモーダルプロンプトを配信します。

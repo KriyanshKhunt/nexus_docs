@@ -1,48 +1,38 @@
 ---
 title: React SDK
-description: "@nexus-signal/react — 通知ベル、受信箱、設定マトリクス。"
+description: '@nexus-signal/react — 通知ベル、インボックス、および環境設定マトリクス。'
 ---
 
-アプリ内通知とサブスクライバー設定のためのドロップイン React コンポーネント。
+# React SDK
+
+`@nexus-signal/react` パッケージは、通知センター、環境設定メニュー、およびトーストプロンプトを React アプリに埋め込むための、すぐに使える UI コンポーネントと React フックを提供します。
+
+---
 
 ## インストール
 
+React SDK をそのピア依存関係（peer dependencies）と一緒にインストールします。
+
 <Tabs items={['npm', 'pnpm', 'yarn']}>
-  <Tab value="npm">
-
-```bash
-npm install @nexus-signal/react socket.io-client
-```
-
-  </Tab>
-  <Tab value="pnpm">
-
-```bash
-pnpm add @nexus-signal/react socket.io-client
-```
-
-  </Tab>
-  <Tab value="yarn">
-
-```bash
-yarn add @nexus-signal/react socket.io-client
-```
-
-  </Tab>
+  <Tab value="npm">```bash npm install @nexus-signal/react socket.io-client ```</Tab>
+  <Tab value="pnpm">```bash pnpm add @nexus-signal/react socket.io-client ```</Tab>
+  <Tab value="yarn">```bash yarn add @nexus-signal/react socket.io-client ```</Tab>
 </Tabs>
+
+---
 
 ## NexusProvider
 
-アプリ（または認証済みレイアウト）をラップします:
+React ツリーを `NexusProvider` で包み、ワークスペースのコンテキストを構成します。キーが正しく入力されるように、このラッパーは認証用レイアウトの下に配置してください。
 
 ```tsx title="app/layout.tsx"
-import { NexusProvider } from "@nexus-signal/react";
+import { NexusProvider } from '@nexus-signal/react';
 
-export function AppShell({ user, hmac }: { user: User; hmac: string }) {
+export function RootLayout({ children, user, hmac }: RootProps) {
   return (
     <NexusProvider
-      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!}
-      subscriberId={user.id}
+      publicKey={process.env.NEXT_PUBLIC_NEXUS_PUBLIC_KEY!} // pk_dev_... または pk_prd_...
+      subscriberId={user.externalId}
       hmacSignature={hmac}
       backendUrl="https://api.nexussignal.dev"
     >
@@ -52,132 +42,236 @@ export function AppShell({ user, hmac }: { user: User; hmac: string }) {
 }
 ```
 
+### プロバイダー構成
+
 <TypeTable
   type={{
     publicKey: {
-      type: "string",
-      description:
-        "環境公開キー（pk_dev_、pk_prd_ などで始まる）。必須。",
+      type: 'string',
+      description: '環境のパブリックキー（pk_dev_、pk_prd_ などで始まります）。必須。',
     },
     subscriberId: {
-      type: "string",
-      description:
-        "ワークフロートリガーで使用するのと同じ一意のサブスクライバー externalId。必須。",
+      type: 'string',
+      description: 'バックエンドのワークフロートリガーペイロードと一致する一意の受信者 ID。必須。',
     },
     hmacSignature: {
-      type: "string",
-      description:
-        "セキュリティのためバックエンドで生成された HMAC 署名。必須。",
+      type: 'string',
+      description: 'ID のなりすましを防ぐためにサーバー側で計算された HMAC-SHA256 hex 署名。必須。',
     },
     backendUrl: {
-      type: "string",
-      default: "https://api.nexussignal.dev",
+      type: 'string',
+      default: 'https://api.nexussignal.dev',
       description:
-        "Nexus プラットフォーム API ベース URL のエンドポイントオリジン（apiBaseUrl プロパティでも設定可能）。",
+        'Nexus プラットフォームのエンドポイントのオリジン。ローカルサンドボックス用にオーバーライド可能です。',
     },
   }}
 />
 
-## 通知ベル
+---
+
+## コンポーネント群
+
+Radix UI をベースにした、事前にスタイルが適用されたコンポーネントをレイアウトにマウントします。
+
+### 1. 通知センターベル (Notification Center Bell)
+
+リアルタイムの WebSocket リスナー、点滅する未読バッジ、およびポップオーバーのフィードリストを備えた、標準的な通知ベルをレンダリングします。
 
 ```tsx title="components/header.tsx"
-import { NotificationCenterBell } from "@nexus-signal/react";
+import { NotificationCenterBell } from '@nexus-signal/react';
 
-<header>
-  <NotificationCenterBell position="bottom-end" variant="ghost" />
-</header>;
+export function Header() {
+  return (
+    <header className="flex justify-between items-center px-4 py-2 border-b">
+      <h3>My Dashboard</h3>
+      <NotificationCenterBell position="bottom-end" variant="ghost" />
+    </header>
+  );
+}
 ```
 
-- WebSocket によるリアルタイム更新と未読バッジ
-- 既読、アーカイブアクション
-- クロスデバイス既読同期
+### 2. フルページインボックス (Full-Page Inbox)
 
-## 通知受信箱
-
-日付グループと無限スクロールを備えたフルページフィード:
+日付ヘッダー、既読/アーカイブアクション、および無限スクロールを備えた完全なフィードレイアウトを提供します。
 
 ```tsx title="pages/notifications.tsx"
-import { NotificationInbox } from "@nexus-signal/react";
+import { NotificationInbox } from '@nexus-signal/react';
 
-<NotificationInbox />;
+export default function NotificationsPage() {
+  return (
+    <main className="max-w-2xl mx-auto py-8">
+      <h2>Your Notifications</h2>
+      <NotificationInbox />
+    </main>
+  );
+}
 ```
 
-ページネーション付きの `GET /v1/sdk/notifications`（`hasMore`、`loadMore`）を使用します。
+特定のトピックタグ（例：請求書明細、アラートなど）のみにメッセージを制限する場合：
 
-## 設定マトリクス
+```tsx
+<NotificationInbox tag="billing" maxItems={50} />
+```
+
+### 3. 環境設定マトリクス (Preferences Matrix)
+
+サブスクライバーがトピックごとに通知チャネルを制御するための、オプトイン/オプトアウトの切り替え（トグル）メニューを表示します。
 
 ```tsx title="pages/settings.tsx"
-import { SubscriberPreferenceMatrix } from "@nexus-signal/react";
+import { SubscriberPreferenceMatrix } from '@nexus-signal/react';
 
-<SubscriberPreferenceMatrix variant="borderless" groupByTopic />;
+export default function Settings() {
+  return (
+    <section className="p-6 bg-card rounded-md">
+      <h4>Notification Channels</h4>
+      <SubscriberPreferenceMatrix variant="borderless" />
+    </section>
+  );
+}
 ```
 
-ワークフローイベントまたは**トピック**をチャンネルチェックボックスに対してレンダリングします。変更は SDK 設定 API を通じて永続化されます。
+---
 
-## useNotifications フック
+## カスタムレイアウト用フック (`useNotifications`)
 
-```tsx title="components/notification-list.tsx"
-import { useNotifications } from "@nexus-signal/react";
+カスタムレイアウトを構築する場合は、ヘッドレス状態のフックを使用します。
 
-const { items, unread, status, loadMore, hasMore, markRead, markAllRead } =
-  useNotifications();
+```tsx title="components/custom-inbox.tsx"
+import { useNotifications } from '@nexus-signal/react';
+
+export function CustomInbox() {
+  const { items, unread, status, loadMore, hasMore, markRead } = useNotifications();
+
+  return (
+    <div>
+      <p>
+        Unread: {unread} | Connection: {status}
+      </p>
+      <div className="space-y-2">
+        {items.map((msg) => (
+          <div
+            key={msg.logId}
+            className={`p-3 border rounded ${msg.read ? 'bg-muted' : 'font-bold'}`}
+            onClick={() => msg.logId && markRead(msg.logId)}
+          >
+            <h5>{msg.title}</h5>
+            <p>{msg.body}</p>
+          </div>
+        ))}
+      </div>
+      {hasMore && <button onClick={loadMore}>Load More</button>}
+    </div>
+  );
+}
 ```
+
+### フックのプロパティ
 
 <TypeTable
   type={{
     items: {
-      type: "InAppNotification[]",
-      description: "現在取得済みのアプリ内通知オブジェクトの配列。",
+      type: 'InAppNotification[]',
+      description: 'アプリ内通知レコードのリアクティブな配列。',
     },
     unread: {
-      type: "number",
-      description: "未読かつアーカイブされていない通知のカウンター。",
+      type: 'number',
+      description: '未読かつ未アーカイブのメッセージ数。',
     },
     status: {
       type: "'connected' | 'disconnected'",
-      description: "現在のリアルタイム WebSocket 接続状態。",
+      description: '現在のリアルタイム WebSocket 接続状態。',
     },
     hasMore: {
-      type: "boolean",
-      description: "ロード可能な過去の通知があるかどうかを示します。",
+      type: 'boolean',
+      description: 'データベースに追加の過去レコードが存在するかどうかを示します。',
     },
     loadingMore: {
-      type: "boolean",
-      description:
-        "ページ取得リクエストが現在実行中かどうかを示すフラグ。",
+      type: 'boolean',
+      description: '現在、追加読み込みのクエリが実行中である場合に true になります。',
     },
     loadMore: {
-      type: "() => Promise<void>",
-      description:
-        "次のページの通知を取得し、アイテムフィードに追加します。",
+      type: '() => Promise<void>',
+      description: '次のページの通知を非同期でフェッチして追加します。',
     },
     markRead: {
-      type: "(logId: string) => Promise<void>",
-      description: "特定の通知を既読にします。",
+      type: '(logId: string) => Promise<void>',
+      description: '特定の通知を既読としてマークし、デバイス間で状態を同期します。',
     },
     markAllRead: {
-      type: "() => Promise<void>",
-      description: "現在のすべての通知を既読にします。",
+      type: '() => Promise<void>',
+      description: '現在のすべての通知を既読としてマークします。',
     },
     archive: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "特定の通知をアーカイブし、既読にしてアクティブな未読リストから削除します。",
+      type: '(logId: string) => Promise<void>',
+      description: '通知を未読リストから非表示にし、アーカイブに移動します。',
     },
     remove: {
-      type: "(logId: string) => Promise<void>",
-      description:
-        "データベースとフィードから通知を完全に削除します。",
+      type: '(logId: string) => Promise<void>',
+      description: 'データベースから通知レコードを永久に削除します。',
     },
   }}
 />
 
-## テーマ設定
+---
 
-コンポーネントは Tailwind と互換性のある CSS 変数（`--nexus-theme-*`）を使用します。ブランドに合わせてグローバル CSS でオーバーライドしてください。
+## ガイド検出用フック (`useGuides`)
 
-## セキュリティ
+React アプリケーション内でバナーのトリガーやツールチップを動的に管理します。
 
-<Callout type="error">
-  すべてのセッションでサーバー上で `hmacSignature` を生成してください。フロントエンドコードに `secretKey` を絶対に置かないでください。
-</Callout>
+```tsx
+import { useGuides } from '@nexus-signal/react';
+
+export function AppGuideSlots() {
+  const { guides, markSeen, dismiss } = useGuides({
+    pathname: window.location.pathname,
+  });
+
+  return guides.map((guide) => (
+    <div key={guide.id} className="p-4 border border-blue-200 bg-blue-50 rounded">
+      <h6>{guide.content.title}</h6>
+      <p>{guide.content.body}</p>
+      <button onClick={() => markSeen(guide.id)}>Got it</button>
+      <button onClick={() => dismiss(guide.id)}>Dismiss</button>
+    </div>
+  ));
+}
+```
+
+---
+
+## スタイリング & テーマのカスタマイズ
+
+コンポーネントは、カスタムスタイルやダークモードの切り替えに対応するインライン CSS 変数を使用しています。グローバル CSS スタイルシートでこれらをオーバーライドしてください。
+
+```css title="styles/global.css"
+:root {
+  /* パネル背景 */
+  --nexus-theme-panel: #ffffff;
+  --nexus-theme-panel-muted: #f9fafb;
+
+  /* タイポグラフィ */
+  --nexus-theme-text: #111827;
+  --nexus-theme-muted: #6b7280;
+
+  /* 境界線 & ライン */
+  --nexus-theme-border: #e5e7eb;
+  --nexus-theme-border-subtle: #f3f4f6;
+
+  /* アクセントカラー (未読ドット、チェックボックスなど) */
+  --nexus-theme-accent: #2563eb;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #f9fafb;
+}
+
+[data-theme='dark'] {
+  --nexus-theme-panel: #1f2937;
+  --nexus-theme-panel-muted: #111827;
+  --nexus-theme-text: #f9fafb;
+  --nexus-theme-muted: #9ca3af;
+  --nexus-theme-border: #374151;
+  --nexus-theme-border-subtle: #1f2937;
+  --nexus-theme-accent: #3b82f6;
+  --nexus-theme-accent-foreground: #ffffff;
+  --nexus-theme-muted-bg: #111827;
+}
+```
