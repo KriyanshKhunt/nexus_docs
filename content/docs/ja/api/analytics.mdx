@@ -1,49 +1,138 @@
 ---
 title: 分析 API
-description: ダッシュボード分析 — 概要、トラフィック、レイテンシ、パイプライン健全性、コスト。
+description: ダッシュボード分析エンドポイント — 概要カード、チャネル別トラフィック、パイプラインレイテンシ、および支出コスト。
 ---
 
-ダッシュボード JWT + ワークスペースコンテキストが必要です。
+分析 API は、指定した環境の集約メトリクス、ログボリューム、レイテンシ時間、エラーヒートマップ、およびプロバイダーコストを取得します。
 
-## エンドポイント
+---
 
-| メソッド | パス | 説明 |
-|--------|------|-----|
-| GET | `/v1/analytics/overview` | サマリーカード — トリガー数、成功率、ROI |
-| GET | `/v1/analytics/overview/traffic` | チャンネルトラフィック時系列 |
-| GET | `/v1/analytics/overview/latency` | 取り込みから配信までのレイテンシ |
-| GET | `/v1/analytics/overview/pipeline` | パイプライン健全性フロー |
-| GET | `/v1/analytics/overview/heatmap` | プロバイダー別エラーヒートマップ |
-| GET | `/v1/analytics/overview/cost` | プロバイダー支出の内訳 |
+## 認証 & アクセス
 
-### クエリパラメータ
+- **ベースパス**: `/v1/analytics`
+- **認証**: ユーザー JWT セッショントークンが必要です。
+- **クエリパラメータ**:
+  - `environment`: `DEVELOPMENT`、`STAGING`、または `PRODUCTION`（デフォルトは `DEVELOPMENT`）。
+  - `timeframe`: 例: `24h`、`7d`、`30d`（時系列エンドポイントでサポートされます）。
 
+---
+
+## エンドポイント概要
+
+| メソッド | パス                              | 説明                                                                           |
+| :------- | :-------------------------------- | :----------------------------------------------------------------------------- |
+| `GET`    | `/v1/analytics/overview`          | 主要なダッシュボード統計（トリガー取り込み数、配信成功率、コンバージョン率）。 |
+| `GET`    | `/v1/analytics/overview/traffic`  | チャネルごとにグループ化された時系列の配信ボリューム。                         |
+| `GET`    | `/v1/analytics/overview/latency`  | エンドツーエンドの処理速度（取り込みからプロバイダー受信まで）。               |
+| `GET`    | `/v1/analytics/overview/pipeline` | パイプライン状態のルーティング成功統計。                                       |
+| `GET`    | `/v1/analytics/overview/heatmap`  | 連携プロバイダーごとにグループ化された配信エラーのグリッドデータ。             |
+| `GET`    | `/v1/analytics/overview/cost`     | プロバイダーレイヤーおよびワークフローごとの支出分析。                         |
+
+---
+
+## 概要メトリクス
+
+概要サマリーカードを取得します。
+
+```http
+GET /v1/analytics/overview?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
 ```
-?environment=PRODUCTION&timeframe=24h
-```
 
-`environment`: `DEVELOPMENT` | `STAGING` | `PRODUCTION`
-
-### コストレスポンス（抜粋）
+**レスポンスボディ:**
 
 ```json
 {
-  "totalCostUsd": 423.18,
-  "budgetUsd": 500,
-  "budgetUsedPercent": 85,
-  "budgetExceeded": false,
-  "byProvider": [
-    { "providerId": "twilio", "label": "Twilio", "count": 8200, "costUsd": 410 }
-  ],
-  "byWorkflow": [
-    { "workflowName": "auth.otp", "costUsd": 180.5 }
+  "ingestedTriggers": 12542,
+  "deliverySuccessRate": 99.42,
+  "meanLatencyMs": 348.5,
+  "conversionRoi": 8.45,
+  "environment": "PRODUCTION"
+}
+```
+
+---
+
+## トラフィック時系列データ
+
+時間ごとのトリガーボリュームを取得します。
+
+```http
+GET /v1/analytics/overview/traffic?environment=PRODUCTION&timeframe=24h
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**レスポンスボディ:**
+
+```json
+{
+  "traffic": [
+    { "timestamp": "2026-07-28T12:00:00Z", "email": 120, "sms": 45, "push": 320, "total": 485 },
+    { "timestamp": "2026-07-28T13:00:00Z", "email": 140, "sms": 38, "push": 310, "total": 488 }
   ]
 }
 ```
 
-`PUT /v1/settings/provider-costs` でプロバイダーの単価コストを設定します。
+---
 
-## 関連
+## エラーヒートマップ
+
+プロバイダーごとのエラー率を取得します：
+
+```http
+GET /v1/analytics/overview/heatmap?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**レスポンスボディ:**
+
+```json
+{
+  "heatmap": [
+    { "providerId": "twilio", "errorCount": 12, "lastErrorAt": "2026-07-28T20:45:00Z" },
+    { "providerId": "sendgrid", "errorCount": 2, "lastErrorAt": "2026-07-28T19:30:00Z" }
+  ]
+}
+```
+
+---
+
+## 支出分析（コスト概要）
+
+設定されたプロバイダーの重み付けに基づいて、予算の使用状況とチャネルコストを分析します：
+
+```http
+GET /v1/analytics/overview/cost?environment=PRODUCTION
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**レスポンスボディ:**
+
+```json
+{
+  "totalCostUsd": 423.18,
+  "budgetUsd": 500.0,
+  "budgetUsedPercent": 84.6,
+  "budgetExceeded": false,
+  "byChannel": [
+    { "channel": "EMAIL", "costUsd": 12.18, "count": 12180 },
+    { "channel": "SMS", "costUsd": 411.0, "count": 27400 }
+  ],
+  "byProvider": [
+    { "providerId": "twilio", "label": "Twilio", "count": 27400, "costUsd": 411.0 },
+    { "providerId": "sendgrid", "label": "SendGrid", "count": 12180, "costUsd": 12.18 }
+  ],
+  "byWorkflow": [
+    { "workflowName": "auth.otp", "costUsd": 411.0 },
+    { "workflowName": "billing.invoice", "costUsd": 12.18 }
+  ]
+}
+```
+
+---
+
+## 関連リンク
 
 - [コスト分析機能](/docs/platform/features/cost-analytics)
-- [監査ログ](/docs/platform/concepts/delivery-pipeline) — 配信ごとの詳細
+- [コスト削減](/docs/platform/features/cost-reduction) — 支出抑制戦略ガイド
+- [監査ログ API](/docs/api/audit-logs) — 配信ごとの詳細実行履歴

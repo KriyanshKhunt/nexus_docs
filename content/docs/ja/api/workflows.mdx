@@ -1,70 +1,177 @@
 ---
 title: ワークフロー API
-description: POST /v1/workflows/trigger — バックエンドからワークフローイベントを取り込みます。
+description: サーバー側でのワークフローのトリガーおよび定義の同期 — POST /v1/workflows/trigger および /v1/workflows/sync。
+---
+
+ワークフロー（Workflows）は、テンプレートの選択、条件分岐、コスト管理、および配信ルーティングを制御する論理マップです。これらのエンドポイントは、サーバー間通信用のシークレットキー認証（`sk_*`）を使用します。
+
+---
+
+## エンドポイント概要
+
+| メソッド | パス                    | 認証スコープ                      | 説明                                                                       |
+| :------- | :---------------------- | :-------------------------------- | :------------------------------------------------------------------------- |
+| `POST`   | `/v1/workflows/trigger` | サーバーシークレットキー (`sk_*`) | ワークフローを実行するためのトリガーイベントを取り込みます（非同期処理）。 |
+| `POST`   | `/v1/workflows/sync`    | サーバーシークレットキー (`sk_*`) | ワークフローのスキーマ定義を同期します（Workflow-as-code）。               |
+
+ダッシュボード管理用のルート（作成、削除、ビジュアル編集など）には、JWT 認証されたダッシュボード用パス `/v1/workflows/dashboard` を使用します。
+
 ---
 
 ## ワークフローのトリガー
 
+トリガーペイロードを取り込み、1人以上の受信者に対してワークフローを実行します。
+
 ```http
 POST /v1/workflows/trigger
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 Content-Type: application/json
-Idempotency-Key: optional-unique-key
+Idempotency-Key: opt-idempotency-uuid-here
 ```
 
-### リクエストボディ
+### リクエストボディのフィールド
+
+- `workflowName`: string (必須)。ワークフローの識別システム名（例: `order.shipped`）。
+- `tenant`: string (任意)。テンプレートのブランド表示に使用する B2B テナントの外部識別子。
+- `recipients`: array of objects (必須、最低 1 個)。配信対象のサブスクライバー（下記参照）。
+- `data`: object (任意)。Handlebars テンプレートや条件分岐ステップ内で補間・評価される、動的なキー・値のペイロードコンテキスト。
+
+### 受信者（recipients）スキーマの構造
+
+サブスクライバー登録エンドポイントとは異なり、トリガーエンドポイントは受信者オブジェクトの中に `email` や `phoneNumber` などの直接的な連絡先情報を**受け入れません**。受信者エントリは、システムにあらかじめ登録されている既存のサブスクライバーを参照する必要があります：
 
 ```json
 {
-  "workflowName": "order.shipped",
+  "workflowName": "invoice.sent",
   "recipients": [
     {
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "timezone": "America/Los_Angeles",
-      "locale": "ja"
+      "timezone": "America/New_York",
+      "locale": "es-MX",
+      "slackWebhookUrl": "https://hooks.slack.com/services/T0/B0/X"
     }
   ],
   "data": {
-    "orderId": "ORD-9912",
-    "trackingUrl": "https://carrier.com/track/9912"
+    "invoiceId": "INV-1092"
   }
 }
 ```
 
-### レスポンス — 202 Accepted
+#### 受信者のプロパティフィールド：
+
+- `externalId`: string。サブスクライバープロファイルに一致するアプリケーション側のユーザー ID。
+- `subscriberId`: string。サブスクライバープロファイルのデータベース UUID（`externalId` または `subscriberId` のいずれかを使用）。
+- `timezone`: string (任意)。有効な IANA タイムゾーン名。渡された場合、データベース内のサブスクライバーのタイムゾーンが更新されます。
+- `locale`: string (任意)。有効な BCP 47 ロケール（例: `es-MX`）。このトリガーイベントにおける翻訳の上書き指定として使用されます（サブスクライバープロファイルのデフォルトロケールは**書き換えられません**）。
+- `slackWebhookUrl` / `discordWebhookUrl` / `teamsWebhookUrl`: string (任意)。カスタムのチャット Webhook URL。渡された場合、サブスクライバーの接続設定に自動的に保存されます。
+
+---
+
+## オブジェクトのファンアウトトリガー
+
+特定のデータエンティティ（オブジェクト）を現在購読（監視）しているすべてのサブスクライバーに通知するには、`recipients` フィールドにオブジェクトの `collection` と `id` を代わりに渡します：
+
+```json
+{
+  "workflowName": "project.milestone",
+  "recipients": [
+    {
+      "collection": "projects",
+      "id": "proj_alpha"
+    }
+  ],
+  "data": {
+    "milestoneName": "API Beta launch"
+  }
+}
+```
+
+トリガーサービスは内部的にオブジェクトの監視者リストを展開し、解決されたサブスクライバープロファイルごとに配信をキューに入れます。
+
+---
+
+## レスポンスペイロード
+
+### 202 Accepted（キュー登録に成功）
 
 ```json
 {
   "accepted": true,
-  "workflow": "order.shipped",
+  "workflow": "invoice.sent",
   "environment": "PRODUCTION",
   "results": [
     {
-      "logId": "uuid",
-      "subscriberId": "uuid",
+      "logId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "subscriberId": "550e8400-e29b-41d4-a716-446655440000",
       "status": "queued"
     }
   ],
-  "billing": { "quotaStatus": "ok" }
+  "billing": {
+    "quotaStatus": "ok",
+    "triggerCount": 1284,
+    "limit": 100000
+  }
 }
 ```
 
-### エラーコード
+### 400 Bad Request（検証エラー）
 
-| ステータス | 意味 |
-|--------|----|
-| 400 | バリデーション失敗 |
-| 401 | 無効または不足しているシークレットキー |
-| 404 | ワークフローが見つかりません |
-| 409 | ワークフローが無効化されています |
-| 402/429 | クォータ超過またはレート制限 |
+受信者に関する制約が満たされていない場合（例: `externalId` と `subscriberId` の両方が未指定）、またはタイムゾーン/ロケールの値が無効な場合：
 
-## ダッシュボード ワークフロー CRUD
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "fieldErrors": {
+      "recipients": ["Each recipient needs subscriberId or externalId"]
+    }
+  }
+}
+```
 
-`/v1/workflows/dashboard` 配下の認証済みダッシュボードルートで、作成・更新・削除・テストトリガー・A/B 統計が利用可能です。
+### 404 Not Found（ワークフローまたはサブスクライバーが見つかりません）
 
-## Node SDK
+指定されたワークフロー名が存在しない場合：
 
-型付きトリガー、リトライ、サーキットブレーカーには [`@nexus-signal/node`](/docs/sdk/backend/node) をお勧めします。
+```json
+{ "error": "Workflow \"invoice.sent\" not found" }
+```
+
+受信者がデータベースで見つからない場合、その受信者スロットは `results` リストにスキップされたインジケータを返します：
+
+```json
+{
+  "accepted": true,
+  "workflow": "invoice.sent",
+  "environment": "PRODUCTION",
+  "results": [
+    {
+      "recipient": { "externalId": "non_existent_user" },
+      "status": "skipped",
+      "reason": "subscriber_not_found"
+    }
+  ]
+}
+```
+
+---
+
+## ワークフローの同期
+
+ワークフローの構造（ノード、チャネル、トリガー、オプション）をコードで定義し、デプロイ時にそのレイアウトを同期します：
+
+```http
+POST /v1/workflows/sync
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+```
+
+完全な JSON 構成については、[Workflow-as-code](/docs/sdk/workflow/workflow-as-code) を参照してください。
+
+---
+
+## 関連リンク
+
+- [サブスクライバー API](/docs/api/subscribers) — ユーザープロファイルは最初にあらかじめ登録しておく必要があります。
+- [オブジェクト & 購読 API](/docs/api/objects) — 一斉配信（ファンアウト）グループの管理
+- [冪等送信](/docs/platform/getting-started/authentication) — 重複処理の防止

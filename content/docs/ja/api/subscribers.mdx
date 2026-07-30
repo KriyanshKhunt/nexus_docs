@@ -1,99 +1,194 @@
 ---
 title: サブスクライバー API
-description: サブスクライバー管理のダッシュボードエンドポイント — 作成・更新・エクスポート・GDPR 削除。
+description: サブスクライバーを管理するためのダッシュボードエンドポイント — 一覧取得、作成、更新、エクスポート、および抹消。
 ---
 
-ダッシュボード JWT + ワークスペースコンテキストが必要です。
+サブスクライバー（Subscribers）は、通知を受信する対象となる宛先プロファイルです。この API を使用すると、ダッシュボード管理者は、チャネル接続や配信履歴を含むサブスクライバーのデータの照会、作成、更新、および管理を行えます。
 
-## エンドポイント
+---
 
-| メソッド | パス | 説明 |
-|--------|------|-----|
-| GET | `/v1/subscribers` | サブスクライバー一覧（ページネーション・検索対応） |
-| POST | `/v1/subscribers` | サブスクライバーを作成 |
-| GET | `/v1/subscribers/:id` | ID でサブスクライバーを取得 |
-| PUT | `/v1/subscribers/:id` | サブスクライバーを更新 |
-| DELETE | `/v1/subscribers/:id` | GDPR 削除 — サブスクライバーと配信履歴を削除 |
-| GET | `/v1/subscribers/:id/export` | サブスクライバーデータのエクスポート（GDPR） |
-| GET | `/v1/subscribers/:id/engagement` | エンゲージメントモデル — スマート送信時刻データ |
+## 認証 & アクセス
 
-ロール: 作成・更新・削除には `OWNER`、`ADMIN`、または `DEVELOPER` が必要です。
+サブスクライバーの情報は、認証方法が異なる 2 つのパスからアクセスできます：
 
-## サブスクライバー一覧
+- **サーバー間 / SDK 用（`sk_*` 認証）**: ルートパスは `/v1/management/subscribers`
+- **ダッシュボード画面用（JWT 認証）**: ルートパスは `/v1/subscribers`
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)              | ダッシュボード用パス (JWT)       | 説明                                                                   |
+| :------- | :------------------------------- | :------------------------------- | :--------------------------------------------------------------------- |
+| `GET`    | `/v1/management/subscribers`     | `/v1/subscribers`                | サブスクライバーの一覧を取得します（ページネーション、検索対応）。     |
+| `GET`    | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | サブスクライバーのプロファイルを取得します。                           |
+| `POST`   | `/v1/management/subscribers`     | `/v1/subscribers`                | サブスクライバーを作成または特定（Upsert）します。                     |
+| `DELETE` | `/v1/management/subscribers/:id` | `/v1/subscribers/:id`            | GDPR 抹消 — プロファイルとログを削除します。                           |
+| `GET`    | —                                | `/v1/subscribers/:id/export`     | GDPR エクスポート — 保存されているすべてのユーザーデータを取得します。 |
+| `GET`    | —                                | `/v1/subscribers/:id/engagement` | エンゲージメント時間帯ヒートマップのスコアを取得します。               |
+
+---
+
+## サブスクライバーの一覧取得
+
+環境内のサブスクライバープロファイルのリストを取得します。
 
 ```http
-GET /v1/subscribers?environment=PRODUCTION&page=1&limit=50&search=alex
-Authorization: Bearer <jwt>
+GET /v1/subscribers?environment=PRODUCTION&page=1&limit=25&search=alex
+Authorization: Bearer <jwt_dashboard_token>
 ```
+
+- `environment`: `DEVELOPMENT`、`STAGING`、または `PRODUCTION`（デフォルトは `DEVELOPMENT`）。
+- `search`: 名前、メールアドレス、電話番号、または外部 ID でのフィルタリング。
+- `page`: ページインデックス（デフォルトは `1`）。
+- `limit`: 1 ページあたりの取得件数制限（デフォルトは `25`、最大 `100`）。
+
+**レスポンスボディ:**
 
 ```json
 {
   "subscribers": [
     {
-      "id": "uuid",
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
       "externalId": "user_42",
-      "email": "alex@acme.io",
-      "phoneNumber": "+15551234567",
-      "locale": "ja",
-      "timezone": "Asia/Tokyo",
+      "email": "alex@example.com",
+      "phoneNumber": "+14155552671",
+      "pushTokens": ["fcm_token_123"],
+      "deviceCount": 1,
+      "preferences": {},
       "globalUnsubscribed": false,
-      "deliveryCount": 128
+      "timezone": "America/New_York",
+      "locale": "en-US",
+      "deliveryCount": 128,
+      "createdAt": "2026-07-01T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
     }
   ],
   "total": 1,
   "page": 1,
-  "limit": 50,
+  "limit": 25,
   "environment": "PRODUCTION"
 }
 ```
 
+---
+
 ## サブスクライバーの作成
+
+データベースに新しいサブスクライバーを登録します。
 
 ```http
 POST /v1/subscribers
+Authorization: Bearer <jwt_dashboard_token>
 Content-Type: application/json
-```
 
-```json
 {
+  "environmentId": "environment-uuid-here",
   "externalId": "user_42",
-  "email": "alex@acme.io",
-  "phoneNumber": "+15551234567",
-  "timezone": "Asia/Tokyo",
-  "locale": "ja",
+  "email": "alex@example.com",
+  "phoneNumber": "+14155552671",
+  "pushTokens": ["fcm_token_123"],
+  "timezone": "America/New_York",
+  "locale": "en-US",
   "preferences": {
-    "order.shipped": { "EMAIL": true, "SMS": false }
+    "billing_alerts": { "EMAIL": true, "SMS": false }
+  },
+  "channelConnections": {
+    "slackWebhookUrl": "https://hooks.slack.com/services/...",
+    "discordWebhookUrl": null,
+    "teamsWebhookUrl": null
   }
 }
 ```
 
+- `externalId`: 必須。アプリケーションのユーザー ID とマッピングされる一意の ID（最大 128 文字）。
+- `timezone`: 任意。有効な IANA タイムゾーン名（例: `America/New_York`）。
+- `locale`: 任意。有効な BCP 47 言語識別子（例: `en-US`、`ja-JP`）。
+- `phoneNumber`: 任意。有効な E.164 電話番号形式（例: `+14155552671`）。
+- `channelConnections`: 任意。`slack`、`discord`、および `teams` の直接 Webhook ルーティング URL の設定。
+
+---
+
 ## サブスクライバーの更新
 
-```http
-PUT /v1/subscribers/:id
-```
-
-`email`、`phoneNumber`、`timezone`、`locale`、`preferences`、または `globalUnsubscribed` を更新します。
-
-## GDPR エクスポート & 削除
+既存のサブスクライバーのプロファイルまたは環境設定を変更します。
 
 ```http
-GET /v1/subscribers/:id/export
-DELETE /v1/subscribers/:id
+PUT /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "email": "alex-new@example.com",
+  "globalUnsubscribed": true,
+  "preferences": {
+    "billing_alerts": { "EMAIL": false, "SMS": false }
+  }
+}
 ```
 
-エクスポートはサブスクライバープロファイルと配信履歴の JSON バンドルを返します。削除はサブスクライバーを永続的に削除し、Redis プレゼンス状態をクリアして、監査ログにエントリを書き込みます。
+_注意: 更新処理によって `externalId` または `environmentId` を変更することはできません。_
 
-## エンゲージメントデータ
+---
+
+## GDPR エクスポート & 抹消
+
+データポータビリティおよび削除オプションを提供することで、GDPR コンプライアンスを保証します。
+
+### 1. サブスクライバーデータのエクスポート
 
 ```http
-GET /v1/subscribers/:id/engagement
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/export
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-[スマート送信時刻](/docs/platform/features/smart-send-time) で使用されるチャンネル別エンゲージメントスコアを返します。
+サブスクライバーのプロファイル、チャネル接続、環境設定マトリクス、および配信履歴ログの完全な JSON パックを返します。
 
-## 関連
+### 2. サブスクライバーの抹消（完全削除）
 
-- [SDK API](/docs/api/sdk) — ブラウザ受信箱と設定
-- [多言語テンプレート](/docs/platform/features/i18n) — `locale` フィールド
-- [Node SDK](/docs/sdk/backend/node) — `locale` オーバーライドでトリガー
+```http
+DELETE /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+- サブスクライバーのプロファイル、環境設定、および接続設定を永続的に削除します。
+- そのユーザーに関連付けられているすべての配信実行ログを連鎖的に削除します。
+- サブスクライバーのオンライン状況記録（`presence:sub:<subscriberId>`）やキャッシュされた配信時間スコア（`engagement:scores:<subscriberId>`）などの Redis キーをスキャンして削除します。
+- 組織の監査ログに抹消イベントを記録します。
+
+---
+
+## エンゲージメント分析
+
+計算された時間帯別エンゲージメントスコアのヒートマップ（Smart Send-Time で使用）を取得します：
+
+```http
+GET /v1/subscribers/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/engagement
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+**レスポンスボディ:**
+
+```json
+{
+  "subscriberId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+  "timezone": "America/New_York",
+  "totalEvents": 42,
+  "optimalHour": 14,
+  "reason": "optimal",
+  "scores": {
+    "1": [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 1, 0, 5, 8, 2, 0, 1, 0, 0, 0, 0, 0, 0],
+    "2": [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 2, 6, 7, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}
+```
+
+レスポンスには、各曜日（`1` = 月曜日、`2` = 火曜日など）の 24 時間スコア配列が含まれます。
+
+---
+
+## 関連リンク
+
+- [SDK API リファレンス](/docs/api/sdk) — サブスクライバーの受信箱フィードとアップデート
+- [サブスクライバー個別 Webhook](/docs/platform/integrations/messaging-channels)
+- [Smart send-time](/docs/platform/features/smart-send-time)

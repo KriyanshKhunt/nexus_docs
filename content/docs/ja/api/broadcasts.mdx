@@ -1,64 +1,114 @@
 ---
 title: ブロードキャスト API
-description: 1回限りのオーディエンスメッセージを作成、スケジュール、および送信します。
+description: 1回限りのオーディエンスキャンペーンを作成、編集、スケジュール、およびキャンセルするためのサーバー側およびダッシュボードエンドポイント。
 ---
 
-<DashboardAuth />
+ブロードキャストを使用すると、特定のオーディエンスに対して1回限りのメッセージ（例: ニュースレター、機能リリースの通知など）を送信できます。トランザクションのトリガーとは異なり、ブロードキャストは解決されたサブスクライバープロファイルのサブセットに対して非同期で実行されます。
 
-ダッシュボードベースパス: `/v1/broadcasts`
+---
 
-管理API: `GET|POST /v1/management/broadcasts`, `POST /v1/management/broadcasts/:id/send`
+## アクセス & パス
 
-## ブロードキャストのリスト表示
+使用するキーによって、接続先のエンドポイントルートが異なります：
 
-```http
-GET /v1/broadcasts?status=COMPLETED&page=1
-Authorization: Bearer <jwt>
-```
+- **サーバー間 / SDK 用（`sk_*` 認証）**: ルートパスは `/v1/management/broadcasts`
+- **ダッシュボード画面用（JWT 認証）**: ルートパスは `/v1/broadcasts`
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)                  | ダッシュボード用パス (JWT)  | 説明                                                                 |
+| :------- | :----------------------------------- | :-------------------------- | :------------------------------------------------------------------- |
+| `GET`    | `/v1/management/broadcasts`          | `/v1/broadcasts`            | 環境内のすべてのブロードキャストの一覧を取得します。                 |
+| `POST`   | `/v1/management/broadcasts`          | `/v1/broadcasts`            | 新しい下書きまたはスケジュールされたブロードキャストを作成します。   |
+| `GET`    | —                                    | `/v1/broadcasts/:id`        | 単一のブロードキャストプロファイルを取得します。                     |
+| `PUT`    | —                                    | `/v1/broadcasts/:id`        | 下書きまたはスケジュールされたブロードキャストの詳細を更新します。   |
+| `DELETE` | —                                    | `/v1/broadcasts/:id`        | ブロードキャストを削除します。                                       |
+| `POST`   | `/v1/management/broadcasts/:id/send` | `/v1/broadcasts/:id/send`   | 下書きまたはスケジュールされたブロードキャストを即座に送信します。   |
+| `POST`   | —                                    | `/v1/broadcasts/:id/cancel` | スケジュール済み、または送信中のブロードキャストをキャンセルします。 |
+
+_注意: キャンセル（`/cancel`）は、ダッシュボードルートでのみ使用できます。_
+
+---
 
 ## ブロードキャストの作成
 
-```http
-POST /v1/broadcasts
-Authorization: Bearer <jwt>
-```
+新しいブロードキャストキャンペーンを作成します。
 
-```json
+```http
+POST /v1/management/broadcasts
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
-  "name": "Q4 Update",
-  "workflowId": "workflow-uuid",
-  "audienceId": "audience-uuid",
-  "scheduledAt": "2026-08-01T09:00:00Z"
+  "name": "Q4 Enterprise Update",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "audienceId": "771e8400-e29b-41d4-a716-446655440000",
+  "scheduledAt": "2026-11-15T09:00:00.000Z",
+  "data": {
+    "releaseVersion": "v4.2"
+  }
 }
 ```
 
-下書きの場合は `scheduledAt` を省略し、後で手動で送信します。
+- `name`: string (必須)。ダッシュボードに表示されるキャンペーン名（最大 256 文字）。
+- `workflowId`: string (必須)。各購読者に対して実行する宛先ワークフローの UUID。
+- `audienceId`: string (任意)。ターゲットとするオーディエンスセグメントの UUID。送信を実行する前に設定されている必要があります。
+- `scheduledAt`: string (任意)。ISO 8601 形式の日時文字列。省略された場合、ブロードキャストは `DRAFT` として保存されます。
+- `data`: object (任意)。すべての受信者の実行に渡される静的なキー・値のペイロードコンテキスト。
+
+---
 
 ## 即時送信
 
-```http
-POST /v1/broadcasts/:id/send
-```
-
-## キャンセル
+スケジュール設定された時刻をバイパスし、ブロードキャストの送信キューを即座に開始します：
 
 ```http
-POST /v1/broadcasts/:id/cancel
+POST /v1/management/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/send
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-## ブロードキャストのステータス
+_注意: ブロードキャストに有効なオーディエンスが割り当てられており（`audienceId`）、かつ `DRAFT` または `SCHEDULED` ステータスである必要があります。_
 
-`DRAFT` · `SCHEDULED` · `SENDING` · `COMPLETED` · `FAILED` · `CANCELLED`
+---
 
-## Node SDK
+## ブロードキャストのキャンセル
 
-```ts
-await nexus.broadcasts.create({
-  name: "Launch",
-  workflowId: "workflow-uuid",
-  audienceId: "audience-uuid",
-});
-await nexus.broadcasts.send(broadcastId);
+アクティブ（送信中）またはスケジュールされたブロードキャストキャンペーンをキャンセルします：
+
+```http
+POST /v1/broadcasts/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/cancel
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-[ブロードキャスト](/docs/platform/features/broadcasts)を参照してください。
+---
+
+## ブロードキャストのライフサイクル
+
+ブロードキャストキャンペーンは、以下のステータス状態に遷移します：
+
+- **`DRAFT`**: スケジュール時刻が設定されていない、または手動トリガーを待っている状態。編集可能です。
+- **`SCHEDULED`**: 将来の指定時刻に送信するようにスケジュールされた状態。バックグラウンドジョブが60秒ごとにポーリングし、送信期限が来ると配信を実行します。編集可能です。
+- **`SENDING`**: 現在処理中で、BullMQ 配信キューにジョブをプッシュしている状態。編集や削除はできません。
+- **`COMPLETED`**: ターゲットオーディエンスのすべてのメンバーに対して正常に発送されました。
+- **`FAILED`**: 発送中に、致命的なデータベース、Redis、またはプランの制限クォータエラーが発生しました。
+- **`CANCELLED`**: 実行前、または実行中に管理者によってキャンセルされました。
+
+---
+
+## 制限事項
+
+| 制限事項                           | 値        |
+| :--------------------------------- | :-------- |
+| 環境あたりの最大ブロードキャスト数 | 200       |
+| 名前の最大長さ                     | 256 文字  |
+| スケジュールポーリング確認の間隔   | 60 秒ごと |
+
+---
+
+## 関連リンク
+
+- [ブロードキャスト機能の概要](/docs/platform/features/broadcasts)
+- [オーディエンス API](/docs/api/audiences) — ターゲット宛先グループの定義
+- [ワークフロートリガー API](/docs/api/workflows)

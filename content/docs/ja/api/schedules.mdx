@@ -1,51 +1,133 @@
 ---
 title: スケジュール API
-description: ダッシュボードまたは SDK でスケジュール済みワークフロートリガーを作成・管理します。
+description: 定期的な cron タイマーまたは将来の 1 回限りのワークフロー配信を登録するための、サーバー側およびダッシュボードエンドポイント。
 ---
 
-## SDK ルート（シークレットキー）
+スケジュールを使用すると、独自のタスクランナーや cron デーモンをセットアップすることなく、ワークフローを自動的にトリガーできます。
+
+---
+
+## アクセス & パス
+
+Nexus は、アクセススコープに基づいてスケジュールの管理を分離しています：
+
+- **サーバー間 / SDK 用（`sk_*` 認証）**: ルートパスは `/v1/schedules/sdk`
+- **ダッシュボード画面用（JWT 認証）**: ルートパスは `/v1/schedules`
+
+---
+
+## SDK エンドポイント概要（`sk_*` 認証）
+
+| メソッド | パス                    | 説明                                                                         |
+| :------- | :---------------------- | :--------------------------------------------------------------------------- |
+| `GET`    | `/v1/schedules/sdk`     | すべてのスケジュールを一覧取得します（ページネーション対応）。               |
+| `POST`   | `/v1/schedules/sdk`     | 定期実行または 1 回限りのスケジュールを作成します。                          |
+| `PUT`    | `/v1/schedules/sdk/:id` | スケジュールのプロパティ、アクティブ状態、またはタイミング設定を更新します。 |
+| `DELETE` | `/v1/schedules/sdk/:id` | スケジュールを削除します。                                                   |
+
+---
+
+## スケジュールの作成
+
+環境内にスケジュールを登録します。
 
 ```http
-Authorization: Bearer sk_prd_…
-```
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-| メソッド | パス | アクション |
-|--------|------|---------|
-| GET | `/v1/schedules/sdk` | スケジュール一覧 |
-| POST | `/v1/schedules/sdk` | スケジュールを作成 |
-| PATCH | `/v1/schedules/sdk/:id` | スケジュールを更新 |
-| DELETE | `/v1/schedules/sdk/:id` | スケジュールを削除 |
-
-### 作成ボディ
-
-```json
 {
-  "name": "週次レポート",
-  "workflowId": "uuid",
+  "name": "Weekly Audit Report",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
   "cronExpression": "0 9 * * 1",
-  "timezone": "Asia/Tokyo",
-  "recipients": [{ "externalId": "user_1" }],
-  "data": { "reportType": "weekly" },
+  "timezone": "America/New_York",
+  "recipients": [
+    { "externalId": "user_42" }
+  ],
+  "data": { "reportType": "audit" },
   "active": true
 }
 ```
 
-単発スケジュール — `cronExpression` の代わりに `scheduledAt` を使用します:
+- `name`: string (必須)。ダッシュボード表示用ラベル（最大 256 文字）。
+- `workflowId`: string (必須)。トリガー対象ワークフローの UUID。
+- `timezone`: string (任意)。有効な IANA タイムゾーン名（デフォルトは `'UTC'`）。
+- `recipients`: array of objects (必須)。既存のサブスクライバーを参照する `{ externalId }` または `{ subscriberId }` を含める必要があります。
+- `data`: object (任意)。ワークフローに渡される動的な JSON ペイロードコンテキスト。
+- `active`: boolean (任意)。スケジュールを即座に有効にするかどうか。デフォルトは `true`。
+
+### 1 回限りのスケジュール実行
+
+将来の特定のタイムスタンプにワークフローを一度だけトリガーするには、`cronExpression` の代わりに `scheduledAt` を渡します：
 
 ```json
 {
-  "scheduledAt": "2026-07-15T10:00:00.000Z"
+  "name": "Delayed Onboarding Checklist",
+  "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+  "scheduledAt": "2026-08-01T14:30:00.000Z",
+  "timezone": "America/New_York",
+  "recipients": [{ "externalId": "user_42" }]
 }
 ```
 
-## ダッシュボードルート
+---
 
-実行履歴付きの JWT 認証 CRUD が `/v1/schedules` で利用可能です。
+## スケジュールの更新
 
-## Node SDK
+スケジュールのプロパティを変更します。これには **PUT** リクエストが必要である点にご注意ください。
 
-```ts
-await nexus.schedules.create({ … });
+```http
+PUT /v1/schedules/sdk/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
+{
+  "active": false,
+  "data": { "reportType": "consolidated" }
+}
 ```
 
-[Node SDK](/docs/sdk/backend/node) と [スケジュール機能](/docs/platform/features/schedules) をご覧ください。
+---
+
+## スケジュールの一覧取得
+
+アクティブなスケジュールを取得します。
+
+```http
+GET /v1/schedules/sdk?page=1&limit=25
+Authorization: Bearer sk_prd_your_secret_key
+```
+
+**レスポンスボディ:**
+
+```json
+{
+  "schedules": [
+    {
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "name": "Weekly Audit Report",
+      "type": "recurring",
+      "cronExpression": "0 9 * * 1",
+      "scheduledAt": null,
+      "timezone": "America/New_York",
+      "active": true,
+      "nextFireAt": "2026-08-03T13:00:00.000Z",
+      "lastFiredAt": "2026-07-27T13:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+## 関連リンク
+
+- [スケジュール機能の概要](/docs/platform/features/schedules)
+- [ワークフロートリガー API](/docs/api/workflows)
+- [Node.js SDK スケジュールリソース](/docs/sdk/backend/node)

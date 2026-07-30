@@ -1,60 +1,126 @@
 ---
 title: オーディエンス API
-description: フィルタールールを使用して動的な購読者セグメントを作成および管理します。
+description: 動的なサブスクライバーのセグメンテーションルールを管理するためのサーバー側およびダッシュボードエンドポイント。
 ---
 
-<DashboardAuth />
+オーディエンス（Audiences）は、トリガーの実行時にカスタムセグメントルールフィルターを使用して解決される、サブスクライバーリストの動的なサブセットを表します。
 
-ベースパス: `/v1/audiences`
+---
 
-## オーディエンスのリスト表示
+## アクセス & パス
 
-```http
-GET /v1/audiences?page=1&limit=20
-Authorization: Bearer <jwt>
-```
+- **サーバー間 / SDK 用（`sk_*` 認証）**: `/v1/management/audiences` 以下の `GET` / `POST` リクエスト
+- **ダッシュボード画面用（JWT 認証）**: `/v1/audiences` 以下のリクエスト
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)        | ダッシュボード用パス (JWT)  | 説明                                                           |
+| :------- | :------------------------- | :-------------------------- | :------------------------------------------------------------- |
+| `GET`    | `/v1/management/audiences` | `/v1/audiences`             | 環境内のすべてのオーディエンス定義の一覧を取得します。         |
+| `POST`   | `/v1/management/audiences` | `/v1/audiences`             | 新しいオーディエンス定義を作成します。                         |
+| `GET`    | —                          | `/v1/audiences/:id`         | ID 指定でオーディエンスのプロファイルを取得します。            |
+| `PUT`    | —                          | `/v1/audiences/:id`         | オーディエンスの定義またはルールを更新します。                 |
+| `DELETE` | —                          | `/v1/audiences/:id`         | オーディエンスの定義を削除します。                             |
+| `GET`    | —                          | `/v1/audiences/:id/members` | メンバーのページネーションされたプレビューリストを取得します。 |
+
+---
 
 ## オーディエンスの作成
 
-```http
-POST /v1/audiences
-Authorization: Bearer <jwt>
-```
+セグメント定義を登録します。
 
-```json
+```http
+POST /v1/management/audiences
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
 {
-  "name": "Growth active",
+  "name": "Inactive Spanish Accounts",
+  "description": "Subscribers who preferred Spanish and are globally subscribed.",
   "filters": {
     "logic": "AND",
     "rules": [
-      { "field": "properties.plan", "operator": "equals", "value": "growth" },
-      { "field": "lastActiveAt", "operator": "within_days", "value": 7 }
+      {
+        "field": "locale",
+        "operator": "starts_with",
+        "value": "es"
+      },
+      {
+        "field": "globalUnsubscribed",
+        "operator": "is_false"
+      }
     ]
   }
 }
 ```
 
-## オーディエンスの取得
+### リクエストボディのフィールド
+
+- `name`: string (必須)。ダッシュボードに表示されるセグメント名（最大128文字）。
+- `description`: string (任意)。内部向け説明文（最大256文字）。
+- `filters`: object (必須)。論理セグメントルールを含みます：
+  - `logic`: `AND` または `OR`（デフォルトは `AND`）。
+  - `rules`: 最大 10 個のフィルタールールオブジェクトの配列。
+
+#### 使用可能なルールプロパティ：
+
+- `field`: 検証済みの以下の 7 つのデータベースフィールドのいずれかでなければなりません：
+  - `email`、`phoneNumber`、`locale`、`timezone`、`globalUnsubscribed`、`externalId`、`createdAt`
+- `operator`: 実行する比較操作：
+  - `equals`、`not_equals`、`contains`、`not_contains`、`starts_with`、`ends_with`、`is_empty`、`is_not_empty`、`is_true`、`is_false`、`greater_than`、`less_than`
+- `value`: string、number、または boolean (任意)。値マッチングを行うオペレーターで必要です。
+
+---
+
+## オーディエンスメンバーのプレビュー
+
+リアルタイムでルールを評価し、一致するサブスクライバープロファイルを返します：
 
 ```http
-GET /v1/audiences/:id
+GET /v1/audiences/2db4c803-10ac-4bfa-8bf2-0cfb4db1b392/members?page=1&limit=25
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## メンバーのプレビュー
+**レスポンスボディ:**
 
-```http
-GET /v1/audiences/:id/members?page=1&limit=50
+```json
+{
+  "members": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "externalId": "user_42",
+      "email": "billing@example.com",
+      "phoneNumber": null,
+      "locale": "es-MX",
+      "timezone": "America/Mexico_City"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
+}
 ```
 
-現在のフィルタールールに一致する購読者の解決済みリストを返します。
+---
 
-## 更新 / 削除
+## 制限事項
 
-```http
-PUT    /v1/audiences/:id
-DELETE /v1/audiences/:id
-```
+| 制限事項                                     | 値       |
+| :------------------------------------------- | :------- |
+| 環境あたりの最大オーディエンス数             | 50       |
+| オーディエンスあたりの最大フィルタールール数 | 10       |
+| 名前の最大長さ                               | 128 文字 |
+| 説明の最大長さ                               | 256 文字 |
 
-`OWNER`、`ADMIN`、または `DEVELOPER` ロールが必要です。
+---
 
-[オーディエンスとセグメンテーション](/docs/platform/features/audiences)を参照してください。
+## 関連リンク
+
+- [オーディエンスとセグメンテーション機能の概要](/docs/platform/features/audiences)
+- [ブロードキャスト API](/docs/api/broadcasts) — オーディエンス宛てのメッセージ発送
+- [サブスクライバー API](/docs/api/subscribers)

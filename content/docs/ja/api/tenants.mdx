@@ -1,59 +1,100 @@
 ---
 title: テナント API
-description: B2B SaaS向けの顧客ごとのブランディング、プロバイダーのオーバーライド、およびデフォルトの設定。
+description: B2B ホワイトラベルブランディング構成 — カスタマーテナントの作成、一覧表示、および管理。
 ---
 
-<DashboardAuth />
+テナント（Tenants）は、お客様の B2B SaaS 顧客を表します。この API を使用すると、ダッシュボード管理者またはバックエンドスクリプトが、テナントごとのブランディングやプロパティを設定・管理できます。
 
-ダッシュボードベースパス: `/v1/tenants`
+---
 
-管理API (CLI/MCP): `GET|PUT /v1/management/tenants`
+## アクセス & パス
 
-## テナントのリスト表示
+- **管理 API / Node.js SDK 用（`sk_*` 認証）**: `/v1/management/tenants` 以下の `PUT` / `GET` / `DELETE` リクエスト
+- **ダッシュボード API（JWT セッショントークン認証）**: `/v1/tenants` 以下のリクエスト
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)      | ダッシュボード用パス (JWT) | 説明                                                               |
+| :------- | :----------------------- | :------------------------- | :----------------------------------------------------------------- |
+| `GET`    | `/v1/management/tenants` | `/v1/tenants`              | すべてのテナントの一覧を取得します（ページネーション、検索対応）。 |
+| `PUT`    | `/v1/management/tenants` | `/v1/tenants`              | テナントを作成または更新（Upsert）します。                         |
+| `GET`    | —                        | `/v1/tenants/:id`          | 単一のテナントプロファイルを取得します。                           |
+| `PATCH`  | —                        | `/v1/tenants/:id`          | 個別のテナントプロパティを更新します。                             |
+| `DELETE` | —                        | `/v1/tenants/:id`          | テナントを削除します。                                             |
+
+---
+
+## テナントの Upsert
+
+新しいテナントを作成するか、そのフィールドを更新します。
 
 ```http
-GET /v1/tenants
-Authorization: Bearer <jwt>
-```
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
 
-## テナントの保存 (Upsert)
-
-```http
-PUT /v1/tenants
-Authorization: Bearer <jwt>
-```
-
-```json
 {
   "externalId": "tenant_acme",
   "name": "Acme Corp",
   "branding": {
-    "logoUrl": "https://cdn.acme.io/logo.png",
+    "logo": "https://cdn.acme.io/logo.png",
     "primaryColor": "#2563eb",
-    "footerHtml": "<p>© Acme</p>"
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
   },
-  "providerOverrides": {},
-  "preferenceDefaults": {}
+  "properties": {
+    "planTier": "enterprise"
+  }
 }
 ```
 
-## 取得 / 更新 / 削除
+- `externalId`: string (必須)。お客様の SaaS アカウント/テナントとマッピングされる一意の ID（最大 128 文字）。
+- `name`: string (必須)。顧客企業の表示名（最大 256 文字）。
+- `branding`: object (任意)。テンプレートのブランディング文字列を含むカスタムキー・値の辞書（最大 20 キー）。サポートされているキーには、`logo`、`primaryColor`、`companyName`、および `footerHtml` が含まれます。
+- `properties`: object (任意)。カスタムのキー・値のメタデータクエリフィルター（最大 50 キー）。
+
+---
+
+## テナントの一覧取得
+
+アクティブな環境で構成されているすべてのテナントを取得します。
 
 ```http
-GET    /v1/tenants/:id
-PATCH  /v1/tenants/:id
-DELETE /v1/tenants/:id
+GET /v1/tenants?page=1&limit=25&search=acme
+Authorization: Bearer <jwt_dashboard_token>
 ```
 
-## テナント付きトリガー
+**レスポンスボディ:**
 
 ```json
 {
-  "workflowName": "invoice.sent",
-  "tenant": "tenant_acme",
-  "recipients": [{ "externalId": "user_42" }],
-  "data": {}
+  "tenants": [
+    {
+      "id": "771e8400-e29b-41d4-a716-446655440000",
+      "externalId": "tenant_acme",
+      "name": "Acme Corp",
+      "branding": {
+        "logo": "https://cdn.acme.io/logo.png",
+        "primaryColor": "#2563eb"
+      },
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
-[テナントごとのブランディング](/docs/platform/features/tenants)を参照してください。
+---
+
+## 関連リンク
+
+- [B2B マルチテナント設定](/docs/platform/guides/b2b-multi-tenant)
+- [テナント機能の概要](/docs/platform/features/tenants)
+- [メールレイアウト](/docs/platform/features/email-layouts)

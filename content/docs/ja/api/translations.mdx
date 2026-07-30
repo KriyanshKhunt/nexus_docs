@@ -1,32 +1,79 @@
 ---
 title: 翻訳 API
-description: "`{{ t \"key\" }}` テンプレートヘルパー用のロケールキー値翻訳ファイルを保存します。"
+description: '`{{ t "key" }}` テンプレートヘルパー用に、ロケール辞書ファイルを登録するためのサーバー側およびダッシュボードエンドポイント。'
 ---
 
-<SecretKeyAuth />
+翻訳データ（Translations）は、言語ロケールと名前空間によってマッピングされた、静的なキー・値の文字列テーブルです。これにより、トリガー実行時にワークフローがローカライズされた文字列を動的に挿入（補間）できます。
 
-ベースパス: `/v1/management/translations`
+---
 
-## 翻訳リストの表示
+## アクセス & パス
 
-アップロードされたすべてのロケール辞書パッケージを取得します。
+- **サーバー間 / SDK 用（`sk_*` 認証）**: ルートパスは `/v1/management/translations`
+- **ダッシュボード画面用（JWT 認証）**: ルートパスは `/v1/translations`
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)           | ダッシュボード用パス (JWT) | 説明                                               |
+| :------- | :---------------------------- | :------------------------- | :------------------------------------------------- |
+| `GET`    | `/v1/management/translations` | `/v1/translations`         | 環境内のすべての翻訳パッケージの一覧を取得します。 |
+| `PUT`    | `/v1/management/translations` | `/v1/translations`         | 翻訳パッケージを作成または更新（Upsert）します。   |
+| `GET`    | —                             | `/v1/translations/:id`     | UUID 指定で翻訳パッケージの詳細を取得します。      |
+| `DELETE` | —                             | `/v1/translations/:id`     | 翻訳パッケージを削除します。                       |
+
+---
+
+## 翻訳パッケージの保存 (アップサート)
+
+翻訳テーブルをアップロードまたは更新します。
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_your_secret_key
+Content-Type: application/json
+
+{
+  "locale": "es-MX",
+  "namespace": "invoice-labels",
+  "content": {
+    "title.invoice_overdue": "Factura Vencida",
+    "button.pay_now": "Pagar Ahora",
+    "description.amount_due": "El monto total a pagar es {{amount}}."
+  }
+}
+```
+
+### リクエストボディのフィールド
+
+- `locale`: string (必須)。BCP 47 形式の言語コード（最大35文字、例: `es-MX`、`ja`、`pt-BR`）。
+- `namespace`: string (任意)。大文字小文字を区別するカテゴリ分け用ラベル（最大64文字）。英小文字、数字、ダッシュ、アンダースコア（`/^[a-z][a-z0-9_-]*$/`）。デフォルト値は `default`。
+- `content`: object (必須)。文字列のキーと値のペアで構成されるフラットな辞書（最大 500 キー）。
+  - **キー**: 先頭文字は英字で、英数字、ドット、アンダースコア、またはダッシュを含むもの（`/^[a-zA-Z][a-zA-Z0-9_.-]*$/`、最大128文字）。
+  - **値**: 生のテンプレート文字列（最大 5,000 文字）。Handlebars の変数スロットを含めることができます。
+
+---
+
+## 翻訳ファイルの一覧取得
 
 ```http
 GET /v1/management/translations
-Authorization: Bearer sk_prd_…
+Authorization: Bearer sk_prd_your_secret_key
 ```
 
-ロケール、名前空間、およびファイルごとのキー数を返します：
+**レスポンスボディ:**
 
 ```json
 {
   "translations": [
     {
-      "id": "trans_123",
-      "locale": "es",
-      "namespace": "default",
+      "id": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "locale": "es-MX",
+      "namespace": "invoice-labels",
       "keyCount": 3,
-      "createdAt": "2026-07-26T12:00:00Z"
+      "createdAt": "2026-07-28T12:00:00.000Z",
+      "updatedAt": "2026-07-28T21:00:00.000Z"
     }
   ]
 }
@@ -34,32 +81,20 @@ Authorization: Bearer sk_prd_…
 
 ---
 
-## 翻訳パッケージの保存 (Upsert)
+## 制限事項
 
-BCP 47ロケールに対応するローカライズされた文字列を含むJSON辞書をアップロードします。
-
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
-
-```json
-{
-  "locale": "es",
-  "namespace": "default",
-  "content": {
-    "welcome_message": "Bienvenido",
-    "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
-  }
-}
-```
-
-デフォルトの名前空間は `default` です。
+| 制限事項                         | 値         |
+| :------------------------------- | :--------- |
+| 環境あたりの最大翻訳パッケージ数 | 50         |
+| 翻訳ファイルあたりの最大キー数   | 500        |
+| キーの最大長さ                   | 128 文字   |
+| 値の最大長さ                     | 5,000 文字 |
+| 名前空間の最大長さ               | 64 文字    |
 
 ---
 
 ## 関連リンク
 
-- [翻訳ファイルガイド](/docs/platform/features/translations)
-- [CLIによる翻訳のプル/プッシュ](/docs/sdk/devtools/cli)
+- [翻訳機能ガイド](/docs/platform/features/translations)
+- [マルチ言語テンプレート](/docs/platform/features/i18n)
+- [CLI による翻訳のプッシュ/プル](/docs/sdk/devtools/cli)

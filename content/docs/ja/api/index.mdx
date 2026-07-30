@@ -1,36 +1,101 @@
 ---
 title: API リファレンス
-description: Nexus Signal の REST API — トリガー、受信箱、スケジュール、サブスクライバー、分析、トピック。
+description: Nexus Signal の REST API — トリガー、オブジェクト、ブロードキャスト、受信箱、管理、および分析。
 ---
 
 # Nexus Signal API
 
 **ベース URL:** `https://api.nexussignal.dev/v1`
 
-トリガー、アプリ内受信箱、スケジュール、サブスクライバー管理、分析へのプログラムアクセスを提供します。すべての取り込みエンドポイントは **202 Accepted** を返します — 配信は非同期です。
+トリガー、製品メッセージング、アプリ内受信箱、および分析へのプログラムアクセスを提供します。取り込み用エンドポイントは **202 Accepted** を返します — 配信は非同期処理されます。
+
+## コア機能
 
 <Cards>
-  <Card title="ワークフロー" href="/docs/api/workflows" description="POST /workflows/trigger — 非同期配信。" />
-  <Card title="SDK" href="/docs/api/sdk" description="ブラウザアプリ向け受信箱・設定・トピック。" />
-  <Card title="スケジュール" href="/docs/api/schedules" description="Cron および単発スケジュールトリガー。" />
-  <Card title="サブスクライバー" href="/docs/api/subscribers" description="サブスクライバーの作成・更新・エクスポート。" />
-  <Card title="トピック" href="/docs/api/topics" description="設定マトリクス用トピックグループ。" />
-  <Card title="分析" href="/docs/api/analytics" description="メトリクス、コスト、エンゲージメントデータ。" />
+  <Card
+    title="ワークフロー"
+    href="/docs/api/workflows"
+    description="POST /workflows/trigger — 非同期配信 + 同期。"
+  />
+  <Card
+    title="サブスクライバー"
+    href="/docs/api/subscribers"
+    description="サブスクライバーの作成、更新、およびエクスポート。"
+  />
+  <Card
+    title="SDK (ブラウザ)"
+    href="/docs/api/sdk"
+    description="クライアントアプリ向けの受信箱、環境設定、ガイド。"
+  />
+  <Card title="管理" href="/docs/api/management" description="CLI/MCP リソース管理 API。" />
+</Cards>
+
+## プロダクトメッセージング
+
+<Cards>
+  <Card
+    title="オブジェクト"
+    href="/docs/api/objects"
+    description="オブジェクト、購読、ファンアウトトリガー。"
+  />
+  <Card
+    title="テナント"
+    href="/docs/api/tenants"
+    description="顧客ごとの B2B ホワイトラベルブランディング。"
+  />
+  <Card
+    title="オーディエンス"
+    href="/docs/api/audiences"
+    description="動的セグメントフィルター。"
+  />
+  <Card
+    title="ブロードキャスト"
+    href="/docs/api/broadcasts"
+    description="1回限りのオーディエンス一斉送信。"
+  />
+  <Card title="ガイド" href="/docs/api/guides" description="プロダクト内バナーおよびモーダル。" />
+</Cards>
+
+## コンテンツ & 設定
+
+<Cards>
+  <Card
+    title="翻訳データ"
+    href="/docs/api/translations"
+    description="ロケールごとのキー・値の翻訳ファイル。"
+  />
+  <Card
+    title="メールレイアウト"
+    href="/docs/api/email-layouts"
+    description="共有メールフレームとパーシャル。"
+  />
+  <Card title="トピック" href="/docs/api/topics" description="環境設定のカテゴリグループ。" />
+  <Card
+    title="スケジュール"
+    href="/docs/api/schedules"
+    description="Cron および単発スケジュールトリガー。"
+  />
+  <Card
+    title="分析"
+    href="/docs/api/analytics"
+    description="メトリクス、コスト、およびエンゲージメント。"
+  />
 </Cards>
 
 ## 認証モード
 
-| 対象 | 認証 | エンドポイント |
-|----------|------|-----------|
-| サーバーアプリ | `Authorization: Bearer sk_*` | `/workflows/trigger`, `/schedules/sdk` |
-| ブラウザ SDK | `x-nexus-public-key: pk_*` | `/sdk/*` |
-| ダッシュボード | JWT セッションクッキー / Bearer | `/workflows/dashboard`, `/analytics`, `/subscribers` など |
+| 対象           | 認証方法                     | 使用エンドポイント                                        |
+| :------------- | :--------------------------- | :-------------------------------------------------------- |
+| サーバーアプリ | `Authorization: Bearer sk_*` | `/workflows/trigger`、`/workflows/sync`、`/schedules/sdk` |
+| ブラウザ SDK   | `x-nexus-public-key: pk_*`   | `/sdk/*`                                                  |
+| ダッシュボード | JWT セッション / Bearer      | `/workflows/dashboard`、`/broadcasts`、`/audiences` など  |
+| CLI / MCP      | `Authorization: Bearer sk_*` | `/management/*`                                           |
 
 ## レスポンス規約
 
 - トリガーは **202 Accepted** を返します（非同期処理）
 - エラーは `{ error: string, code?: string, details?: object }` を返します
-- レート制限はプランティアごとに適用されます
+- レート制限はプランのティアごとに適用されます
 
 ## ヘルス & テレメトリ
 
@@ -50,21 +115,17 @@ GET /v1/telemetry/click/:trackingId
 POST /v1/telemetry/callbacks/:provider
 ```
 
-クリックトラッキングはユーザーをリダイレクトし、エンゲージメントを記録します。キャリアコールバックは配信ステータスを更新します。
+クリックトラッキングはユーザーをリダイレクトし、エンゲージメントを記録します。プロバイダーコールバックは配信ステータスを更新します。
 
   </Tab>
 </Tabs>
 
-<Callout type="warn">
-ブラウザコードに `sk_*` シークレットキーを公開しないでください。SDK ルートには `pk_*` 公開キーのみを使用してください。
-</Callout>
+<SecretKeyAuth />
 
 <Callout type="info">
-型付きの統合をお好みですか？[Node SDK](/docs/sdk/backend/node) と [React SDK](/docs/sdk/frontend/react) をご覧ください。
+  型付きの統合をお好みですか？[Node
+  SDK](/docs/sdk/backend/node)、[CLI](/docs/sdk/devtools/cli)、および [MCP
+  サーバー](/docs/sdk/devtools/mcp-server) を参照してください。
 </Callout>
-
-## スタック
-
-Node.js · PostgreSQL · Redis · BullMQ — 10ms 未満の取り込み、観測可能な配信パイプライン。
 
 **サポート:** [support@nexussignal.dev](mailto:support@nexussignal.dev) · [ダッシュボード](https://app.nexussignal.dev)

@@ -1,83 +1,121 @@
 ---
-title: SDK API
-description: 公開キー認証エンドポイント — アプリ内受信箱とサブスクライバー設定。
+title: クライアント SDK バックエンド API
+description: リアルタイムの通知フィード、製品内ガイドの発送、および環境設定のための、公開キー認証ブラウザ/モバイル API エンドポイント。
 ---
 
-すべてのルートにヘッダーが必要です: `x-nexus-public-key: pk_prd_…`
+SDK API は、クライアント側モジュール（[@nexus-signal/react](/docs/sdk/frontend/react)、[@nexus-signal/js](/docs/sdk/frontend/js)）を駆動します。認証情報を保護するために、これらのルートには公開キー認証（`pk_*`）とサブスクライバー検証署名が必要です。
 
-## 通知（受信箱）
+---
 
-### 通知一覧
+## 認証 & ヘッダー
+
+すべてのクライアント向けリクエストには以下を含める必要があります：
+
+- 有効な環境公開キー（`pk_dev_*`、`pk_stg_*`、または `pk_prd_*`）を含む `x-nexus-public-key` ヘッダー。
+- セッションの範囲を定義するための、クエリ文字列またはリクエストボディ内の `subscriberExternalId`。
+
+リアルタイムの WebSocket 接続や安全なアプリ内ベル（通知アイコン）については、ユーザーのなりすましを防ぐために、バックグラウンドで生成された `hmacSignature` も渡す必要があります（[認証 & セキュリティ](/docs/platform/getting-started/authentication)を参照）。
+
+---
+
+## エンドポイント概要
+
+| メソッド | パス                                          | 説明                                                                                 |
+| :------- | :-------------------------------------------- | :----------------------------------------------------------------------------------- |
+| `GET`    | `/v1/sdk/notifications`                       | ページネーションされたアプリ内インボックス通知を取得します。                         |
+| `GET`    | `/v1/sdk/notifications/count`                 | 未読/総メッセージ数を取得します。                                                    |
+| `POST`   | `/v1/sdk/notifications/:logId/read`           | 通知を既読にします。                                                                 |
+| `POST`   | `/v1/sdk/notifications/:logId/unread`         | 通知を未読にします。                                                                 |
+| `POST`   | `/v1/sdk/notifications/:logId/archive`        | 通知をアクティブなインボックスフィードからアーカイブします。                         |
+| `POST`   | `/v1/sdk/notifications/:logId/unarchive`      | アーカイブされた通知を復元します。                                                   |
+| `POST`   | `/v1/sdk/notifications/mark-all-read`         | インボックスのすべてのメッセージを既読にします。                                     |
+| `DELETE` | `/v1/sdk/notifications/:logId`                | 通知を削除（ソフトデリート）します。                                                 |
+| `GET`    | `/v1/sdk/guides`                              | ページルートに一致する、表示要件を満たすアクティブな製品内ガイドを取得します。       |
+| `POST`   | `/v1/sdk/guides/:guideId/events`              | `guideSeen`、`guideInteracted`、または `guideArchived` テレメトリを記録します。      |
+| `GET`    | `/v1/sdk/subscribers/:externalId/preferences` | サブスクライバーの環境設定チャネルマトリクスを取得します。                           |
+| `PUT`    | `/v1/sdk/subscribers/:externalId/preferences` | サブスクライバーの環境設定を更新します。                                             |
+| `GET`    | `/v1/sdk/notification-events`                 | 環境設定のグループ化のために、アクティブなワークフローイベントスキーマを取得します。 |
+| `GET`    | `/v1/sdk/topics`                              | アクティブな環境設定トピックを取得します。                                           |
+
+---
+
+## 通知一覧の取得
+
+サブスクライバーのアプリ内インボックスフィードを取得します。
 
 ```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&page=1&limit=50&filter=unread
+GET /v1/sdk/notifications?subscriberExternalId=user_42&filter=unread&page=1&limit=25
+x-nexus-public-key: pk_prd_your_public_key
 ```
 
-| クエリ | 値 |
-|-------|-----|
-| `filter` | `unread`, `read`, `archived` |
-| `dateFrom` / `dateTo` | ISO タイムスタンプ |
+### クエリフィルター
+
+- `subscriberExternalId`: string (必須)。
+- `filter`: string (任意)。フィード状態のフィルタ：`unread`、`read`、または `archived`。
+- `tag` / `tags`: string (任意)。カンマ区切りのワークフロータグのリスト（例: `billing,invoices`）。
+- `tenantId`: string (任意)。B2B テナントのデータベース UUID でフィルタリングします。
+- `dateFrom` / `dateTo`: string (任意)。ISO 8601 形式のタイムスタンプ。
+
+**レスポンスボディ:**
 
 ```json
 {
   "notifications": [
     {
-      "logId": "uuid",
-      "title": "注文が発送されました",
-      "body": "荷物を追跡してください",
+      "logId": "2db4c803-10ac-4bfa-8bf2-0cfb4db1b392",
+      "title": "Invoice Paid",
+      "body": "Thank you! Your payment of $150 was processed.",
+      "workflowName": "billing.invoice",
+      "actor": {
+        "name": "Acme Billing",
+        "avatar": "https://cdn.acme.io/avatar.png"
+      },
+      "actions": [
+        {
+          "label": "Download PDF",
+          "url": "/receipts/pdf/992",
+          "style": "primary"
+        }
+      ],
+      "redirect": "/receipts/992",
+      "tags": ["billing", "receipts"],
       "read": false,
       "archived": false,
-      "at": "2026-07-02T14:00:00.000Z",
-      "workflowName": "order.shipped"
+      "at": "2026-07-28T21:00:00.000Z"
     }
   ],
-  "total": 128,
+  "total": 1,
   "page": 1,
-  "limit": 50,
-  "hasMore": true
+  "limit": 25,
+  "hasMore": false
 }
 ```
 
-### 既読にする
+---
+
+## 環境設定（プリファレンス）の更新
+
+サブスクライバーのオプトイン/オプトアウト設定を取得または更新します。
 
 ```http
-POST /v1/sdk/notifications/:logId/read
-POST /v1/sdk/notifications/mark-all-read
-Body: { "subscriberExternalId": "user_42" }
-```
+PUT /v1/sdk/subscribers/user_42/preferences
+x-nexus-public-key: pk_prd_your_public_key
+Content-Type: application/json
 
-### アーカイブ / 削除
-
-```http
-POST /v1/sdk/notifications/:logId/archive
-DELETE /v1/sdk/notifications/:logId
-```
-
-## 設定（プリファレンス）
-
-```http
-GET /v1/sdk/subscribers/:externalId/preferences
-PUT /v1/sdk/subscribers/:externalId/preferences
-```
-
-```json
 {
   "preferences": {
-    "order.shipped": { "EMAIL": true, "SMS": false },
+    "billing.invoice": { "EMAIL": true, "SMS": false },
     "topic:marketing": { "EMAIL": false }
   }
 }
 ```
 
-## イベント & トピック
+_注意: カスタムの環境設定上書きはサブスクライバーのデータベース行内に保存され、今後のトリガー実行時にデフォルト設定をバイパスして優先適用されます。_
 
-```http
-GET /v1/sdk/notification-events
-GET /v1/sdk/topics
-```
+---
 
-React マトリクス用の有効なワークフロー、トピックリスト、利用可能な設定チャンネルを返します。
+## 関連リンク
 
-## React SDK
-
-これらのエンドポイントは [`@nexus-signal/react`](/docs/sdk/frontend/react) コンポーネントを自動的に動かします。
+- [リッチなアプリ内インボックス機能の概要](/docs/platform/features/rich-inbox)
+- [React SDK コンポーネントリファレンス](/docs/sdk/frontend/react)
+- [Headless JS SDK](/docs/sdk/frontend/js)

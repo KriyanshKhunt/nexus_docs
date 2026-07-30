@@ -1,58 +1,107 @@
 ---
 title: メールレイアウト API
-description: 共有メールフレームと再利用可能なHTMLパーシャル。
+description: HTML フレームレイアウトおよび Handlebars パーシャルを管理するためのサーバー側およびダッシュボードエンドポイント。
 ---
 
-<DashboardAuth />
+メールレイアウトは、HTML メールのヘッダー、フッター、および外側のコンテナフレームを定義します。一方、パーシャルを使用すると、テンプレートボディ内でコードスニペット（例: CTA ボタン、標準的な法的免責テキストなど）を再利用できます。
 
-ベースパス: `/v1/email`
+---
 
-## レイアウト
+## アクセス & パス
+
+- **サーバー / SDK 管理用（`sk_*` 認証）**: `/v1/management/email/layouts` 以下の `GET` / `POST` リクエスト
+- **ダッシュボード画面用（JWT 認証）**: `/v1/email` 以下のすべてのルート
+
+---
+
+## エンドポイント概要
+
+| メソッド | 管理用パス (`sk_*`)            | ダッシュボード用パス (JWT) | 説明                                                       |
+| :------- | :----------------------------- | :------------------------- | :--------------------------------------------------------- |
+| `GET`    | `/v1/management/email/layouts` | `/v1/email/layouts`        | 環境内のすべてのレイアウトの一覧を取得します。             |
+| `POST`   | `/v1/management/email/layouts` | `/v1/email/layouts`        | 新しい HTML レイアウトを作成します。                       |
+| `GET`    | —                              | `/v1/email/layouts/:id`    | レイアウトの HTML ボディと変数を取得します。               |
+| `PUT`    | —                              | `/v1/email/layouts/:id`    | 既存の HTML レイアウトを更新します。                       |
+| `DELETE` | —                              | `/v1/email/layouts/:id`    | HTML レイアウトを削除します。                              |
+| `GET`    | —                              | `/v1/email/partials`       | 環境内のすべての Handlebars パーシャルの一覧を取得します。 |
+| `POST`   | —                              | `/v1/email/partials`       | 再利用可能な Handlebars HTML パーシャルを作成します。      |
+| `GET`    | —                              | `/v1/email/partials/:id`   | パーシャルの詳細を取得します。                             |
+| `PUT`    | —                              | `/v1/email/partials/:id`   | パーシャルを更新します。                                   |
+| `DELETE` | —                              | `/v1/email/partials/:id`   | パーシャルを削除します。                                   |
+
+---
+
+## レイアウトの作成
+
+新しい外枠レイアウトを作成します。HTML レイアウトには、内部のメッセージテンプレートをコンパイルするために、プレースホルダー `{{{content}}}` が含まれている必要があります。
 
 ```http
-GET    /v1/email/layouts
-GET    /v1/email/layouts/:id
-POST   /v1/email/layouts
-PUT    /v1/email/layouts/:id
-DELETE /v1/email/layouts/:id
-```
+POST /v1/email/layouts
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-レイアウト作成のボディ：
-
-```json
 {
-  "name": "Default",
-  "html": "<html><body>{{{ content }}}</body></html>",
-  "isActive": true
+  "name": "corporate-newsletter",
+  "htmlBody": "<html><head><style>body { font-family: sans-serif; }</style></head><body><header><img src=\"{{ logo }}\" /></header><main>{{{content}}}</main><footer>{{{footerHtml}}}</footer></body></html>",
+  "variables": {
+    "defaultFooter": "<p>© 2026 Acme Corp</p>"
+  },
+  "isDefault": true
 }
 ```
 
-## パーシャル
+### リクエストボディのフィールド
+
+- `name`: string (必須)。ダッシュ、アンダースコアを含む英小文字、数字（`/^[a-z][a-z0-9_-]*$/`、最大64文字）。
+- `htmlBody`: string (必須)。`{{{content}}}` を含む生の HTML コード（最大 100 KB）。
+- `variables`: object (任意)。レイアウトのデフォルト文字列を表すカスタムのキー・値ペア。
+- `isDefault`: boolean (任意)。新しいメールテンプレートのデフォルトレイアウトとして設定します。
+
+---
+
+## パーシャルの作成
+
+再利用可能なサブテンプレートスニペットを登録します。
 
 ```http
-GET    /v1/email/partials
-GET    /v1/email/partials/:id
-POST   /v1/email/partials
-PUT    /v1/email/partials/:id
-DELETE /v1/email/partials/:id
-```
+POST /v1/email/partials
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 
-パーシャルのボディ：
-
-```json
 {
-  "name": "cta-button",
-  "html": "<a href=\"{{ url }}\" class=\"btn\">{{ label }}</a>"
+  "name": "action-button",
+  "description": "Standard green CTA button with tracking URL",
+  "htmlBody": "<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\"><tr><td align=\"center\" bgcolor=\"#10b981\" style=\"border-radius: 4px;\"><a href=\"{{url}}\" target=\"_blank\" style=\"font-size: 14px; font-family: sans-serif; color: #ffffff; text-decoration: none; padding: 12px 24px; border: 1px solid #10b981; display: inline-block; font-weight: bold;\">{{label}}</a></td></tr></table>"
 }
 ```
 
-テンプレート内での参照： `{{> cta-button url=data.link label="Click here" }}`
+- `name`: string (必須)。ダッシュ、アンダースコアを含む英小文字、数字（`/^[a-z][a-z0-9_-]*$/`、最大64文字）。
+- `description`: string (任意)。パーシャルの内部向け説明（最大256文字）。
+- `htmlBody`: string (必須)。生の HTML コード（最大 100 KB）。
 
-## 管理API
+### テンプレート内での使用方法
 
-```http
-GET  /v1/management/email/layouts
-POST /v1/management/email/layouts
+標準の Handlebars 構文を使用して、登録済みのパーシャルをメールテンプレート内に含めます。
+
+```html
+<p>Click the link below to verify your email address:</p>
+{{> action-button url=data.verificationLink label="Verify Email" }}
 ```
 
-[メールレイアウトとパーシャル](/docs/platform/features/email-layouts)を参照してください。
+---
+
+## 制限事項
+
+| 制限事項                                      | 値      |
+| :-------------------------------------------- | :------ |
+| 環境あたりの最大レイアウト数                  | 20      |
+| 環境あたりの最大パーシャル数                  | 100     |
+| レイアウト/パーシャルの最大 HTML ボディサイズ | 100 KB  |
+| 名前の最大長さ                                | 64 文字 |
+
+---
+
+## 関連リンク
+
+- [メールレイアウト機能ガイド](/docs/platform/features/email-layouts)
+- [B2B マルチテナント設定](/docs/platform/guides/b2b-multi-tenant)
