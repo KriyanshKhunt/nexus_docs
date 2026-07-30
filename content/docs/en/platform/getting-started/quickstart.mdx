@@ -7,9 +7,7 @@ description: Send your first notification with Nexus Signal in under 5 minutes.
 
 This guide walks you through sending your first notification event and checking the real-time delivery logs.
 
-<Steps>
-<Step>
-### Create a Workspace & Retrieve Keys
+### Create a Workspace & Retrieve Keys [step]
 
 Log in to the [Nexus Dashboard](https://app.nexussignal.dev). Your workspace comes pre-configured with **three fully isolated environments**:
 
@@ -21,10 +19,7 @@ Log in to the [Nexus Dashboard](https://app.nexussignal.dev). Your workspace com
 
 Navigate to **Settings → API Keys** to copy the keys for your current active environment.
 
-</Step>
-
-<Step>
-### Design Your First Workflow
+### Design Your First Workflow [step]
 
 1. Go to the **Workflows** page in the dashboard.
 2. Click **Create Workflow** and name the event trigger: `user.welcome`.
@@ -32,10 +27,7 @@ Navigate to **Settings → API Keys** to copy the keys for your current active e
 4. Click the Email node to configure its subject line (e.g., `Welcome to Acme, {{ data.name }}!`) and standard template layout.
 5. Click **Publish** to deploy the workflow template to your active environment.
 
-</Step>
-
-<Step>
-### Connect a Delivery Provider (BYOP)
+### Connect a Delivery Provider (BYOP) [step]
 
 Nexus requires a delivery gateway to dispatch notifications.
 
@@ -43,10 +35,7 @@ Nexus requires a delivery gateway to dispatch notifications.
 2. Select your provider of choice (e.g., **SendGrid**, **Resend**, or **Twilio**).
 3. Enter your provider API credentials. Your credentials are fully encrypted at rest using AES-256 and decrypted only at the moment of execution.
 
-</Step>
-
-<Step>
-### Install the SDKs
+### Install the SDKs [step]
 
 Nexus supports both server-side SDKs for workflow triggers and frontend components for real-time in-app feeds:
 
@@ -90,10 +79,7 @@ Nexus supports both server-side SDKs for workflow triggers and frontend componen
   </Tab>
 </Tabs>
 
-</Step>
-
-<Step>
-### Trigger the Event
+### Trigger the Event [step]
 
 Create a script on your backend server to initialize the client and trigger the `user.welcome` workflow:
 
@@ -129,18 +115,13 @@ main().catch(console.error);
 
 Run this file on your server to emit the event trigger.
 
-</Step>
-
-<Step>
-### Verify Logs & Sandbox
+### Verify Logs & Sandbox [step]
 
 A successful API request returns an **HTTP 202 Accepted** payload immediately.
 
 - **Audit Logs**: In the dashboard, click **Audit Logs** to view the live execution trace. You will see steps like `Ingested` → `Queued` → `Compiled` → `Dispatched`.
 - **Sandbox Simulator**: While in the **Development** environment, outbound messages (Email, SMS) do not make external provider API calls. They stream to the dashboard **Sandbox Simulator** so you can view mock emails and messages for free.
 
-</Step>
-</Steps>
 
 ---
 

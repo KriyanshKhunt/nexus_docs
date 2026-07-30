@@ -49,8 +49,8 @@ await nexus.workflows.trigger({
 ```mermaid
 flowchart TD
     Node[Emailノード] --> Check{条件: data.isAdmin == true}
-    Check -->|はい (True)| Send[メールを送信]
-    Check -->|いいえ (False)| Skip[スキップしてパイプラインを続行]
+    Check -->|はい| Send[メールを送信]
+    Check -->|いいえ| Skip[スキップしてパイプラインを続行]
 ```
 
 条件ルールのチェック例：

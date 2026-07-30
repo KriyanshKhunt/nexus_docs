@@ -7,9 +7,7 @@ description: Envie sua primeira notificação com o Nexus Signal em menos de 5 m
 
 Este guia orientará você no envio do seu primeiro evento de notificação e na verificação dos logs de entrega em tempo real.
 
-<Steps>
-<Step>
-### Crie um Espaço de Trabalho e Recupere as Chaves
+### Crie um Espaço de Trabalho e Recupere as Chaves [step]
 
 Faça login no [Painel de Controle do Nexus](https://app.nexussignal.dev). Seu espaço de trabalho vem pré-configurado com **três ambientes completamente isolados**:
 
@@ -21,10 +19,7 @@ Faça login no [Painel de Controle do Nexus](https://app.nexussignal.dev). Seu e
 
 Navegue até **Settings → API Keys** para copiar as chaves do seu ambiente ativo atual.
 
-</Step>
-
-<Step>
-### Desenhe seu Primeiro Fluxo de Trabalho (Workflow)
+### Desenhe seu Primeiro Fluxo de Trabalho (Workflow) [step]
 
 1. Vá para a página de **Workflows** no painel de controle.
 2. Clique em **Create Workflow** e dê o nome ao gatilho do evento: `user.welcome`.
@@ -32,10 +27,7 @@ Navegue até **Settings → API Keys** para copiar as chaves do seu ambiente ati
 4. Clique no nó de Email para configurar a linha de assunto (por exemplo, `Welcome to Acme, {{ data.name }}!`) e o layout padrão do modelo.
 5. Clique em **Publish** para implantar o modelo do fluxo de trabalho no seu ambiente ativo.
 
-</Step>
-
-<Step>
-### Conecte um Provedor de Entrega (BYOP)
+### Conecte um Provedor de Entrega (BYOP) [step]
 
 O Nexus exige um gateway de entrega para despachar notificações.
 
@@ -43,10 +35,7 @@ O Nexus exige um gateway de entrega para despachar notificações.
 2. Selecione o provedor de sua preferência (por exemplo, **SendGrid**, **Resend** ou **Twilio**).
 3. Insira as credenciais de API do seu provedor. Suas credenciais são totalmente criptografadas em repouso usando AES-256 e decifradas apenas no momento da execução.
 
-</Step>
-
-<Step>
-### Instale os SDKs
+### Instale os SDKs [step]
 
 O Nexus é compatível com SDKs do lado do servidor para disparar fluxos de trabalho e componentes de frontend para feeds in-app em tempo real:
 
@@ -90,10 +79,7 @@ O Nexus é compatível com SDKs do lado do servidor para disparar fluxos de trab
   </Tab>
 </Tabs>
 
-</Step>
-
-<Step>
-### Dispare o Evento
+### Dispare o Evento [step]
 
 Crie um script em seu servidor de backend para inicializar o cliente e disparar o workflow `user.welcome`:
 
@@ -129,18 +115,12 @@ main().catch(console.error);
 
 Execute este arquivo no seu servidor para emitir o gatilho do evento.
 
-</Step>
-
-<Step>
-### Verifique os Logs e o Sandbox
+### Verifique os Logs e o Sandbox [step]
 
 Uma solicitação de API bem-sucedida retorna um payload **HTTP 202 Accepted** imediatamente.
 
 - **Audit Logs**: No painel de controle, clique em **Audit Logs** para exibir o rastreamento de execução em tempo real. Você verá etapas como `Ingested` → `Queued` → `Compiled` → `Dispatched`.
 - **Simulador de Sandbox**: No ambiente de **Development**, os disparos de saída (E-mail, SMS) não realizam chamadas externas de API de provedores. Eles são transmitidos para o **Simulador de Sandbox** do painel de controle, para que você possa visualizar e-mails e mensagens de teste gratuitamente.
-
-</Step>
-</Steps>
 
 ---
 

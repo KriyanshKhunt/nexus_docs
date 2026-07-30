@@ -88,7 +88,7 @@ flowchart TD
     API -->|6. ジョブをキューイング| Q[(Redisキュー)]
     Q -->|7. ワーカーによる処理| Workers[非同期ワーカー]
     Workers -->|8. ライブイベントの送信| WebHost
-    Workers -->|9. プロバイダーの呼び出し| Carriers[プロバイダー (Twilio/SendGrid)]
+    Workers -->|9. プロバイダーの呼び出し| Carriers["プロバイダー (Twilio/SendGrid)"]
   end
 
   WebHost -->|10. フィードへのストリーム配信| FE

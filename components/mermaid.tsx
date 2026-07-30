@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
-import { Loader2, Maximize2, X } from 'lucide-react';
+import { useEffect, useId, useState, useRef } from 'react';
+import { Loader2, Maximize2, X, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useI18n } from 'fumadocs-ui/contexts/i18n';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 const loadingTexts: Record<string, string> = {
   en: 'Loading diagram…',
@@ -16,6 +17,7 @@ export function Mermaid({ chart }: { chart: string }) {
   const id = useId().replace(/:/g, '');
   const [svg, setSvg] = useState<string>('');
   const [isOpen, setIsOpen] = useState(false);
+  const scaleRef = useRef<HTMLSpanElement>(null);
   const { resolvedTheme } = useTheme();
   const { locale = 'en' } = useI18n();
 
@@ -79,7 +81,9 @@ export function Mermaid({ chart }: { chart: string }) {
     <>
       <div
         className="group relative my-6 overflow-x-auto rounded-xl border border-fd-border bg-fd-card p-4 transition-all hover:bg-fd-card/85 cursor-zoom-in [&_svg]:mx-auto"
-        onClick={() => setIsOpen(true)}
+        onClick={() => {
+          setIsOpen(true);
+        }}
       >
         <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity bg-fd-muted p-1.5 rounded-lg border border-fd-border text-fd-muted-foreground hover:text-fd-foreground">
           <Maximize2 className="size-4" />
@@ -100,13 +104,76 @@ export function Mermaid({ chart }: { chart: string }) {
           </button>
 
           <div
-            className="relative w-full max-w-5xl max-h-[85vh] overflow-auto rounded-xl border border-fd-border bg-fd-card p-6 shadow-2xl transition-all [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-fd-muted-foreground/45 [&::-webkit-scrollbar-track]:bg-transparent"
+            className="relative w-full max-w-5xl h-[80vh] overflow-hidden rounded-xl border border-fd-border bg-fd-card shadow-2xl transition-all"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle, color-mix(in srgb, var(--color-fd-foreground) 15%, transparent) 1.5px, transparent 1.5px)',
+              backgroundSize: '20px 20px',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div
-              className="mt-2 w-full flex items-center justify-center [&_svg]:!w-full [&_svg]:!h-auto [&_svg]:!max-w-full"
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
+            <TransformWrapper
+              initialScale={1}
+              initialPositionX={0}
+              initialPositionY={0}
+              centerOnInit={true}
+              minScale={0.2}
+              maxScale={4}
+              smooth={false}
+              wheel={{
+                step: 0.25,
+              }}
+              onTransform={(ref, state) => {
+                if (scaleRef.current) {
+                  scaleRef.current.innerText = `${Math.round(state.scale * 100)}%`;
+                }
+              }}
+            >
+              {({ zoomIn, zoomOut, resetTransform }) => (
+                <>
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[102] flex items-center gap-2 rounded-full border border-fd-border bg-fd-popover/90 backdrop-blur-md px-4 py-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)] select-none">
+                    <button
+                      onClick={() => zoomOut()}
+                      className="p-1.5 hover:bg-fd-muted text-fd-muted-foreground hover:text-fd-foreground rounded-full transition-colors"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="size-4" />
+                    </button>
+                    <span
+                      ref={scaleRef}
+                      className="text-xs font-mono font-medium min-w-[3.5rem] text-center text-fd-foreground"
+                    >
+                      100%
+                    </span>
+                    <button
+                      onClick={() => zoomIn()}
+                      className="p-1.5 hover:bg-fd-muted text-fd-muted-foreground hover:text-fd-foreground rounded-full transition-colors"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="size-4" />
+                    </button>
+                    <div className="w-[1px] h-4 bg-fd-border mx-1" />
+                    <button
+                      onClick={() => resetTransform()}
+                      className="p-1.5 hover:bg-fd-muted text-fd-muted-foreground hover:text-fd-foreground rounded-full transition-colors"
+                      title="Reset View"
+                    >
+                      <RefreshCw className="size-4" />
+                    </button>
+                  </div>
+
+                  <TransformComponent
+                    wrapperClass="!w-full !h-full cursor-grab active:cursor-grabbing"
+                    contentClass="!w-full !h-full flex items-center justify-center"
+                  >
+                    <div
+                      className="w-full h-full flex items-center justify-center p-12 [&_svg]:!max-w-full [&_svg]:!h-auto [&_svg]:mx-auto select-none"
+                      dangerouslySetInnerHTML={{ __html: svg }}
+                    />
+                  </TransformComponent>
+                </>
+              )}
+            </TransformWrapper>
           </div>
         </div>
       )}

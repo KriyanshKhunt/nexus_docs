@@ -88,7 +88,7 @@ flowchart TD
     API -->|6. Enqueue Job| Q[(Redis Queue)]
     Q -->|7. Worker Processing| Workers[Async Workers]
     Workers -->|8. Push Live Event| WebHost
-    Workers -->|9. Dispatch Carrier Call| Carriers[Providers (Twilio/SendGrid)]
+    Workers -->|9. Dispatch Carrier Call| Carriers["Providers (Twilio/SendGrid)"]
   end
 
   WebHost -->|10. Stream to Feed| FE

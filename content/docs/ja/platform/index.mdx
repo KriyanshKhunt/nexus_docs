@@ -89,7 +89,7 @@ flowchart TD
     App[あなたのバックエンドSDK] -->|POSTトリガーイベント| API[Express APIゲートウェイ]
     API -->|1. APIキーとスキーマの検証| DB[(PostgreSQL)]
     API -->|2. 取り込みジョブのエンキュー| Q[Redis / BullMQ]
-    API -->>|3. 10ms未満での202 Accepted| App
+    API -->|3. 10ms未満での202 Accepted| App
     Q --> Worker[Async Worker Cluster]
     Worker -->|サブスクライバーの環境設定の読み込み| DB
     Worker --> Presence{ユーザーはオンライン？}

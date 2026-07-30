@@ -68,7 +68,6 @@ a[data-card]:hover {
 #nd-toc a[data-active='true'] {
   background: transparent;
   color: var(--color-fd-primary);
-  font-weight: 500;
 }
 
 .hover\:bg-fd-accent:hover:not(#nd-sidebar button),

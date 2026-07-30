@@ -78,7 +78,7 @@ Altere a parcial uma única vez — todos os modelos que a utilizam serão atual
 
 ```mermaid
 flowchart TD
-  T[HTML do modelo de e-mail] --> P[Resolver parciais (partials)]
+  T[HTML do modelo de e-mail] --> P[Resolver parciais]
   P --> C[Compilar Handlebars — inscrito + dados do disparo]
   C --> L[Envolver no HTML do layout ativo]
   L --> B[Injetar variáveis de marca do tenant]

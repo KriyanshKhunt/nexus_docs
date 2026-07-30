@@ -88,7 +88,7 @@ flowchart TD
     API -->|6. Enfileirar Job| Q[(Fila do Redis)]
     Q -->|7. Processamento de Workers| Workers[Workers Assíncronos]
     Workers -->|8. Enviar Evento ao Vivo| WebHost
-    Workers -->|9. Despachar Chamada à Operadora| Carriers[Provedores (Twilio/SendGrid)]
+    Workers -->|9. Despachar Chamada à Operadora| Carriers["Provedores (Twilio/SendGrid)"]
   end
 
   WebHost -->|10. Transmitir para o Feed| FE

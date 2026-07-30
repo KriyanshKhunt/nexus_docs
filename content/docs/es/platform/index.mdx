@@ -89,7 +89,7 @@ flowchart TD
     App[Tu Backend SDK] -->|POST trigger event| API[Express API Gateway]
     API -->|1. Validar Clave API y Esquema| DB[(PostgreSQL)]
     API -->|2. Encolar Trabajo de Ingestión| Q[Redis / BullMQ]
-    API -->>|3. Sub-10ms 202 Accepted| App
+    API -->|3. Sub-10ms 202 Accepted| App
     Q --> Worker[Async Worker Cluster]
     Worker -->|Leer Preferencias del Suscriptor| DB
     Worker --> Presence{¿Usuario en línea?}
