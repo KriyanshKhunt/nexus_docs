@@ -31,11 +31,11 @@ description: Development、Staging、および Production — 分離されたワ
 
 ```mermaid
 flowchart LR
-    Trigger[開発トリガー] --> Worker[ワーカー]
+    Trigger(開発トリガー) --> Worker(ワーカー)
     Worker --> Channel{チャンネルタイプ}
-    Channel -->|アプリ内| WebSocket[実際のWebSocketベル]
-    Channel -->|メール / SMS / プッシュ| Sandbox[サンドボックスインターセプター]
-    Sandbox -->|ペイロードのストリーム| UI[ダッシュボード受信トレイシミュレーター]
+    Channel -->|アプリ内| WebSocket(実際のWebSocketベル)
+    Channel -->|メール / SMS / プッシュ| Sandbox(サンドボックスインターセプター)
+    Sandbox -->|ペイロードのストリーム| UI(ダッシュボード受信トレイシミュレーター)
 ```
 
 - **受信トレイシミュレーター**: ダッシュボードで、ユーザーに表示されるのと同じコンパイル済みの HTML、SMS テキスト、または JSON ペイロードを確認できます。

@@ -18,12 +18,12 @@ description: Test end-to-end notification flows in the Development environment w
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger workflow in Dev] --> Compile[Compile layout & templates]
+  Trigger(Trigger workflow in Dev) --> Compile(Compile layout & templates)
   Compile --> Dispatch{Sandbox active?}
-  Dispatch -->|Yes| Simulate[Publish sandbox_delivery event]
-  Simulate --> Log[Set status to DELIVERED & log SANDBOX_DELIVERED]
-  Dispatch -->|No| Live[Call SendGrid / Twilio API]
-  Live --> LogLive[Set status to DISPATCHED]
+  Dispatch -->|Yes| Simulate(Publish sandbox_delivery event)
+  Simulate --> Log(Set status to DELIVERED & log SANDBOX_DELIVERED)
+  Dispatch -->|No| Live(Call SendGrid / Twilio API)
+  Live --> LogLive(Set status to DISPATCHED)
 ```
 
 ---

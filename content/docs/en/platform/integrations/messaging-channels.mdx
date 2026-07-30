@@ -16,11 +16,11 @@ When dispatching chat notifications, Nexus determines which webhook URL to use i
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger Chat Step] --> Sub{Subscriber has custom webhook?}
-  Sub -->|Yes| Custom[Use subscriber's connection URL]
+  Trigger(Trigger Chat Step) --> Sub{Subscriber has custom webhook?}
+  Sub -->|Yes| Custom(Use subscriber's connection URL)
   Sub -->|No| Fallback{Organization integration active?}
-  Fallback -->|Yes| Default[Use organization default webhook URL]
-  Fallback -->|No| Fail[Log PROVIDER_ERROR & fail step]
+  Fallback -->|Yes| Default(Use organization default webhook URL)
+  Fallback -->|No| Fail(Log PROVIDER_ERROR & fail step)
 ```
 
 ---

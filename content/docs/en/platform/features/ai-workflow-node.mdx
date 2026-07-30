@@ -14,10 +14,10 @@ The **AI Node** calls a configured LLM (OpenAI or Anthropic) during workflow exe
 
 ```mermaid
 flowchart LR
-  T[Trigger data + Subscriber] --> P[Compile prompt with Handlebars]
-  P --> LLM[Call LLM: OpenAI / Anthropic]
-  LLM -->|JSON response| D[Store under data.responseKey]
-  D --> Step[Downstream steps use data.responseKey]
+  T(Trigger data + Subscriber) --> P(Compile prompt with Handlebars)
+  P --> LLM(Call LLM: OpenAI / Anthropic)
+  LLM -->|JSON response| D(Store under data.responseKey)
+  D --> Step(Downstream steps use data.responseKey)
 ```
 
 The LLM is instructed via a fixed system prompt to always return a **valid JSON object**. The response is parsed and stored under `data.<responseKey>`.
@@ -63,10 +63,10 @@ Subject: {{ data.copy.subject }}
 
 ```mermaid
 flowchart TD
-  AI[AI Node: classify churn risk] --> C{data.risk.level}
-  C -->|high| SMS[Urgent SMS + retention offer]
-  C -->|medium| Email[Standard re-engagement email]
-  C -->|low| Skip[No notification]
+  AI(AI Node: classify churn risk) --> C{data.risk.level}
+  C -->|high| SMS(Urgent SMS + retention offer)
+  C -->|medium| Email(Standard re-engagement email)
+  C -->|low| Skip(No notification)
 ```
 
 **Prompt:**

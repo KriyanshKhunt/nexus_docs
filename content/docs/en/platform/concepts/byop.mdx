@@ -40,10 +40,10 @@ With BYOP, you are not dependent on a single carrier. You can configure multiple
 
 ```mermaid
 flowchart TD
-    Trigger[Email Node Execution] --> Router{Weighted Router}
-    Router -->|70% Traffic| SG[SendGrid Adapter]
-    Router -->|30% Traffic| RS[Resend Adapter]
-    SG -->|Fail / Timeout| Fallback[Failover to Resend]
+    Trigger(Email Node Execution) --> Router{Weighted Router}
+    Router -->|70% Traffic| SG(SendGrid Adapter)
+    Router -->|30% Traffic| RS(Resend Adapter)
+    SG -->|Fail / Timeout| Fallback(Failover to Resend)
 ```
 
 - **Weighted Routing**: Allocate `70%` of email traffic to SendGrid and `30%` to Resend to maintain warm IP addresses across multiple suppliers.

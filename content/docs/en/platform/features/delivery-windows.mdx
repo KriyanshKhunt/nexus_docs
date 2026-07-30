@@ -7,10 +7,10 @@ The **Delivery Window** step checks the subscriber's local time before dispatchi
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger notification] --> Check{Is local time within window?}
-  Check -->|Yes| Deliver[Deliver immediately]
-  Check -->|No| Delay[Calculate delay in ms]
-  Delay --> Queue[Schedule BullMQ delayed job]
+  Trigger(Trigger notification) --> Check{Is local time within window?}
+  Check -->|Yes| Deliver(Deliver immediately)
+  Check -->|No| Delay(Calculate delay in ms)
+  Delay --> Queue(Schedule BullMQ delayed job)
   Queue -->|Window opens| Deliver
 ```
 

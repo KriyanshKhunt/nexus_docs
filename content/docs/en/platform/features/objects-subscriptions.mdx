@@ -17,12 +17,12 @@ Objects move that relationship into Nexus, so a single trigger delivers to all w
 
 ```mermaid
 flowchart LR
-  App[Your app] -->|trigger on object| Nexus[Nexus API]
+  App(Your app) -->|trigger on object| Nexus(Nexus API)
   Nexus -->|resolve subscribers| DB[(ObjectSubscription table)]
-  DB --> W[Workflow engine]
-  W --> U1[User A notification]
-  W --> U2[User B notification]
-  W --> U3[User C notification]
+  DB --> W(Workflow engine)
+  W --> U1(User A notification)
+  W --> U2(User B notification)
+  W --> U3(User C notification)
 ```
 
 ## Concepts

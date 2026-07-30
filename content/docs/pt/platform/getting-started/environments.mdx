@@ -31,11 +31,11 @@ Para economizar créditos de operadoras e evitar o envio acidental de mensagens 
 
 ```mermaid
 flowchart LR
-    Trigger[Gatilho de Dev] --> Worker[Worker]
+    Trigger(Gatilho de Dev) --> Worker(Worker)
     Worker --> Channel{Tipo de Canal}
-    Channel -->|In-App| WebSocket[Sino WebSocket Real]
-    Channel -->|Email / SMS / Push| Sandbox[Interceptador do Sandbox]
-    Sandbox -->|Transmitir payload| UI[Simulador de Inbox do Painel]
+    Channel -->|In-App| WebSocket(Sino WebSocket Real)
+    Channel -->|Email / SMS / Push| Sandbox(Interceptador do Sandbox)
+    Sandbox -->|Transmitir payload| UI(Simulador de Inbox do Painel)
 ```
 
 - **Simulador de Inbox**: No painel de controle, você pode visualizar o HTML completamente compilado, o texto do SMS ou o payload JSON como apareceriam para o usuário.

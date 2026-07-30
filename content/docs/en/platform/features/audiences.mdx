@@ -11,9 +11,9 @@ Audience rules are evaluated **at send time** (when a broadcast is triggered), n
 
 ```mermaid
 flowchart LR
-  D[Define rules] --> A[Audience saved]
-  A -->|broadcast triggered| E[Rules evaluated against live subscriber data]
-  E --> M[Matched subscribers receive notification]
+  D(Define rules) --> A(Audience saved)
+  A -->|broadcast triggered| E(Rules evaluated against live subscriber data)
+  E --> M(Matched subscribers receive notification)
 ```
 
 ## Filterable fields

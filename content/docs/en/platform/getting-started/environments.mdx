@@ -31,11 +31,11 @@ To save carrier credits and prevent accidental messaging to real users during de
 
 ```mermaid
 flowchart LR
-    Trigger[Dev Trigger] --> Worker[Worker]
+    Trigger(Dev Trigger) --> Worker(Worker)
     Worker --> Channel{Channel Type}
-    Channel -->|In-App| WebSocket[Real WebSocket bell]
-    Channel -->|Email / SMS / Push| Sandbox[Sandbox Interceptor]
-    Sandbox -->|Stream payload| UI[Dashboard Inbox Simulator]
+    Channel -->|In-App| WebSocket(Real WebSocket bell)
+    Channel -->|Email / SMS / Push| Sandbox(Sandbox Interceptor)
+    Sandbox -->|Stream payload| UI(Dashboard Inbox Simulator)
 ```
 
 - **Inbox Simulator**: In the dashboard, you can view the fully compiled HTML, SMS text, or JSON payload as it would appear to the user.

@@ -18,14 +18,14 @@ description: AI-powered delivery timing — delay dispatches to land in each sub
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger Workflow] --> Channel{Channel step has smartTiming: true?}
-  Channel -->|No| Send[Dispatch Immediately]
+  Trigger(Trigger Workflow) --> Channel{Channel step has smartTiming: true?}
+  Channel -->|No| Send(Dispatch Immediately)
   Channel -->|Yes| CheckExclusions{Check Exclusions}
   CheckExclusions -->|Match Excluded| Send
   CheckExclusions -->|Eligible| Optimal{Current hour == optimal hour?}
   Optimal -->|Yes| Send
-  Optimal -->|No| Delay[Calculate delay in ms]
-  Delay --> Queue[Queue delayed job & status: QUEUED]
+  Optimal -->|No| Delay(Calculate delay in ms)
+  Delay --> Queue(Queue delayed job & status: QUEUED)
   Queue -->|Optimal hour opens| Send
 ```
 

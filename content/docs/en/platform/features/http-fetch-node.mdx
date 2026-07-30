@@ -17,9 +17,9 @@ HTTP Fetch solves this by pulling live data exactly when the notification is bei
 
 ```mermaid
 flowchart LR
-  T[Trigger: order.shipped] --> F[HTTP Fetch: carrier API]
-  F -->|merge into data.tracking| E[Email channel]
-  E --> Out[Send with live tracking URL]
+  T(Trigger: order.shipped) --> F(HTTP Fetch: carrier API)
+  F -->|merge into data.tracking| E(Email channel)
+  E --> Out(Send with live tracking URL)
 ```
 
 ## Configuration

@@ -187,6 +187,7 @@ function getMermaidThemeVariables(isDark: boolean) {
         // General variables
         primaryColor: 'hsl(0, 0%, 6%)',
         textColor: 'hsl(0, 0%, 96%)',
+        primaryTextColor: 'hsl(0, 0%, 96%)',
         lineColor: 'hsl(0, 0%, 70%)',
 
         // Flowcharts & Nodes
@@ -210,6 +211,7 @@ function getMermaidThemeVariables(isDark: boolean) {
         labelBoxBorderColor: 'hsl(0, 0%, 16%)',
         labelTextTextColor: 'hsl(0, 0%, 70%)',
         labelTextColor: 'hsl(0, 0%, 70%)',
+        labelColor: 'hsl(0, 0%, 96%)',
 
         // Notes & Loops
         noteBkgColor: 'hsl(0, 0%, 6%)',
@@ -221,6 +223,7 @@ function getMermaidThemeVariables(isDark: boolean) {
         // General variables
         primaryColor: 'hsl(0, 0%, 100%)',
         textColor: 'hsl(0, 0%, 9%)',
+        primaryTextColor: 'hsl(0, 0%, 9%)',
         lineColor: 'hsl(0, 0%, 30%)',
 
         // Flowcharts & Nodes
@@ -244,6 +247,7 @@ function getMermaidThemeVariables(isDark: boolean) {
         labelBoxBorderColor: 'hsl(0, 0%, 90%)',
         labelTextTextColor: 'hsl(0, 0%, 30%)',
         labelTextColor: 'hsl(0, 0%, 30%)',
+        labelColor: 'hsl(0, 0%, 9%)',
 
         // Notes & Loops
         noteBkgColor: 'hsl(0, 0%, 100%)',

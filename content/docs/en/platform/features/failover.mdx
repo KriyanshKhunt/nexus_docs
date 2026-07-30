@@ -7,13 +7,13 @@ The **Failover** node guarantees critical alerts reach your subscribers by execu
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger Node] --> FailoverNode[Failover Node]
-  FailoverNode --> Primary[Execute Primary Channel]
+  Trigger(Trigger Node) --> FailoverNode(Failover Node)
+  FailoverNode --> Primary(Execute Primary Channel)
   Primary -->|Success| Check{Fallback exists?}
-  Primary -->|Immediate Fail| RunFallback[Execute Fallback Channel]
-  Check -->|Yes| Wait[Schedule Timeout Job & Log FAILOVER_WAIT]
-  Wait -->|Read Ack received| Cancel[Cancel Timeout Job & Log FAILOVER_READ_RECEIVED]
-  Wait -->|Timeout expires| Timeout[Log FAILOVER_TIMEOUT & FAILOVER_FALLBACK]
+  Primary -->|Immediate Fail| RunFallback(Execute Fallback Channel)
+  Check -->|Yes| Wait(Schedule Timeout Job & Log FAILOVER_WAIT)
+  Wait -->|Read Ack received| Cancel(Cancel Timeout Job & Log FAILOVER_READ_RECEIVED)
+  Wait -->|Timeout expires| Timeout(Log FAILOVER_TIMEOUT & FAILOVER_FALLBACK)
   Timeout --> RunFallback
 ```
 

@@ -11,9 +11,9 @@ When the workflow engine reaches a step that has conditions configured, it evalu
 
 ```mermaid
 flowchart LR
-  Trigger --> Eval{Evaluate conditions}
-  Eval -->|true| Execute[Run step]
-  Eval -->|false| Skip[Log CONDITION_SKIPPED → next step]
+  Trigger(Trigger) --> Eval{Evaluate conditions}
+  Eval -->|true| Execute(Run step)
+  Eval -->|false| Skip(Log CONDITION_SKIPPED → next step)
 ```
 
 ## Condition structure

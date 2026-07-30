@@ -16,10 +16,10 @@ description: Dashboard-initiated one-time or scheduled sends to audience segment
 
 ```mermaid
 flowchart LR
-  PM[Product manager] -->|creates broadcast| Dash[Dashboard]
-  Dash -->|resolve audience at send time| Aud[Audience engine]
-  Aud -->|fan-out in batches| Worker[Workflow worker]
-  Worker --> Ch[Email / SMS / Push / In-App]
+  PM(Product manager) -->|creates broadcast| Dash(Dashboard)
+  Dash -->|resolve audience at send time| Aud(Audience engine)
+  Aud -->|fan-out in batches| Worker(Workflow worker)
+  Worker --> Ch(Email / SMS / Push / In-App)
 ```
 
 ## Broadcast lifecycle

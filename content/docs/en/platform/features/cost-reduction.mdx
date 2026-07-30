@@ -13,9 +13,9 @@ When a subscriber has an active client SDK connection (React, Angular, or Headle
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger workflow] --> Check{Subscriber online?}
-  Check -->|Yes| Suppress[In-app feed only]
-  Check -->|No| Dispatch[Email / SMS / Push / WhatsApp]
+  Trigger(Trigger workflow) --> Check{Subscriber online?}
+  Check -->|Yes| Suppress(In-app feed only)
+  Check -->|No| Dispatch(Email / SMS / Push / WhatsApp)
 ```
 
 ### Suppressible channels

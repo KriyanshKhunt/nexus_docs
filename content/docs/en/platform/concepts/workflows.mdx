@@ -48,9 +48,9 @@ You can attach boolean rules to **any node** inside your visual tree. If the con
 
 ```mermaid
 flowchart TD
-    Node[Email Node] --> Check{Condition: data.isAdmin == true}
-    Check -->|True| Send[Send Email]
-    Check -->|False| Skip[Skip & Continue Pipeline]
+    Node(Email Node) --> Check{Condition: data.isAdmin == true}
+    Check -->|True| Send(Send Email)
+    Check -->|False| Skip(Skip & Continue Pipeline)
 ```
 
 Example rules check parameters from:

@@ -74,21 +74,21 @@ The following diagram tracks the transaction boundary between server-side dispat
 ```mermaid
 flowchart TD
   subgraph Server Environment
-    App[Your App Server] -->|1. Initialize SDK with sk_*| SDK[Node.js SDK]
-    SDK -->|2. Trigger Workflow| API[Nexus REST API]
+    App(Your App Server) -->|1. Initialize SDK with sk_*| SDK(Node.js SDK)
+    SDK -->|2. Trigger Workflow| API(Nexus REST API)
     SDK -->|3. Generate HMAC| App
   end
 
   subgraph Client Environment
-    App -->|4. Pass subscriberId + HMAC| FE[Browser App]
-    FE -->|5. Connect WebSocket with pk_*| WebHost[Socket.IO Gateway]
+    App -->|4. Pass subscriberId + HMAC| FE(Browser App)
+    FE -->|5. Connect WebSocket with pk_*| WebHost(Socket.IO Gateway)
   end
 
   subgraph Background Processing
     API -->|6. Enqueue Job| Q[(Redis Queue)]
-    Q -->|7. Worker Processing| Workers[Async Workers]
+    Q -->|7. Worker Processing| Workers(Async Workers)
     Workers -->|8. Push Live Event| WebHost
-    Workers -->|9. Dispatch Carrier Call| Carriers["Providers (Twilio/SendGrid)"]
+    Workers -->|9. Dispatch Carrier Call| Carriers("Providers (Twilio/SendGrid)")
   end
 
   WebHost -->|10. Stream to Feed| FE

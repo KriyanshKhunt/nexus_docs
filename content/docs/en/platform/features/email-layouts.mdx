@@ -76,12 +76,12 @@ Change the partial once — every template using it updates on the next send.
 
 ```mermaid
 flowchart TD
-  T[Email template HTML] --> P[Resolve partials]
-  P --> C[Compile Handlebars — subscriber + trigger data]
-  C --> L[Wrap in active layout HTML]
-  L --> B[Inject tenant branding variables]
-  B --> H[Compile layout Handlebars]
-  H --> Out[Final HTML sent to email provider]
+  T(Email template HTML) --> P(Resolve partials)
+  P --> C(Compile Handlebars — subscriber + trigger data)
+  C --> L(Wrap in active layout HTML)
+  L --> B(Inject tenant branding variables)
+  B --> H(Compile layout Handlebars)
+  H --> Out(Final HTML sent to email provider)
 ```
 
 ## Assigning a layout to a workflow

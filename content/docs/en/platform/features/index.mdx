@@ -65,10 +65,10 @@ description: Smart delivery, product messaging, workflow intelligence, and relia
 
 ```mermaid
 flowchart LR
-  T[Trigger] --> P{Presence?}
-  P -->|Online| I[In-App only]
-  P -->|Offline| S[Smart timing]
-  S --> W[Delivery window]
-  W --> C[Channel dispatch]
-  C --> F[Failover watch]
+  T(Trigger) --> P{Presence?}
+  P -->|Online| I(In-App only)
+  P -->|Offline| S(Smart timing)
+  S --> W(Delivery window)
+  W --> C(Channel dispatch)
+  C --> F(Failover watch)
 ```

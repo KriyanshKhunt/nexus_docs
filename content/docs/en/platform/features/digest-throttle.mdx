@@ -13,12 +13,12 @@ The **Digest** node intercepts workflow execution, pushes the trigger context in
 
 ```mermaid
 flowchart TD
-  T1[Trigger 1] --> D[Digest Node]
-  T2[Trigger 2] --> D
-  T3[Trigger 3] --> D
+  T1(Trigger 1) --> D(Digest Node)
+  T2(Trigger 2) --> D
+  T3(Trigger 3) --> D
   D -->|Accumulate in Redis| Redis[(Redis List)]
-  Redis -->|Flush windowMinutes| Compile[Compile summary template]
-  Compile --> Channel[Email / SMS / Push]
+  Redis -->|Flush windowMinutes| Compile(Compile summary template)
+  Compile --> Channel(Email / SMS / Push)
 ```
 
 ### Configuration
@@ -69,11 +69,11 @@ The **Throttle** node rate-limits notifications by tracking delivery frequency i
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger] --> Throttle{Count > maxCount?}
-  Throttle -->|No| Pass[Deliver step]
+  Trigger(Trigger) --> Throttle{Count > maxCount?}
+  Throttle -->|No| Pass(Deliver step)
   Throttle -->|Yes| Divert{divertToDigest?}
-  Divert -->|Yes| Queue[Divert to Digest list]
-  Divert -->|No| Drop[Drop / Status: SKIPPED_BY_PREFERENCE]
+  Divert -->|Yes| Queue(Divert to Digest list)
+  Divert -->|No| Drop(Drop / Status: SKIPPED_BY_PREFERENCE)
 ```
 
 ### Configuration

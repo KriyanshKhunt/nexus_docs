@@ -14,22 +14,22 @@ Nexus Signal is designed as a high-throughput, decoupled notification orchestrat
 ```mermaid
 flowchart TB
   subgraph Client [Client Application & Browser]
-    SDK["Backend SDK (@nexus-signal/node)"]
-    UI["Frontend UI (@nexus-signal/react)"]
+    SDK("Backend SDK (@nexus-signal/node)")
+    UI("Frontend UI (@nexus-signal/react)")
   end
 
   subgraph Nexus [Nexus Control Plane]
-    API["Express API Gateway<br/><small>Sub-10ms INGESTED Log</small>"]
-    Q["Redis Cache + BullMQ"]
-    W["Worker Execution Cluster"]
-    WS["Socket.IO Gateway"]
+    API("Express API Gateway<br/><small>Sub-10ms INGESTED Log</small>")
+    Q("Redis Cache + BullMQ")
+    W("Worker Execution Cluster")
+    WS("Socket.IO Gateway")
     DB[(PostgreSQL + Prisma)]
   end
 
   subgraph Providers [Third-Party Carriers]
-    SG[SendGrid API]
-    TW[Twilio SMS]
-    FCM[Firebase Push]
+    SG(SendGrid API)
+    TW(Twilio SMS)
+    FCM(Firebase Push)
   end
 
   SDK -->|1. POST Trigger Event| API

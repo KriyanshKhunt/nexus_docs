@@ -12,12 +12,12 @@ If your product serves multiple companies, Nexus **Tenants** let each customer r
 ```mermaid
 flowchart TB
   subgraph Your SaaS
-    App[Your application]
+    App(Your application)
   end
   subgraph Nexus Workspace
-    T1[Tenant: acme]
-    T2[Tenant: globex]
-    W[Workflow engine]
+    T1(Tenant: acme)
+    T2(Tenant: globex)
+    W(Workflow engine)
   end
   App ---->|trigger + tenant: tenant_acme| T1
   App ---->|trigger + tenant: tenant_globex| T2
