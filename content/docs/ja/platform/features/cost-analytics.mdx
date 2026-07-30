@@ -1,51 +1,112 @@
 ---
 title: コスト分析
-description: チャンネル、ワークフロー、プロバイダーごとのプロバイダー費用を予算アラート付きで追跡。
+description: チャネル、ワークフロー、およびプロバイダーごとの費用を追跡し、予算アラートを設定します。
 ---
 
-通知の正確なコストを把握 — ほとんどの通知プラットフォームが提供しないもの。
+通知の送信にかかっているコストを正確に把握できます。Nexus は、送信成功ログと定義されたプロバイダー単価表をマッピングすることで、すべてのメッセージングチャネルにおけるプロバイダーレベルの支出を追跡します。
 
-## セットアップ
+---
 
-1. **インテグレーション → プロバイダーコスト** — プロバイダーごとのメッセージあたりコストを設定（例: SendGrid $0.001、Twilio $0.05）
-2. **設定 → 予算** — オプションの月次 `costBudgetUsd` 上限
+## 仕組み
 
-## ダッシュボード
+1. ダッシュボードの **Settings → Integrations → Provider Costs** で、プロバイダーのメッセージ単価を定義します（例: SendGrid はメール1通あたり `$0.001`、Twilio は SMS 1通あたり `$0.0075`）。
+2. 通知が送信成功ステータスで完了すると、Nexus は実行ログの `responseMeta` フィールドに記録されているアクティブなプロバイダーキーを参照します。
+3. 使用された金額が `送信数 * メッセージ単価` として計算され、組織の当月ビルサイクル（請求期間）の合計額に加算されます。
 
-**概要 → 月次支出**カードに表示:
+---
 
-- この請求サイクルの合計支出
-- プロバイダーとチャンネル別の内訳
-- ワークフロー別の内訳
-- 予算使用率 % と超過バッジ
+## セットアップ手順
 
-## API
+### 1. プロバイダー単価の設定
+
+ダッシュボードで **Integrations → Provider Costs** に移動し、アクティブな各連携プロバイダーに対して USD 単位の単価コストを指定します。
+
+### 2. 月間予算上限（バジェットキャップ）の設定
+
+**Settings → General** に移動し、月間の予算上限 `costBudgetUsd`（例: `1000` USD）を指定します。支出がこの上限を超えると、自動的に通知とアラートがトリガーされます。
+
+---
+
+## ダッシュボード API
+
+分析コントローラーから、現在のコストの内訳データを取得できます。
 
 ```http
 GET /v1/analytics/overview/cost?environment=PRODUCTION
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
 ```
+
+**レスポンスボディ:**
 
 ```json
 {
+  "environment": "PRODUCTION",
+  "billingCycleStart": "2026-07-01T00:00:00.000Z",
   "totalCostUsd": 847.32,
-  "budgetUsd": 1000,
+  "budgetUsd": 1000.0,
   "budgetUsedPercent": 85,
   "budgetExceeded": false,
-  "byProvider": [{ "providerId": "sendgrid", "count": 420000, "costUsd": 420 }],
-  "byWorkflow": [{ "workflowName": "order.shipped", "costUsd": 312.5 }]
+  "byChannel": [
+    { "channel": "EMAIL", "count": 420000 },
+    { "channel": "SMS", "count": 61000 }
+  ],
+  "byProvider": [
+    {
+      "providerId": "sendgrid",
+      "label": "SendGrid",
+      "layer": "email",
+      "count": 420000,
+      "costPerMessage": 0.001,
+      "costUsd": 420.0
+    },
+    {
+      "providerId": "twilio",
+      "label": "Twilio SMS",
+      "layer": "sms",
+      "count": 61000,
+      "costPerMessage": 0.007,
+      "costUsd": 427.0
+    }
+  ],
+  "byWorkflow": [
+    {
+      "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+      "workflowName": "order.shipped",
+      "count": 312500,
+      "costUsd": 312.5
+    }
+  ],
+  "providerCosts": {
+    "sendgrid": 0.001,
+    "twilio": 0.007
+  }
 }
 ```
 
-## 予算アラート
+---
 
-支出が `costBudgetUsd` を超えると、組織オーナーは請求サイクルに1回**メールアラート**を受け取ります。
+## 予算アラートの動作
 
-## ROI 相関
+当月の累計コストが設定された `costBudgetUsd` を超えると：
 
-コストデータを監査ログの変換テレメトリ（`OPENED`、`CLICKED`）と組み合わせて、高コスト・低エンゲージメントのワークフローを特定します。
+- ダッシュボードの概要ページで、組織バッジの表示が `Exceeded`（超過）に変わります。
+- 組織のすべての管理者に、請求期間中に 1 回だけ、警告用のメール通知が自動送信されます。
+- **注意**: 予算上限を超えても、以降の通知の送信やトリガーがブロックされることは**ありません**。配信は継続され、管理者がランレートの推移を把握できるようにアラートのみを出します。
 
-## 関連
+---
+
+## 最適化のヒント
+
+コスト分析データをエンゲージメント転送率（`seen` や `interacted` 率）と組み合わせることで、コストが高くエンゲージメントが低い非効率なワークフローを特定できます。特定のワークフローで Twilio のコストが急増しているにもかかわらず反応率が低い場合は、以下を検討してください。
+
+- [プレゼンス抑制](/docs/platform/features/cost-reduction)を導入し、アプリがアクティブなユーザーに対しては SMS の送信をスキップする。
+- 配信チャネルのフォールバック順序を変更し、SMS よりも先にメールやプッシュ通知を優先させる。
+- [ダイジェスト（要約）ウィンドウ](/docs/platform/features/digest-throttle)を導入し、複数のアラートを1通のバッチメールに統合する。
+
+---
+
+## 関連リンク
 
 - [コスト削減](/docs/platform/features/cost-reduction)
 - [分析 API](/docs/api/analytics)
+- [Digest & throttle](/docs/platform/features/digest-throttle)

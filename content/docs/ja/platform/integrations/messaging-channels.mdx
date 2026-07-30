@@ -1,46 +1,79 @@
 ---
-title: メッセージングチャンネル
-description: Slack、Discord、Microsoft Teams — 組織 Webhook とサブスクライバーごとのルーティング。
+title: メッセージングチャネル
+description: チャットワークスペースへの直接のアップデート送信 — サブスクライバーごとの Slack、Discord、および Microsoft Teams の受信 Webhook ルーティング。
 ---
 
-チームチャットツールに直接通知を配信します。
+Nexus には、**Slack**、**Discord**、および **Microsoft Teams** 向けのネイティブチャネルノードが含まれています。組織レベルの共通チャネル（例: 自社の Slack にシステムのアラート通知を送信する）を構成することも、サブスクライバーごとに異なる独自のチャネル Webhook に通知をルーティングすることもできます。
 
-## 組織レベルのセットアップ
+---
 
-各プラットフォームの受信 Webhook URL を **Integrations（インテグレーション）** で設定します。オーバーライドされない限り、すべてのサブスクライバーが組織の Webhook を共有します。
+## Webhook 認証情報の優先順位
 
-## サブスクライバーごとのルーティング
+チャット通知を発送する際、Nexus は以下の優先順位でどの Webhook URL を使用するかを決定します。
 
-ユーザー固有のチャンネル（例: 個人 Slack DM の Webhook）のために、トリガー受信者に Webhook URL を渡します:
+1. **サブスクライバー個別の Webhook**: サブスクライバーの `channelConnections` に登録されているカスタム接続用 URL（例: `slackWebhookUrl`）を確認します。
+2. **組織全体の Webhook**: 個別設定がない場合、現在の環境のインテグレーション設定に保存されているデフォルトの認証情報にフォールバックします。
 
-```ts
-recipients: [
-  {
-    externalId: 'user_1',
-    slackWebhookUrl: 'https://hooks.slack.com/services/T…/B…/…',
-    discordWebhookUrl: 'https://discord.com/api/webhooks/…',
-    teamsWebhookUrl: 'https://outlook.office.com/webhook/…',
-  },
-]
+```mermaid
+flowchart TD
+  Trigger[チャットステップの起動] --> Sub{カスタム Webhook を設定済み?}
+  Sub -->|はい| Custom[ユーザーの接続 URL を使用]
+  Sub -->|いいえ| Fallback{組織のインテグレーションが有効?}
+  Fallback -->|はい| Default[組織のデフォルト Webhook URL を使用]
+  Fallback -->|いいえ| Fail[PROVIDER_ERROR を記録 & ステップ失敗]
 ```
 
-サブスクライバーの URL はディスパッチ時に組織の認証情報を**上書き**します。URL は将来のトリガーのためにサブスクライバープロファイルに永続化されます。
+---
 
-## ペイロード形式
+## サブスクライバー個別の Webhook ルーティング
 
-| チャンネル | 形式 |
-|---------|--|
-| Slack | `{ "text": "…" }` |
-| Discord | `{ "content": "…" }` |
-| Teams | 本文テキスト付きの Adaptive Card |
+サブスクライバー固有のチャネル（例: 個人の Slack DM チャネル、チーム開発用のワークスペースチャネルなど）に通知をルーティングするには、トリガーリクエストで一意の Webhook URL を指定して送信します。
 
-テンプレートは i18n バリアント付きの `slack`、`discord`、`ms_teams` コンテンツフィールドをサポートします。
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'billing.invoice',
+  recipients: [
+    {
+      externalId: 'user_42',
+      slackWebhookUrl: 'https://hooks.slack.com/services/{workspace_id}/{channel_id}/{token}',
+      discordWebhookUrl: 'https://discord.com/api/webhooks/{channel_id}/{token}',
+      teamsWebhookUrl:
+        'https://your-org.webhook.office.com/webhookb2/{guid}@{tenant_id}/IncomingWebhook/{id}/{token}',
+    },
+  ],
+  data: { amount: 150 },
+});
+```
 
-## ワークフローキャンバス
+### 自動保存と永続化
 
-ワークフローのステップツリーに **Slack**、**Discord**、または **Teams** チャンネルノードを追加します。
+- トリガーのペイロードで Webhook URL が渡されると、Nexus はそれを自動的に抽出してデータベース内のサブスクライバーの `channelConnections` オブジェクトに保存します。
+- そのサブスクライバーに対する今後のトリガーでは、キャッシュされた接続 URL が自動的に再利用されるため、このパラメータを渡すのは1回だけで済みます（通常、ユーザーがアプリケーションの設定画面等でチャットツール連携をリンクした際に行います）。
 
-## 関連
+---
 
-- [Node SDK 受信者フィールド](/docs/sdk/backend/node)
-- [インテグレーション](/docs/platform/integrations)
+## 期待されるペイロード形式
+
+Nexus は、各チャットプラットフォームのレイアウト仕様に適合するように、テンプレートのテキスト内容を自動的に適合させます：
+
+| チャネル            | キー       | 形式 | アダプターの動作                                                                                     |
+| :------------------ | :--------- | :--- | :--------------------------------------------------------------------------------------------------- |
+| **Slack**           | `slack`    | JSON | ペイロードを `{ "text": "..." }` として発送します。標準の Slack markdown (mrkdwn) をサポートします。 |
+| **Discord**         | `discord`  | JSON | ペイロードを `{ "content": "..." }` として発送します。                                               |
+| **Microsoft Teams** | `ms_teams` | JSON | メッセージのタイトルと本文を含む Adaptive Card の JSON ブロックをコンパイルします。                  |
+
+---
+
+## ワークフローの構成手順
+
+1. ワークフローを作成し、キャンバスに **Slack**、**Discord**、または **Teams** チャネルノードを追加します。
+2. ノードの設定で、フォールバック先となるプロバイダーキーを選択します。
+3. 保存し、ワークフローをトリガーします。
+
+---
+
+## 関連リンク
+
+- [Node SDK クライアント](/docs/sdk/backend/node) — 宛先（recipient）スキーマのドキュメント
+- [Webhook のインテグレーション](/docs/platform/integrations/webhooks) — カスタムペイロードの発送
+- [翻訳ファイル](/docs/platform/features/translations) — チャットテキストのローカライズ

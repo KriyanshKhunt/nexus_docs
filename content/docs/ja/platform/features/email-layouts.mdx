@@ -1,57 +1,111 @@
 ---
-title: メールレイアウトとパーシャル
-description: 共有メールフレームと再利用可能なHTMLスニペット — ブランディングを一度変更すれば、すべてのテンプレートが更新されます。
+title: メールのレイアウト & パーシャル
+description: 共有のメールフレームと再利用可能な HTML スニペット — ブランディングを一度変更すれば、すべてのテンプレートが更新されます。
 ---
 
-**メールレイアウト** は、すべてのメールテンプレートを共有HTMLフレーム（ヘッダー、フッター、スタイル）でラップします。 **パーシャル** (partials) は、テンプレート間で参照される再利用可能なHandlebarsフラグメントです。
+**メールレイアウト**は、すべてのメールテンプレートを共有の HTML フレーム（ヘッダー、フッター、スタイルなど）でラップします。**パーシャル（Partials）**は、複数のテンプレート間で参照できる再利用可能な Handlebars スニペットです。これらを組み合わせることで、HTML を重複させることなく、一貫したブランドデザインを維持できます。
 
-## レイアウト
+---
 
-レイアウトは、コンテンツ用のスロットを持つ外部構造を定義します：
+## メールレイアウト
+
+レイアウトは外側の HTML シェルを定義します。コンパイルされたテンプレートの本文は `{{{ content }}}` に注入されます。
 
 ```html
 <!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      /* 基本のベーススタイル */
+    </style>
+  </head>
   <body>
-    <img src="{{ branding.logoUrl }}" alt="Logo" />
-    <div class="content">{{{ content }}}</div>
-    <footer>{{ branding.footerHtml }}</footer>
+    <header>
+      <img src="{{ logo }}" alt="{{ name }}" style="max-height: 40px;" />
+    </header>
+    <main>{{{ content }}}</main>
+    <footer>{{{ footerHtml }}}</footer>
   </body>
 </html>
 ```
 
-ダッシュボード： **Templates → Layouts**。環境ごとに1つのレイアウトをアクティブとしてマークできます。テナントコンテキストが定義されている場合、テナントのブランド変数が自動的に挿入されます。
+<Callout type="info">
+  HTML のエスケープ処理を行わずにレンダリングするには、3重波括弧の `{{{ content }}}` および `{{{ footerHtml }}}` を使用します。画像 URL 文字列などの通常の値には、2重波括弧の `{{ logo }}` を使用します。
+</Callout>
 
-## パーシャル (Partials)
+### レイアウト内のテナントブランディング変数
 
-**Templates → Partials** 内で再利用可能なブロックを作成します：
+ワークフリートリガーに `tenant` が含まれている場合、そのテナントのブランディングフィールドがフィールド名で直接レイアウトコンテキストに注入されます。
+
+| レイアウト変数       | ソース                         |
+| :------------------- | :----------------------------- |
+| `{{ logo }}`         | `tenant.branding.logo`         |
+| `{{ primaryColor }}` | `tenant.branding.primaryColor` |
+| `{{{ footerHtml }}}` | `tenant.branding.footerHtml`   |
+| `{{ name }}`         | `tenant.name`                  |
+
+トリガーでテナントが指定されていない場合、これらの変数は空になりますので、レイアウト内で適切なフォールバック処理を記述してください。
+
+### レイアウト変数
+
+テナントブランディング以外に、レイアウト自体に**カスタム静的変数**（ダッシュボードで設定するキーと値のペア）を定義できます。これらは、テナントブランディングやサブスクライバーデータとともにコンテキストにマージされます。
+
+---
+
+## パーシャル
+
+パーシャルは、名前で登録された再利用可能な HTML スニペットです。これらは **Templates → Partials** で作成します。
 
 ```html
-<!-- partial: cta-button -->
-<a href="{{ url }}" class="btn btn-primary">{{ label }}</a>
+<!-- パーシャル名: cta-button -->
+<a
+  href="{{ url }}"
+  style="display:inline-block; padding:12px 24px;
+   background-color:{{ primaryColor }}; color:#fff; text-decoration:none;
+   border-radius:4px;"
+  >{{ label }}</a
+>
 ```
 
-任意のメールテンプレートでの参照：
+任意のメールテンプレートまたはレイアウトから次のように参照します：
 
 ```html
-{{> cta-button url=data.checkoutUrl label="Complete purchase" }}
+{{> cta-button url=data.checkoutUrl label="購入手続きを完了する" }}
 ```
 
-パーシャルスニペットを一度変更すると、それを使用するすべてのテンプレートが次の送信時に自動的に更新されます。
+パーシャルを一度変更するだけで、それを使用しているすべてのテンプレートが次回の送信時に自動的に更新されます。
+
+---
 
 ## コンパイル順序
 
 ```mermaid
 flowchart TD
-  T[Template HTML] --> P[Resolve partials]
-  P --> L[Wrap in active layout]
-  L --> B[Apply tenant branding]
-  B --> H[Handlebars compile]
-  H --> Out[Final HTML]
+  T[メールテンプレート HTML] --> P[パーシャルの解決]
+  P --> C[Handlebars のコンパイル — サブスクライバー + トリガーデータ]
+  C --> L[アクティブなレイアウト HTML でラップ]
+  L --> B[テナントのブランディング変数を注入]
+  B --> H[レイアウト Handlebars のコンパイル]
+  H --> Out[メールプロバイダーに送信される最終 HTML]
 ```
+
+---
+
+## ワークフローへのレイアウトの割り当て
+
+ダッシュボードの**ワークフローキャンバス**上での設定手順：
+
+1. ワークフロー設定を開きます。
+2. **Email Layout** を選択し、現在の環境に存在するレイアウトから選択します。
+3. 保存します。これで、そのワークフロー内のすべてのメールチャネルステップにそのレイアウトが適用されます。
+
+1つのレイアウトを複数のワークフローに適用できます。レイアウトの HTML を変更すると、それを使用しているすべてのワークフローの送信内容が次回の送信時に即座に更新されます。
+
+---
 
 ## 関連リンク
 
 - [テナントごとのブランディング](/docs/platform/features/tenants)
-- [メールレイアウトAPI](/docs/api/email-layouts)
+- [メールレイアウト API](/docs/api/email-layouts)
 - [マルチ言語テンプレート](/docs/platform/features/i18n)

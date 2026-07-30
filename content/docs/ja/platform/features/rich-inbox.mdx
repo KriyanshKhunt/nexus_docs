@@ -1,84 +1,165 @@
 ---
-title: リッチインボックス
-description: タブ、アクションボタン、アクター、およびタグフィルタリング — 基本的なベルを超えた完全な通知フィード。
+title: リッチなアプリ内インボックス
+description: アクションボタン、送信者のアバター、リダイレクト、およびタグフィルタリング — 単なる通知ベルを超えた本格的な通知フィード。
 ---
 
-インボックスSDKコンポーネントは、カテゴリ別のフィード、通知ごとのCTA、アクターのアバター、およびタグベースのフィルタリングをサポートしています。
+アプリ内インボックスは、アクションボタン、送信者アバター、クリックによるリダイレクト、およびトピックベースのタグフィルタリングを含む、リッチな通知ペイロードをサポートしています。これらはすべて、トリガーの実行時に `data` フィールド内のアンダースコア（`_`）で始まる特別なキーを介して構成されます。
+
+---
+
+## 送信者（通知の原因となったユーザー）
+
+トリガーの `data` ペイロード内の `_actor` キーを使用して、イベントを開始した人物（送信者）のメタデータを渡します。
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'comment.added',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _actor: {
+      name: 'Sarah Chen',
+      avatar: 'https://cdn.example.com/avatars/sarah.jpg',
+      id: 'user_sarah',
+    },
+    commentPreview: 'Looks good to me!',
+  },
+});
+```
+
+送信者は、インボックスフィードに名前付きのアバター画像として表示されます（「Sarah Chen commented...」など）。`_actor` 内の 3 つのフィールドはすべてオプションです。
+
+| `_actor` フィールド | 型     | 説明                                            |
+| :------------------ | :----- | :---------------------------------------------- |
+| `name`              | string | 通知の横に表示される表示名。                    |
+| `avatar`            | string | アバター画像の URL。                            |
+| `id`                | string | アクションを実行した人物の外部 ID（リンク用）。 |
+
+---
+
+## アクションボタン
+
+トリガーの `data` 内の `_actions` キーを使用して、最大 **2 つのアクションボタン**を含めることができます。
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'approval.requested',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _actions: [
+      { label: 'Approve', url: '/api/approve/req_123', variant: 'primary' },
+      { label: 'Decline', url: '/api/decline/req_123', variant: 'secondary' },
+    ],
+    requestId: 'req_123',
+  },
+});
+```
+
+| `_actions` フィールド | 型                           | 説明                                                                       |
+| :-------------------- | :--------------------------- | :------------------------------------------------------------------------- |
+| `label`               | string                       | ボタンの表示テキスト（最大 50 文字）。                                     |
+| `url`                 | string                       | アクション実行時の URL。相対パス（同一アプリ内）または絶対パスをサポート。 |
+| `variant`             | `'primary'` \| `'secondary'` | ボタンのスタイルバリアント（デフォルトは `'primary'`）。                   |
+
+<Callout type="info">
+  レンダリングされるのは最初の 2 つのアクションのみです。それ以降の項目は無視されます。
+</Callout>
+
+---
+
+## クリック時のリダイレクト
+
+`_redirect` を使用して、通知がクリックされた際のリダイレクト先を制御します。
+
+```ts
+data: {
+  _redirect: {
+    url: '/orders/ord_789',
+    target: '_self',   // '_self' (デフォルト) または '_blank'
+  },
+}
+```
+
+または、シンプルな遷移用としてプレーンな文字列で記述することも可能です：
+
+```ts
+data: {
+  _redirect: '/orders/ord_789',
+}
+```
+
+---
 
 ## タグフィルタリング
 
-ワークフローのトピックタグでフィルタリングするには、 `tag` プロパティを使用します：
+タグは **ワークフローのトピック名** から自動生成されます。ダッシュボードでワークフローにトピックを割り当てると、そのワークフローから配信されるすべての通知がそのトピックをタグとして持ちます。
+
+### React SDK でのタグフィルタリング
+
+React SDK では、`NotificationInbox` コンポーネントが `tag` プロップを使用してクライアント側で通知をフィルタリングします。
 
 ```tsx
 <NotificationInbox tag="billing" />
 ```
 
-複数のフィードをレンダリングするか、 `tag` プロパティを切り替えて、カスタムのタブ付きUIを作成します：
+`tag` プロップに状態変数を渡すことで、カスタムタブ UI を構築できます。
 
 ```tsx
-const [tab, setTab] = useState<string | undefined>(undefined);
+const [activeTag, setActiveTag] = useState<string | undefined>(undefined);
 
-<button onClick={() => setTab(undefined)}>All</button>
-<button onClick={() => setTab('billing')}>Billing</button>
-<NotificationInbox tag={tab} />
+<>
+  <button onClick={() => setActiveTag(undefined)}>All</button>
+  <button onClick={() => setActiveTag('billing')}>Billing</button>
+  <button onClick={() => setActiveTag('mentions')}>Mentions</button>
+  <NotificationInbox tag={activeTag} />
+</>;
 ```
 
-ダッシュボードで、または [Workflow-as-code](/docs/sdk/workflow/workflow-as-code) を介してワークフローにタグを割り当てます。フィルターは `GET /v1/sdk/notifications?tag=...` にマップされます。
+### 生の SDK API & Headless JS SDK でのフィルタリング
 
-## アクションボタン
+カスタムのヘッドレス統合では、サーバー側でタグをフィルタリングできます。
 
-トリガーデータまたはワークフローテンプレートの出力にアクションを含めます：
+- **生の SDK API**: `tag` または `tags` クエリパラメータを指定してエンドポイントを呼び出します：
+  ```http
+  GET /v1/sdk/notifications?subscriberExternalId=user_42&tag=billing
+  ```
+- **Headless JS SDK**: `tags` 配列オプションを渡します：
+  ```ts
+  await nexus.notifications.refetch({ tags: ['billing'] });
+  ```
 
-```json
-{
-  "actions": [
-    { "label": "Approve", "url": "/api/approve/123", "style": "primary" },
-    { "label": "Decline", "url": "/api/decline/123", "style": "secondary" }
-  ]
-}
-```
+---
 
-アクションは、インボックスアイテム内のクリック可能なボタンとしてレンダリングされます。URLは相対パス（アプリケーションがルーティングを処理）または絶対APIエンドポイントのいずれかにすることができます。
+## 通知のライフサイクル状態
 
-## アクターのサポート
+| 状態                      | 意味                                                                           |
+| :------------------------ | :----------------------------------------------------------------------------- |
+| **未読 (Unread)**         | 配信済み、未開封。未読バッジのカウント数をインクリメントします。               |
+| **既読 (Read)**           | ユーザーがクリックしたか、明示的に既読としてマークされた状態。                 |
+| **アーカイブ (Archived)** | アクティブなフィードから非表示になり、削除はされていないが裏に引っ込んだ状態。 |
+| **表示済み (Seen)**       | SDK が通知ビューポート内にアイテムをレンダリングした状態。                     |
 
-トリガー時アクターのメタデータを渡して、誰が通知の原因となったかを表示します：
+複数デバイス間の同期：1つのデバイスで通知を既読としてマークすると、WebSocket ブロードキャストを介してすべてのデバイスのバッジカウントが即座にクリアされます。
+
+---
+
+## ヘッドレス SDK からのアクセス
 
 ```ts
-await nexus.workflows.trigger({
-  workflowName: "comment.added",
-  recipients: [{ externalId: "user_42" }],
-  data: {
-    actor: {
-      name: "Sarah Chen",
-      avatarUrl: "https://cdn.example.com/sarah.jpg",
-    },
-    commentPreview: "Looks good to me!",
-  },
-});
+// タグフィルターを指定してフェッチ
+await nexus.notifications.refetch({ tags: ['billing'] });
+
+// 次のページを読み込む
+await nexus.notifications.loadMore({ tags: ['mentions'] });
+
+// アクションを実行
+await nexus.notifications.markRead(notificationId);
+await nexus.notifications.markAllRead();
+await nexus.notifications.archive(notificationId);
 ```
 
-フィード内でアバター付きの「Sarah Chen commented...」としてレンダリングされます。
+Nexus が WebSocket の接続や状態管理を処理するため、[`@nexus-signal/js`](/docs/sdk/frontend/js) を使用して完全にカスタムな UI を容易に構築できます。
 
-## 通知のライフサイクル
-
-| ステータス | 意味                                 |
-| ---------- | ------------------------------------ |
-| Unread     | 配信済み、未開封                     |
-| Read       | ユーザーがクリックしたか、既読に設定 |
-| Archived   | アクティブフィードから非表示         |
-| Seen       | (SDK) フィード内でスクロール通過済み |
-
-マルチデバイス同期：1つのデバイスで既読にすると、WebSocketを介してすべての場所でバッジ数がクリアされます。
-
-## ヘッドレサアクセス (JS SDK)
-
-```ts
-await nexus.notifications.refetch({ tags: ["billing"] });
-await nexus.notifications.loadMore({ tags: ["mention"] });
-```
-
-NexusがWebSocket + APIの状態を管理しながら、 [`@nexus-signal/js`](/docs/sdk/frontend/js) を使用して完全にカスタムなUIを構築します。
+---
 
 ## 関連リンク
 

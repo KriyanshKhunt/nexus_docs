@@ -1,46 +1,94 @@
 ---
-title: プロダクト内ガイド
-description: ダッシュボードから管理されるターゲットバナー、モーダル、およびツールチップ — ワークフローでトリガーされる通知ではありません。
+title: アプリ内ガイド
+description: ダッシュボードから管理される、ターゲットを絞ったバナー、モーダル、カード、およびツールチップ — ワークフローからトリガーされる通知ではありません。
 ---
 
-**ガイド**は、ダッシュボードから制御されるプロダクト内のUIサーフェス（バナー、モーダル、ツールチップ、バッジ）を提供します。エンジニアはスロットを一度定義すれば、PMがコンテンツ、ターゲット、およびアクティブ化を管理できます。
+**ガイド**は、ダッシュボードから完全に制御できるアプリ内 UI 画面を配信します。開発者が一度 SDK フックを組み込めば、プロダクトマネージャーはコードを変更することなく、コンテンツ、ターゲット、スケジュール、および有効化を制御できます。
+
+---
 
 ## ガイドの種類
 
-| タイプ    | ユースケース                         |
-| --------- | ------------------------------------ |
-| `banner`  | ページ上部のお知らせ                 |
-| `modal`   | 機能のリリース、アップグレード通知   |
-| `tooltip` | 文脈に応じたオンボーディングのヒント |
-| `badge`   | 新しいUI要素のハイライト             |
+| 種類      | 最適なユースケース                                               |
+| :-------- | :--------------------------------------------------------------- |
+| `BANNER`  | ページ上部のアナウンス、メンテナンス通知                         |
+| `MODAL`   | 機能ローンチ、アップグレードのプロンプト、オンボーディングフロー |
+| `CARD`    | インライン機能紹介、文脈に応じたヒント                           |
+| `TOOLTIP` | 特定の UI 要素にアンカーされたツールチップ（ヒント）             |
 
-## ターゲットルール
+---
 
-ガイドは、以下に基づいて購読者に一致します：
+## ガイドのコンテンツスキーマ
 
-- ユーザーセグメント / オーディエンス
-- ページのURLまたはパス名パターン (pathname)
-- アプリケーションから渡される機能フラグまたはカスタムコンテキスト
-- アクティブ化スケジュール（開始/終了日時）
+各ガイドは、構造化されたコンテンツオブジェクトを持っています。
+
+| フィールド     | 型                                                       | 説明                                                                |
+| :------------- | :------------------------------------------------------- | :------------------------------------------------------------------ |
+| `title`        | string                                                   | 見出しテキスト（最大 256 文字）                                     |
+| `body`         | string                                                   | メイン本文テキスト（最大 5,000 文字）                               |
+| `cta`          | `{ label, url, action }`                                 | プライマリコールトゥアクション（CTA）ボタン                         |
+| `secondaryCta` | `{ label, url }`                                         | セカンダリボタン（例: 「後で」）                                    |
+| `media`        | `{ url, alt }`                                           | オプションの画像                                                    |
+| `dismissible`  | boolean                                                  | ユーザーがガイドを閉じることができるかどうか（デフォルトは `true`） |
+| `theme`        | `info` \| `success` \| `warning` \| `error` \| `neutral` | ビジュアルスタイルのバリエーション                                  |
+
+---
+
+## ターゲット指定
+
+ガイドは、以下に基づいてサブスクライバーをターゲットにできます。
+
+- **オーディエンス**: 既存の[オーディエンス](/docs/platform/features/audiences)セグメントにリンクします。
+- **カスタムルール**: サブスクライバーフィールドでフィルタリングされる追加の `rules` 配列（オーディエンスと同じ形式）。
+- **ロジック**: ルール間の `AND` / `OR` 演算。
+
+---
+
+## 有効化 (Activation)
+
+`activation` オブジェクトを使用して、ガイドが表示される*タイミングと場所*を制御します。
+
+| フィールド   | オプション                                        | 説明                                                       |
+| :----------- | :------------------------------------------------ | :--------------------------------------------------------- |
+| `urlPattern` | string                                            | 一致させるページの URL パターン                            |
+| `pageMatch`  | `exact` \| `starts_with` \| `contains` \| `regex` | URL の一致方法（デフォルト: `starts_with`）                |
+| `frequency`  | `once` \| `once_per_session` \| `always`          | ユーザーごとのガイドの表示頻度                             |
+| `delay`      | number (ms)                                       | ページロード後、表示するまでに待機するミリ秒数 (0〜60,000) |
+
+---
+
+## 優先度 & スケジュール設定
+
+- **優先度** (0–100): 同じユーザー/ページに複数のガイドが一致する場合、優先度の高いガイドが最初に表示されます。
+- **startAt / endAt**: オプションの ISO 8601 日時。ガイドはこの期間内のみアクティブになります。
+
+---
 
 ## SDK 統合
 
-ガイドはクライアント側 (client-side) で取得されます — インapp通知のようにWebSocketを介して送信されることはありません。
+ガイドは WebSocket によるプッシュ配信ではなく、クライアント側からのポーリング/オンデマンド API 呼び出しを介してフェッチされます。
 
 <Tabs items={['React', 'Headless JS']}>
   <Tab value="React">
 
 ```tsx
-import { useGuides } from "@nexus-signal/react";
+import { useGuides } from '@nexus-signal/react';
 
 function GuideRenderer() {
-  const { guides, markSeen, dismiss } = useGuides({
+  const { guides, markSeen, markInteracted, dismiss } = useGuides({
     pathname: window.location.pathname,
   });
 
   return guides.map((guide) => (
-    <div key={guide.id} onClick={() => markSeen(guide.id)}>
-      {guide.content.title}
+    <div key={guide.id}>
+      <h3>{guide.content.title}</h3>
+      <p>{guide.content.body}</p>
+      {guide.content.cta && (
+        <a href={guide.content.cta.url} onClick={() => markInteracted(guide.id)}>
+          {guide.content.cta.label}
+        </a>
+      )}
+      {guide.content.dismissible && <button onClick={() => dismiss(guide.id)}>Dismiss</button>}
     </div>
   ));
 }
@@ -50,22 +98,62 @@ function GuideRenderer() {
   <Tab value="Headless JS">
 
 ```ts
-await nexus.guides.fetch({ pathname: "/dashboard" });
+// 現在のページコンテキストのガイドを取得します
+await nexus.guides.fetch({ pathname: '/dashboard' });
+
+// ユーザーがガイドを見たことをマークします
 nexus.guides.markSeen(guideId);
+
+// ユーザーがアクションを行った（CTAをクリックした）ことをマークします
+nexus.guides.markInteracted(guideId);
+
+// ガイドを永久に非表示（却下）にします
 nexus.guides.dismiss(guideId);
 ```
 
   </Tab>
 </Tabs>
 
-SDKルート: `GET /v1/sdk/guides` — 現在のユーザー＋コンテキストに対してアクティブなガイドを返します。
+**SDK ルート**: `GET /v1/sdk/guides?pathname=/dashboard` — 認証されたサブスクライバーに一致するアクティブなガイドを返します。
 
-## アナリティクス
+---
 
-`POST /v1/sdk/guides/:guideId/events` を介して、インプレッション、インタラクション、および非表示を追跡します。
+## ガイドのライフサイクルイベント
+
+| イベント     | SDK メソッド         | 意味                                                                           |
+| :----------- | :------------------- | :----------------------------------------------------------------------------- |
+| `seen`       | `markSeen(id)`       | ユーザーがガイドを表示した（スクロールして通過した、またはレンダリングされた） |
+| `interacted` | `markInteracted(id)` | ユーザーがプライマリ CTA をクリックした                                        |
+| `archived`   | `dismiss(id)`        | ユーザーが明示的にガイドを閉じた                                               |
+
+イベントは `POST /v1/sdk/guides/:guideId/events` に送信され、分析データに反映されます。
+
+---
+
+## ガイドのステータス
+
+| ステータス | 意味                                                                             |
+| :--------- | :------------------------------------------------------------------------------- |
+| `DRAFT`    | ユーザーに表示されません。                                                       |
+| `ACTIVE`   | 条件に一致するユーザーに提供されます（環境ごとに最大20個のアクティブなガイド）。 |
+| `PAUSED`   | 削除せずに一時的に非表示にします。                                               |
+| `ARCHIVED` | 完全に退役（終了）した状態。                                                     |
+
+---
+
+## 制限事項
+
+| 制限事項                             | 値  |
+| :----------------------------------- | :-- |
+| 環境あたりの最大ガイド数             | 50  |
+| 環境あたりの最大アクティブガイド数   | 20  |
+| ガイドあたりの最大ターゲットルール数 | 10  |
+
+---
 
 ## 関連リンク
 
-- [Guides API](/docs/api/guides)
+- [ガイド API](/docs/api/guides)
+- [オーディエンス](/docs/platform/features/audiences)
 - [React SDK](/docs/sdk/frontend/react)
 - [Headless JS SDK](/docs/sdk/frontend/js)

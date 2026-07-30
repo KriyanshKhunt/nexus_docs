@@ -1,55 +1,112 @@
 ---
 title: AI コンテンツ生成
-description: 自分の AI キーを使って1つのプロンプトからチャンネル最適化された通知コピーを生成。
+description: 独自の AI プロバイダーキーを使用して、単一のプロンプトから各チャネルに最適化された通知テキストコピーを自動生成します。
 ---
 
-テンプレートエディタには **AI アシスト**が含まれています — 通知の内容を説明すると、各チャンネルの文字制限に最適化されたコピーが生成されます。
+ダッシュボードのテンプレートエディタには **AI Assist** 機能が搭載されています。どのような通知を送信したいかを自然言語で記述するだけで、各チャネルの文字数制限に合わせて最適化されたメッセージのテキストコピーを自動生成できます。
 
-## BYOP AI キー
+---
 
-**インテグレーション**で自分のキーを接続:
+## BYOP（独自プロバイダーキーの利用）
 
-- **OpenAI** (`openai_ai`) — `gpt-4o-mini` を使用
-- **Anthropic** (`anthropic_ai`) — `claude-3-haiku` を使用
+Nexus は AI のトークン使用量に手数料を上乗せしません。ダッシュボードの **Settings → Integrations** から、ご自身の API キーを接続して使用します。
 
-Nexus は AI トークンに課金しません — プロバイダーに直接支払います。
+- **OpenAI** (`openai_ai`) — `gpt-4o-mini` を使用します。
+- **Anthropic** (`anthropic_ai`) — `claude-3-haiku-20240307` を使用します。
 
-## API
+プロバイダーの呼び出しは、JSON 形式を強制する制約のもとでサーバー側で実行されます。有効なプロバイダーキーが設定されていない場合、ジェネレーターは `400` バリデーションエラーを返します。
+
+---
+
+## ダッシュボード API エンドポイント
+
+ダッシュボード UI は、以下のテンプレート生成エンドポイントを呼び出すことでテキストコピーを生成します。
 
 ```http
 POST /v1/templates/ai-generate
-Authorization: Bearer <dashboard JWT>
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
 ```
+
+**リクエストボディ:**
 
 ```json
 {
-  "prompt": "追跡リンク付きの注文発送通知",
-  "tone": "friendly",
-  "locale": "ja",
-  "channels": ["email", "sms", "push", "whatsapp", "slack"]
+  "prompt": "Order #4092 shipped with carrier DHL. Include tracking number.",
+  "tone": "casual",
+  "locale": "ja"
 }
 ```
 
-制限が適用されたチャンネルごとの構造化されたコンテンツを返します:
+- `prompt`: メッセージの要件や目標を説明するプレーンテキスト（最大 1,000 文字）。
+- `tone`: 生成されるテキストのトーン。`professional`、`casual`、`urgent`、または `friendly` のいずれかでなければなりません。デフォルトは `professional` です。
+- `locale`: オプションのターゲット言語。指定された場合、LLM はテキストをその言語に翻訳・適応させます。
 
-| チャンネル | 制限 |
-|---------|-----|
-| メール件名 | 80文字 |
-| SMS 本文 | 160文字 |
-| プッシュタイトル / 本文 | 50 / 120文字 |
-| WhatsApp 本文 | 1024文字 |
+**レスポンスボディ:**
 
-**トーン:** `professional`（プロフェッショナル）、`casual`（カジュアル）、`urgent`（緊急）、`friendly`（フレンドリー）
+```json
+{
+  "generated": {
+    "email": {
+      "subject": "ご注文商品が出荷されました！ 📦",
+      "html": "嬉しいお知らせです！ご注文番号 #4092 が出荷されました。DHLの追跡URLから配送状況をご確認いただけます..."
+    },
+    "sms": {
+      "body": "ご注文番号 #4092 が DHL にて出荷されました。追跡はこちら！"
+    },
+    "push": {
+      "title": "商品出荷のお知らせ",
+      "body": "ご注文番号 #4092 は DHL にて配送中です。"
+    },
+    "whatsapp": {
+      "body": "嬉しいお知らせです！ご注文番号 #4092 が DHL にて出荷されました。"
+    },
+    "slack": {
+      "body": "ご注文番号 #4092 が DHL にて出荷されました。"
+    },
+    "discord": {
+      "body": "ご注文番号 #4092 が DHL にて出荷されました。"
+    },
+    "ms_teams": {
+      "body": "ご注文番号 #4092 が DHL にて出荷されました。"
+    }
+  },
+  "locale": "ja",
+  "message": "Content generated"
+}
+```
 
-## ワークフロー
+---
 
-1. ダッシュボードで**テンプレート**を開く
-2. **AI アシスト**パネルをクリック
-3. プロンプトを入力してチャンネルを選択
-4. チャンネルごとに生成されたコピーをプレビュー
-5. テンプレートドラフトに取り込む
+## 適用されるチャネル別文字数制限
 
-## 関連
+生成されたすべての出力は、各チャネルの最大容量制限に合わせて、サーバー側で自動的に切り詰め（トリミング）処理されます。
 
-- [i18n テンプレート](/docs/platform/features/i18n) — ロケールごとに生成
-- [最初のワークフローガイド](/docs/platform/guides/first-workflow)
+| チャネル             | 制限文字数 | 生成されるフィールド      |
+| :------------------- | :--------- | :------------------------ |
+| メール件名           | 80 文字    | `generated.email.subject` |
+| SMS 本文             | 160 文字   | `generated.sms.body`      |
+| プッシュ通知タイトル | 50 文字    | `generated.push.title`    |
+| プッシュ通知本文     | 120 文字   | `generated.push.body`     |
+| WhatsApp 本文        | 1,024 文字 | `generated.whatsapp.body` |
+| Slack 本文           | 2,000 文字 | `generated.slack.body`    |
+| Discord 本文         | 2,000 文字 | `generated.discord.body`  |
+| MS Teams 本文        | 2,000 文字 | `generated.ms_teams.body` |
+
+---
+
+## テンプレートビルダーでのワークフロー
+
+1. ダッシュボードの **Templates** に移動し、新規作成または下書き（ドラフト）を開きます。
+2. サイドバーの **AI Assist** タブをクリックします。
+3. プロンプトを入力し、お好みのトーンを選択して、適用したいチャネルを選択します。
+4. **Generate** をクリックすると、生成されたメッセージの下書きプレビューが表示されます。
+5. **Apply to Draft** をクリックすると、生成された文字列がエディタの入力領域に直接適用されます。
+
+---
+
+## 関連リンク
+
+- [マルチ言語テンプレート](/docs/platform/features/i18n) — チャネルごとの複数言語のバリエーション管理
+- [最初のワークフロー構築ガイド](/docs/platform/guides/first-workflow)
+- [AI ワークフローノード](/docs/platform/features/ai-workflow-node) — ワークフロー内でのランタイム LLM 実行

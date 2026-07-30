@@ -1,45 +1,107 @@
 ---
-title: Webhook チャンネル
-description: コンパイルされた通知ペイロードを独自の HTTP エンドポイントに送信します。
+title: Webhook チャネル
+description: ダウンストリームでの追加処理用に、コンパイル済みの通知ペイロードをカスタム HTTP エンドポイントへ発送します。
 ---
 
-**Webhook** チャンネルは、設定した URL に構造化された JSON を POST します — 内部マイクロサービス、Zapier、カスタムオートメーションに最適です。
+**Webhook** チャネルは、構成したカスタム HTTP エンドポイントへ構造化された JSON ペイロードを発送します。これは、内部のマイクロサービスとイベントを同期したり、サードパーティの自動化フロー（例: Zapier、Make）を起動したり、カスタムのクライアントワークフローを開始したりするのに最適です。
 
-## セットアップ
+---
 
-1. インテグレーションで **Custom Webhook（カスタム Webhook）** を追加（`webhook_custom`）
-2. URL、認証方法、オプションの署名シークレットを設定
-3. ワークフローに **Webhook** チャンネルノードを追加
+## 設定手順
 
-## アウトバウンドペイロード
+1. ダッシュボードの **Integrations** に移動し、**Custom Webhook**（`webhook_custom`）インテグレーションを作成します。
+2. エンドポイント URL、オプションの認証方法、およびオプションの HMAC 署名シークレットを指定します。
+3. エディタのワークフローキャンバスに **Webhook** チャネルノードを追加します。
+4. 保存し、ワークフローをトリガーします。
+
+---
+
+## 送信 HTTP リクエスト
+
+送信される Webhook リクエストは、JSON ボディとカスタムのメタデータヘッダーを伴う **POST** リクエストとして送信されます。
+
+### HTTP ヘッダー
+
+- `Content-Type`: `application/json`
+- `User-Agent`: `NexusSignal-Webhook/1.0`
+- `Idempotency-Key`: 配信試行を識別する一意の UUID 文字列。重複処理の防止に使用します。
+- `x-nexus-timestamp`: 秒単位の Unix エポックタイムスタンプ（`signingSecret` が設定されている場合のみ存在）。
+- `x-nexus-signature`: `sha256=<signature_hash>` 形式の署名（`signingSecret` が設定されている場合のみ存在）。
+
+### ペイロードボディの構造
+
+ボディには、サブスクライバーの詳細、トリガーされたイベントのコンテキスト、およびコンパイルされたテンプレートの内容が含まれます。
 
 ```json
 {
-  "event": "notification.delivered",
-  "workflow": { "id": "…", "name": "order.shipped" },
-  "subscriber": { "id": "…", "externalId": "user_42" },
+  "event": "order.completed",
+  "workflowName": "order.completed",
+  "subscriber": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "externalId": "user_42",
+    "email": "billing@example.com",
+    "phoneNumber": "+14155552671"
+  },
   "channel": "WEBHOOK",
-  "data": { "orderId": "ORD-9912" },
-  "compiled": { "title": "…", "body": "…" }
+  "data": {
+    "orderId": "ORD-9912",
+    "items": ["book", "pen"]
+  },
+  "payload": {
+    "title": "Order Confirmed",
+    "body": "Your order ORD-9912 is complete."
+  },
+  "timestamp": "2026-07-28T21:30:00.000Z"
 }
 ```
 
-## 認証
+---
 
-| メソッド | ヘッダー |
-|-------|------|
-| なし | — |
-| Bearer | `Authorization: Bearer …` |
-| Basic | `Authorization: Basic …` |
-| HMAC | `x-nexus-signature`、`x-nexus-timestamp` |
+## 認証 & セキュリティ
 
-設定された署名シークレットを使用してサーバーで HMAC を検証します。
+Nexus は Webhook エンドポイントを保護するために 3 つの認証方式をサポートしています。
 
-## 信頼性
+| 認証方法      | 動作仕様                                                                                           |
+| :------------ | :------------------------------------------------------------------------------------------------- |
+| **Bearer**    | リクエストに `Authorization: Bearer <token>` ヘッダーを注入します。                                |
+| **Basic**     | `Authorization: Basic <base64_credentials>` ヘッダーを注入します。                                 |
+| **HMAC 署名** | 共有シークレットを使用してペイロードの SHA-256 HMAC ハッシュ値を計算し、署名ヘッダーを注入します。 |
 
-失敗した Webhook 配信は BullMQ でリトライされます。レスポンスは監査ログの `responseMeta` に保存されます。
+### HMAC 署名の検証
 
-## 関連
+受信した Webhook ペイロードが Nexus から送信されたものであり、改ざんされていないことを検証するには、受信サーバー側で HMAC を計算し、ヘッダーの署名と比較します。
 
-- [配信パイプライン](/docs/platform/concepts/delivery-pipeline)
-- [プロバイダーカタログ](/docs/platform/integrations/providers)
+1. `x-nexus-timestamp` ヘッダーとリクエストボディの生のテキスト文字列を取得します。
+2. 署名対象のペイロード文字列を以下のように構築します：
+   `signature_payload = timestamp_string + "." + raw_request_body`
+3. 構成した **Signing Secret（署名用シークレット）** と SHA-256 アルゴリズムを使用して HMAC を生成します。
+4. 生成されたハッシュ値が、`x-nexus-signature` ヘッダー内のハッシュ値（`sha256=` 接頭辞を取り除いた部分）と一致することを確認します。
+
+#### Node.js での検証例：
+
+```js
+import crypto from 'crypto';
+
+function verifyWebhook(requestBody, headers, signingSecret) {
+  const timestamp = headers['x-nexus-timestamp'];
+  const expectedSignature = headers['x-nexus-signature'].replace('sha256=', '');
+
+  const signaturePayload = `${timestamp}.${requestBody}`;
+  const computedSignature = crypto
+    .createHmac('sha256', signingSecret)
+    .update(signaturePayload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(computedSignature, 'hex'),
+    Buffer.from(expectedSignature, 'hex')
+  );
+}
+```
+
+---
+
+## 関連リンク
+
+- [プロバイダー認証情報カタログ](/docs/platform/integrations/providers)
+- [ワークフロー実行パイプライン](/docs/platform/concepts/delivery-pipeline)

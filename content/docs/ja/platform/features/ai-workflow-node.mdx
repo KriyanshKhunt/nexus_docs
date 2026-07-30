@@ -1,62 +1,153 @@
 ---
-title: AIワークフローノード
-description: ワークフロー内の実行時LLM実行 — ユーザーの分類、パーソナライズされたコピーの生成、およびAI出力の分岐。
+title: AI ワークフローノード
+description: ワークフロー内でのランタイム LLM 実行 — ユーザーの分類、パーソナライズされたコピーの生成、および AI 出力に基づく分岐。
 ---
 
-**AIノード**は、ワークフロー実行の途中で構成されたLLM（OpenAIまたはAnthropic）を呼び出します。動的コピー、ユーザー分類、インテントスコアリング、および非決定論的分岐に使用します。
+**AI ノード**は、ワークフローの実行中に構成された LLM（OpenAI または Anthropic）を呼び出します。プロンプトは現在のサブスクライバーおよびトリガーのデータコンテキストを使用してコンパイルされ、応答は下流のテンプレートや条件付きステップで使用するために `data` の下に格納されます。
 
 <Callout type="info">
-  これは**ワークフロー内の実行時AI**です。ダッシュボードエディターでのAI支援によるテンプレート*作成*については、[AIコンテンツ生成](/docs/platform/features/ai-content)を参照してください。
+  これは**ワークフロー内での実行時 AI（ランタイム
+  AI）**に関するドキュメントです。ダッシュボードエディタでの AI
+  支援によるテンプレート*作成*については、[AI
+  コンテンツ生成](/docs/platform/features/ai-content)を参照してください。
 </Callout>
 
-## 設定
+---
 
-| Campo         | Descrição                                                           |
-| ------------- | ------------------------------------------------------------------- |
-| `prompt`      | 購読者＋トリガーコンテキストを持つHandlebarsテンプレート            |
-| `responseKey` | `ctx.data` にLLM出力を格納するキー（デフォルト： `aiResponse`）     |
-| `conditions`  | オプションの[ステップ条件](/docs/platform/features/step-conditions) |
+## 仕組み
 
-## 例：パーソナライズされた件名
-
-プロンプト：
-
-```
-Write a short email subject line for {{ subscriber.externalId }} about order {{ data.orderId }}.
-Tone: friendly, under 60 characters. Return only the subject text.
+```mermaid
+flowchart LR
+  T[トリガーデータ + サブスクライバー] --> P[Handlebars によるプロンプトのコンパイル]
+  P --> LLM[LLMの呼び出し: OpenAI / Anthropic]
+  LLM -->|JSON 応答| D[data.responseKey に保存]
+  D --> Step[下流のステップで data.responseKey を使用]
 ```
 
-後続のメールチャネルテンプレート：
+LLM は、常に**有効な JSON オブジェクト**を返すように固定のシステムプロンプトを通じて指示されます。応答は解析され、`data.<responseKey>` の下に格納されます。
+
+---
+
+## 構成
+
+| フィールド    | 型     | 必須 | 説明                                                                                       |
+| :------------ | :----- | :--- | :----------------------------------------------------------------------------------------- |
+| `prompt`      | string | ✅   | サブスクライバー + トリガーデータコンテキストを含む Handlebars テンプレート                |
+| `responseKey` | string | —    | LLM の JSON 出力を `data.*` の下に保存するためのキー。デフォルトは `ai` です。             |
+| `conditions`  | object | —    | 実行を制限するためのオプションの [ステップの条件](/docs/platform/features/step-conditions) |
+
+<Callout type="info">
+  **デフォルトの `responseKey`**: 指定しない場合、LLM の応答は `data.ai`
+  の下に格納されます。キー名は文字で始まり、英数字とアンダースコア（`[a-zA-Z][a-zA-Z0-9_]*`）のみを含める必要があります。
+</Callout>
+
+---
+
+## 例: パーソナライズされた件名
+
+**AI ノードのプロンプト:**
+
+```
+Write a short email subject line for {{ subscriber.first_name }} about order {{ data.orderId }}.
+Tone: friendly, under 60 characters.
+Return a JSON object: { "subject": "<subject line here>" }
+```
+
+**下流のメールテンプレート**（`data.ai.subject` を参照）:
 
 ```html
-Subject: {{ aiResponse }}
+Subject: {{ data.ai.subject }}
+<p>Hi {{ subscriber.first_name }}, your order {{ data.orderId }} is confirmed!</p>
 ```
 
-## 例：チャーンリスク分岐
+または、カスタムの `responseKey: "copy"` を使用する場合：
+
+```html
+Subject: {{ data.copy.subject }}
+```
+
+---
+
+## 例: 解約リスクによる分岐
 
 ```mermaid
 flowchart TD
-  AI[AI Node: classify churn risk] --> C{data.riskLevel}
-  C -->|high| SMS[Urgent SMS]
-  C -->|low| Email[Standard email]
+  AI[AIノード: 解約リスクの分類] --> C{data.risk.level}
+  C -->|高| SMS[緊急 SMS + 引き止めオファー]
+  C -->|中| Email[通常の再エンゲージメントメール]
+  C -->|低| Skip[通知なし]
 ```
 
-プロンプトは、`responseKey` を介してマージされた構造化コンテキストを返します。後続のノードに `data.riskLevel` キーを持つ[ステップ条件](/docs/platform/features/step-conditions)を添付します。
+**プロンプト:**
 
-## プロバイダー設定
+```
+Based on last active date {{ data.lastActiveAt }} and plan {{ data.plan }},
+classify this user's churn risk.
+Return JSON: { "level": "high" | "medium" | "low", "reason": "<brief reason>" }
+```
 
-**Integrations → AI Providers** でOpenAIまたはAnthropicのAPIキーを構成します。トークンの使用量は、コスト分析のために実行ごとに追跡されます。
+**SMS ノードのステップの条件**（`data.risk.level` に基づく）:
 
-## ガードレール
+```json
+{
+  "logic": "AND",
+  "rules": [{ "variable": "data.risk.level", "operator": "equals", "value": "high" }]
+}
+```
 
-- ノードごとのリクエストタイムアウト
-- LLMが失敗した場合のフォールバックパス（代替分岐の条件を使用）
-- 組織プラン層ごとの構成可能なコスト制限
+---
+
+## プロバイダーのセットアップ
+
+ダッシュボードの **Integrations → AI Providers** で OpenAI または Anthropic の API キーを構成します。トークンの使用量は、コスト分析のためにワークフローの実行ごとに追跡されます。
+
+- **OpenAI**: ダッシュボードの統合から `OPENAI_API_KEY` を設定します。
+- **Anthropic**: ダッシュボードの統合から `ANTHROPIC_API_KEY` を設定します。
+
+AI プロバイダーのキーが構成されていない場合、AI ノードはスキップされ、`No AI provider API key configured` という理由で `AI_NODE_FAILED` がログに記録されます。
+
+---
+
+## エラー処理 & ガードレール
+
+- **API キーが構成されていない場合**: ステップはスキップされ、`data.<responseKey>` は `null` に設定され、`AI_NODE_FAILED` がログに記録されます。
+- **LLM リクエストのタイムアウト**: ステップはスキップされ、`data.<responseKey>` は `null` に設定され、`AI_NODE_FAILED` がログに記録されます。
+- **無効な JSON 応答**: 応答はそのまま格納されます。下流のテンプレートでは、`{{#if data.ai}}` によるガードで安全に処理してください。
+- **コスト上限**: ダッシュボードの組織プラン設定で制限を構成可能です。
+
+---
+
+## Workflow-as-code
+
+```ts
+import { defineWorkflow } from '@nexus-signal/node';
+
+defineWorkflow('payment.overdue')
+  .addHttpFetch({
+    url: 'https://api.billing.com/invoices/{{ data.invoiceId }}',
+    method: 'GET',
+    responseKey: 'invoice',
+  })
+  .addAiNode({
+    prompt:
+      'Classify urgency for invoice {{ data.invoice.amount }} due {{ data.invoice.dueDate }}. Return JSON: { "level": "low" | "medium" | "high" }',
+    responseKey: 'risk',
+  })
+  .addChannel('EMAIL')
+  .addChannel('SMS', {
+    conditions: {
+      logic: 'AND',
+      rules: [{ variable: 'data.risk.level', operator: 'equals', value: 'high' }],
+    },
+  })
+  .toDefinition();
+```
+
+---
 
 ## 関連リンク
 
-- [AIコンテンツ生成](/docs/platform/features/ai-content)
-- [ステップ条件](/docs/platform/features/step-conditions)
-- [HTTPデータ取得ノード](/docs/platform/features/http-fetch-node)
-
----
+- [AI コンテンツ生成](/docs/platform/features/ai-content)
+- [ステップの条件](/docs/platform/features/step-conditions)
+- [HTTP Fetch ノード](/docs/platform/features/http-fetch-node)
+- [ワークフロー・アズ・コード](/docs/sdk/workflow/workflow-as-code)

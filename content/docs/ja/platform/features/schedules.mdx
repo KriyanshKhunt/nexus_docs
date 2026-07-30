@@ -1,47 +1,98 @@
 ---
-title: スケジュールトリガー
-description: 独自のジョブランナーを構築せずに Cron と単発のスケジュール通知を設定。
+title: スケジュールされたトリガー
+description: タスクランナーや cron デーモンを設定することなく、定期実行（cron）および1回限りのスケジュールされたワークフローを実行します。
 ---
 
-ダッシュボードまたは Node SDK からワークフロー発火をスケジュール — 外部 Cron 不要。
+Nexus には、メッセージの自動スケジュール送信機能が組み込まれています。ダッシュボードまたは Node SDK から直接、定期的なタイマー（Cron）を定義したり、将来の1回限りの配信キューを登録したりできます。
 
-## タイプ
+---
 
-| タイプ | フィールド | 例 |
-|------|---------|--|
-| **繰り返し** | `cronExpression` | `0 9 * * 1`（月曜午前9時） |
-| **単発** | `scheduledAt` | `2026-07-01T10:00:00Z` |
+## スケジュールの種類
 
-両方とも `timezone`（デフォルト UTC）と静的な `recipients` + `data` ペイロードをサポートします。
+| 種類                 | タイミング構成   | 説明                                                            |
+| :------------------- | :--------------- | :-------------------------------------------------------------- |
+| **定期実行（Cron）** | `cronExpression` | 標準の cron パターン（例: `0 9 * * 1` は毎週月曜日の午前 9:00） |
+| **1回限り**          | `scheduledAt`    | ISO 8601 形式の日時文字列（例: `2026-08-01T10:00:00Z`）         |
 
-## ダッシュボード
+どちらのスケジュールタイプも、受信者（サブスクライバー）のローカル時間の基準に合わせて実行時間を解決するための `timezone` パラメータ（デフォルトは `'UTC'`）を受け入れます。
 
-**スケジュール**ページ — 作成、一時停止、編集、削除。`nextFireAt` と `lastFiredAt` を表示。
+---
 
-## Node SDK
+## API エンドポイント
+
+クライアントのアクセス元に応じて、Nexus はスケジュールの管理を 2 つのエンドポイントに分離しています。
+
+### 1. SDK API（サーバー側スクリプト / SDK 用、`sk_*` キー認証）
+
+Node SDK は、プログラムによって動的に作成されたスケジュールを登録するためにこのエンドポイントと通信します：
+
+```http
+POST /v1/schedules/sdk
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+### 2. ダッシュボード API（ダッシュボード画面用、JWT 認証）
+
+ウェブ管理画面（コンソール）は、標準のセッショントークンを使用してスケジュールを管理します：
+
+```http
+POST /v1/schedules
+Authorization: Bearer <jwt_dashboard_token>
+```
+
+---
+
+## Node SDK での使用方法
+
+プログラムからスケジュールを作成、編集、一覧取得、および削除します：
 
 ```ts
-await nexus.schedules.create({
-  name: '週次ダイジェスト',
-  workflowId: 'wf_uuid',
-  cronExpression: '0 9 * * 1',
-  timezone: 'Asia/Tokyo',
-  recipients: [{ externalId: 'user_1' }],
-  data: { week: '2026-W27' },
+// 毎週定期的に実行される要約配信（ダイジェスト）スケジュールを作成
+const result = await nexus.schedules.create({
+  name: 'Weekly Digest',
+  workflowId: '550e8400-e29b-41d4-a716-446655440000',
+  cronExpression: '0 9 * * 1', // 毎週月曜日の午前 9:00 (EST)
+  timezone: 'America/New_York',
+  recipients: [{ externalId: 'user_42' }, { externalId: 'user_109' }],
+  data: { scope: 'weekly_summary' },
+  active: true,
 });
+
+// スケジュールのアクティブ状態やデータを更新
+await nexus.schedules.update(scheduleId, {
+  active: false,
+});
+
+// スケジュールを削除
+await nexus.schedules.delete(scheduleId);
 ```
 
-```ts
-await nexus.schedules.list({ page: 1, limit: 20 });
-await nexus.schedules.update(id, { active: false });
-await nexus.schedules.delete(id);
-```
+### スケジュールの構造と宛先
 
-## 実行
+`recipients` 配列には、`subscriberId`（データベースの UUID）または `externalId`（ユーザー管理 ID）を含むオブジェクトを指定します。
 
-ワーカー Cron は**60秒**ごとに期限切れスケジュールを評価します（環境ごとに最大100アクティブスケジュール）。
+---
 
-## 関連
+## 実行の仕組み
 
-- [API リファレンス — スケジュール](/docs/api/schedules)
-- [Node SDK](/docs/sdk/backend/node)
+- ワークフローワーカー内の cron スケジューラーが、**60秒ごと**にデータベースをスキャンし、配信期限に達しているアクティブなスケジュールを検索します。
+- 配信期限になると、指定された `workflowId`、`recipients`、および `data` ペイロードを使用してワークフローの実行をトリガーします。
+- ダッシュボードでは、実行履歴の追跡、`lastFiredAt`（最終実行日時）の確認、および `nextFireAt`（次回予定日時）のプレビューが可能です。
+
+---
+
+## 制限事項
+
+| 制限事項                       | 値        |
+| :----------------------------- | :-------- |
+| 環境あたりの最大スケジュール数 | 100       |
+| ジョブポーリング確認の間隔     | 60 秒ごと |
+
+---
+
+## 関連リンク
+
+- [スケジュール API リファレンス](/docs/api/schedules)
+- [Node.js SDK クライアント](/docs/sdk/backend/node)
+- [ワークフロー・アズ・コード](/docs/sdk/workflow/workflow-as-code)

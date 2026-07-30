@@ -1,61 +1,146 @@
 ---
 title: テナントごとのブランディング
-description: B2B SaaS向けのブランド分離、優先設定、およびオプションのプロバイダーオーバーライドを備えたマルチテナント通知。
+description: B2B SaaS 用のホワイトレーベル通知 — 各顧客に隔離されたブランディング、環境設定、および通知フィードを提供します。
 ---
 
-**テナント**は、Nexus内の _あなたの_ 顧客（あなたのワークスペースであるNexus **組織**とは異なります）を表します。ブランド分離、顧客ごとの受信トレイ、および隔離された設定を必要とする複数の企業にプロダクトを提供する場合は、テナントを使用します。
+**テナント（Tenants）**は、Nexus における*あなたの顧客*を表現します（あなたのワークスペースである Nexus **組織（Organization）**とは異なります）。製品が複数の企業にサービスを提供しており、顧客ごとにブランド化されたメール、専用のアプリ内通知フィード、および隔離された通知の環境設定が必要な場合にテナントを使用します。
+
+<Callout type="info">
+  テナントは **B2B**
+  向けの機能です。単一ブランドの消費者向け（B2C）アプリである場合は、テナントは不要です。
+</Callout>
+
+---
 
 ## テナントモデル
 
-各テナント（環境ごと）には以下が含まれます：
+| フィールド              | 型     | 説明                                       |
+| :---------------------- | :----- | :----------------------------------------- |
+| `externalId`            | string | あなたの顧客の ID（例: `"tenant_acme"`）   |
+| `name`                  | string | 表示名                                     |
+| `branding.logo`         | string | ロゴ URL                                   |
+| `branding.primaryColor` | string | アクセント要素の 16 進カラーコード         |
+| `branding.footerHtml`   | string | メールレイアウト内のカスタム HTML フッター |
+| `properties`            | object | カスタムメタデータ用の任意のキーと値のペア |
 
-| フィールド           | 目的                                          |
-| -------------------- | --------------------------------------------- |
-| `externalId`         | 顧客のID（例： `tenant_acme`）                |
-| `name`               | 表示名                                        |
-| `branding`           | ロゴのURL、プライマリカラー、フッターのHTML   |
-| `providerOverrides`  | テナント固有のオプションのSendGrid/Twilioキー |
-| `preferenceDefaults` | 新しい購読者向けのデフォルト設定配列          |
+---
 
-## テナントの作成
+## テナントの作成または更新
 
-ダッシュボード： **Tenants** ページ、またはSDK：
+テナントの登録は upsert です。既存の `externalId` に対して `upsert` を呼び出すと、そのフィールドが更新されます。
+
+**Node SDK:**
 
 ```ts
 await nexus.tenants.upsert({
-  externalId: "tenant_acme",
-  name: "Acme Corp",
+  externalId: 'tenant_acme',
+  name: 'Acme Corp',
   branding: {
-    logoUrl: "https://cdn.acme.io/logo.png",
-    primaryColor: "#2563eb",
-    footerHtml: "<p>© Acme Corp</p>",
+    logo: 'https://cdn.acme.io/logo.png',
+    primaryColor: '#2563eb',
+    footerHtml: '<p>© 2026 Acme Corp. All rights reserved.</p>',
   },
+  properties: { tier: 'enterprise', region: 'us-east' },
 });
 ```
 
-## テナントコンテキストでのトリガー
+**Management API（`sk_*` キーを使用）:**
+
+```http
+PUT /v1/management/tenants
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+
+{
+  "externalId": "tenant_acme",
+  "name": "Acme Corp",
+  "branding": {
+    "logo": "https://cdn.acme.io/logo.png",
+    "primaryColor": "#2563eb",
+    "footerHtml": "<p>© 2026 Acme Corp</p>"
+  }
+}
+```
+
+---
+
+## テナントコンテキストを指定したトリガー
+
+任意のワークフロートリガーで、`tenant` パラメータにテナントの `externalId` 文字列を渡します。
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "invoice.sent",
-  tenant: "tenant_acme",
-  recipients: [{ externalId: "user_42", email: "billing@acme.io" }],
-  data: { invoiceId: "INV-001" },
+  workflowName: 'invoice.sent',
+  tenant: 'tenant_acme',
+  recipients: [{ externalId: 'user_42', email: 'billing@acme.io' }],
+  data: { invoiceId: 'INV-001', amount: 4900 },
 });
 ```
 
-テンプレートのコンパイルにより、テナントのブランディングがメールレイアウトに適用されます。SDKのクエリパラメータ `tenantId` を介して、テナントごとにインapp通知をフィルタリングします。
+トリガーで `tenant` が設定されると：
 
-## SDK受信トレイのスコープ
+- メールレイアウトは、そのテナントのブランディング変数（`{{ logo }}`、`{{ primaryColor }}` など）を使用してコンパイルされます。
+- アプリ内通知は、そのテナントのフィードにスコープ制限されます。
 
-```http
-GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_acme
+---
+
+## メールレイアウトへのブランディングの挿入方法
+
+メールレイアウトをコンパイルする際、テナントのブランディングフィールドは Handlebars テンプレートコンテキストに直接展開されます。参照する際は `branding.` 接頭辞は**不要**で、フィールド名で直接参照します。
+
+```html
+<!-- メールレイアウトの HTML 内での記述例 -->
+<img src="{{ logo }}" alt="{{ name }} logo" />
+<div style="background-color: {{ primaryColor }};">{{{ content }}}</div>
+{{{ footerHtml }}}
 ```
 
-クライアント側でのテナントフィルタリングについては、[SDK API](/docs/api/sdk)を参照してください。
+<Callout type="info">
+  `{{{ content }}}`（3重波括弧）は、コンパイルされたメールテンプレートの本文をレイアウト内の生の HTML としてレンダリングします。`{{ logo }}`、`{{ primaryColor }}`、および `{{ footerHtml }}` はテナントのブランディングオブジェクトから注入されます。
+</Callout>
+
+---
+
+## テナントスコープのアプリ内通知フィード
+
+生の SDK API を直接クエリする場合、テナントのデータベース UUID によって通知をフィルタリングできます。
+
+**SDK API:**
+
+```http
+GET /v1/sdk/notifications?subscriberExternalId=user_42&tenantId=tenant_database_uuid
+```
+
+<Callout type="warn">
+  SDK クエリパラメータ `tenantId` は、テナントの外部 ID ではなく、**内部データベースの UUID**
+  を必要とします。フロントエンド SDK
+  コンポーネント（React、Angular、JS）は、現時点ではテナント別のフィードのスコープ切り替えを標準でサポートしていません。UI
+  内で単純なカテゴリ別のインボックスフィードが必要な場合は、ワークフローのトピック（Topics）タグを使用してください。
+</Callout>
+
+---
+
+## テナントの一覧表示
+
+```ts
+const { data } = await nexus.tenants.list({ page: 1, limit: 25 });
+```
+
+---
+
+## 制限事項
+
+| 制限事項                       | 値    |
+| :----------------------------- | :---- |
+| 環境あたりの最大テナント数     | 1,000 |
+| 最大ブランディングフィールド数 | 20    |
+| 最大 `properties` キー数       | 50    |
+
+---
 
 ## 関連リンク
 
-- [B2Bマルチテナント設定ガイド](/docs/platform/guides/b2b-multi-tenant)
-- [Tenants API](/docs/api/tenants)
+- [B2B マルチテナントガイド](/docs/platform/guides/b2b-multi-tenant)
+- [テナント API](/docs/api/tenants)
 - [メールレイアウト](/docs/platform/features/email-layouts)
+- [Node SDK](/docs/sdk/backend/node)

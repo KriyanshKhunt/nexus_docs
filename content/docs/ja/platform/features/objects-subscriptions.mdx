@@ -1,69 +1,169 @@
 ---
-title: オブジェクトと購読
-description: データベースで受信者を解決することなく、プロジェクト、課題、注文、またはチャネルを監視している全員に通知をファンアウトします。
+title: オブジェクト & 購読
+description: データベースの宛先リストをクエリすることなく、プロジェクト、課題、注文、またはチャネルを監視している全員に通知をファンアウト配信します。
 ---
 
-**オブジェクト**は、ユーザーが購読する第1級エンティティ（プロジェクト、ドキュメント、注文、チャネルなど）です。オブジェクトを受信者としてワークフローをトリガーすると、Nexusは自動的にすべての購読者にファンアウトします。
+**オブジェクト（Objects）**は、Nexus における第一級のエンティティです（プロジェクト、ドキュメント、注文、あるいはユーザーが購読するあらゆるリソースを指します）。オブジェクトを受信者としてワークフローをトリガーすると、Nexus は自動的にすべての監視サブスクライバーを解決し、それぞれのユーザーに対してワークフローを実行します。
 
-## なぜオブジェクトが重要なのか
+---
 
-オブジェクトがない場合、トリガーのたびにバックエンドが「これを誰が監視しているか？」をクエリし、受信者の完全なリストを渡す必要があります。オブジェクトは、その関係をNexusに移動します。
+## オブジェクトが解決する課題
+
+オブジェクト機能を使用しない場合、ファンアウト（拡散）トリガーを行うたびにバックエンドで以下を実行する必要があります。
+
+1. 「このリソースを誰が監視しているか？」をデータベースに問い合わせる。
+2. 受信者 ID のリストを構築する。
+3. トリガー呼び出しのたびに、その全リストをパラメータとして渡す。
+
+オブジェクト機能は、この購読関係を Nexus 側に移譲します。これにより、単一のトリガー呼び出しだけで、すべての監視者に自動的に通知が配信されます。
 
 ```mermaid
 flowchart LR
-  App[Your app] -->|trigger on object| Nexus[Nexus API]
-  Nexus -->|resolve subscribers| DB[(ObjectSubscription)]
-  DB --> W[Workflow engine]
-  W --> U1[User A]
-  W --> U2[User B]
-  W --> U3[User C]
+  App[アプリケーション] -->|オブジェクトを指定してトリガー| Nexus[Nexus API]
+  Nexus -->|サブスクライバーの解決| DB[(ObjectSubscription テーブル)]
+  DB --> W[ワークフローエンジン]
+  W --> U1[ユーザー A への通知]
+  W --> U2[ユーザー B への通知]
+  W --> U3[ユーザー C への通知]
 ```
 
-## オブジェクトの作成
+---
 
-ダッシュボードの **Objects** ページ、またはAPI/SDK：
+## 概念
+
+| 用語                          | 説明                                                                                         |
+| :---------------------------- | :------------------------------------------------------------------------------------------- |
+| **コレクション (Collection)** | 論理的なグループ定義（例: `"projects"`、`"orders"`、`"channels"` など）。                    |
+| **オブジェクト (Object)**     | コレクション内の単一のエンティティ。`externalId` によって識別されます。                      |
+| **購読 (Subscription)**       | サブスクライバーとオブジェクトのマッピング定義。オプションでメタデータプロパティを持ちます。 |
+
+---
+
+## オブジェクトの作成または更新
+
+オブジェクトの作成・更新は upsert です。既存の `externalId` に対して `set` を呼び出すと、そのフィールドが更新されます。
+
+**Node SDK:**
 
 ```ts
 await nexus.objects.set({
-  collection: "projects",
-  externalId: "proj_alpha",
-  name: "Project Alpha",
-  properties: { status: "active", owner: "team-eng" },
+  collection: 'projects',
+  externalId: 'proj_alpha',
+  name: 'Project Alpha',
+  properties: { status: 'active', owner: 'team-eng' },
 });
 ```
 
-オブジェクトのプロパティは、テンプレート内で `{{ object.name }}`、 `{{ object.properties.status }}` として使用できます。
+**Management API（サーバー側、`sk_*` キーを使用）:**
+
+```http
+PUT /v1/management/objects/projects/proj_alpha
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+
+{
+  "name": "Project Alpha",
+  "properties": { "status": "active", "owner": "team-eng" }
+}
+```
+
+<Callout type="info">
+  **変数に関する注意**:
+  トリガー実行時に、オブジェクトは生のサブスクライバープロファイルに解決および重複排除されます。そのため、オブジェクト固有のプロパティはテンプレート変数コンテキスト内で自動的には利用できません。通知内にオブジェクトの詳細（プロジェクトの名前やステータスなど）を表示するには、トリガーリクエストの
+  `data` ペイロードにそれらを含めて渡してください。
+</Callout>
+
+---
 
 ## 購読の管理
 
-```ts
-await nexus.objects.addSubscriptions("projects", "proj_alpha", {
-  recipients: ["user_alice", "user_bob"],
-});
+**オブジェクトにサブスクライバーを追加する:**
 
-await nexus.objects.removeSubscriptions("projects", "proj_alpha", ["user_bob"]);
+```ts
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
+  recipients: ['user_alice', 'user_bob'],
+  // または: recipients: [{ externalId: 'user_alice' }]
+});
 ```
+
+**オブジェクトからサブスクライバーを削除する:**
+
+```ts
+await nexus.objects.removeSubscriptions('projects', 'proj_alpha', ['user_bob']);
+```
+
+<Callout type="info">
+  サブスクライバーをオブジェクトに追加する前に、対象の受信者が同じ環境に**サブスクライバー**としてすでに存在している必要があります。まだ作成していない場合は、まず
+  `nexus.subscribers.identify()` を呼び出してください。
+</Callout>
+
+`recipients` フィールドは、プレーンな `externalId` 文字列の配列、または `{ externalId: string }` 形式のオブジェクトの配列を受け入れます。
+
+---
 
 ## オブジェクトファンアウトによるトリガー
 
-個々のユーザーの代わりにオブジェクトを渡します：
+トリガー呼び出しで `{ collection, id }` を使用して、オブジェクトを受信者として指定します。
 
 ```ts
 await nexus.workflows.trigger({
-  workflowName: "project.updated",
-  recipients: [{ collection: "projects", id: "proj_alpha" }],
-  data: { changeType: "milestone_completed" },
+  workflowName: 'project.updated',
+  recipients: [{ collection: 'projects', id: 'proj_alpha' }],
+  data: { changeType: 'milestone_completed', updatedBy: 'sarah' },
 });
 ```
 
-ワーカーは購読しているすべての購読者を解決し、それぞれに対してワークフローを実行します。
+ワークフローワーカーは `proj_alpha` のすべてのアクティブなサブスクライバーを解決し、サブスクライバーごとに1つのワークフロー実行を実行します。テンプレート内では、通常通りサブスクライバーコンテキスト（`subscriber.email`、`subscriber.locale` など）が利用可能です。
 
-## オブジェクトごとの設定
+---
 
-購読者は、他のオブジェクトをアクティブに保ちながら、特定のオブジェクトをミュートできます。設定は、購読者の `preferences` JSON内のオブジェクトキーの下にスコープされます。
+## オブジェクトと個別サブスクライバーの混在
+
+1 回のトリガー呼び出しに、オブジェクトと個々のサブスクライバーの両方を含めることができます。
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'project.updated',
+  recipients: [
+    { collection: 'projects', id: 'proj_alpha' }, // すべての監視者にファンアウト
+    { externalId: 'admin_user' }, // 明示的な個々のサブスクライバー
+  ],
+  data: { changeType: 'status_change' },
+});
+```
+
+---
+
+## オブジェクトごとの購読プロパティ
+
+サブスクライバーを追加する際、購読レベルのメタデータを保存できます。
+
+```ts
+await nexus.objects.addSubscriptions('projects', 'proj_alpha', {
+  recipients: ['user_alice'],
+  properties: { role: 'owner', notifyOnAll: true },
+});
+```
+
+---
+
+## オブジェクトごとの環境設定
+
+サブスクライバーは、他の通知を有効にしたまま、特定のオブジェクトのみをミュートすることができます。この設定は、サブスクライバーの環境設定マトリクスのオブジェクトキーの下にスコープされます。あなたのコードに変更を加える必要はありません。
+
+---
+
+## API 制限
+
+| 制限事項                                        | 値                   |
+| :---------------------------------------------- | :------------------- |
+| 環境あたりの最大オブジェクト数                  | プランごとに構成可能 |
+| オブジェクトあたねの最大購読数                  | プランごとに構成可能 |
+| `addSubscriptions` 呼び出しあたりの最大受信者数 | 100                  |
+
+---
 
 ## 関連リンク
 
-- [オブジェクトファンアウト通知ガイド](/docs/platform/guides/object-fanout)
-- [Objects API](/docs/api/objects)
-- [Node SDKのオブジェクト](/docs/sdk/backend/node)
+- [オブジェクトファンアウトガイド](/docs/platform/guides/object-fanout)
+- [オブジェクト API](/docs/api/objects)

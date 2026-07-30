@@ -1,33 +1,49 @@
 ---
 title: 翻訳ファイル
-description: "`{{ t \"key\" }}` Handlebarsヘルパーを使用した集中型ロケールキー値ストア — すべてのテンプレートで再利用可能な文字列。"
+description: テンプレート全体で再利用可能な共通文字列 — {{ t "key" }} Handlebars ヘルパーを備えた中央集約のローカライズキー値ストア。
 ---
 
-**翻訳ファイル** は、ロケールごとの共有言語文字列を環境ごとに保存します。言語ごとテンプレートのコピーを複製する代わりに、任意のテンプレートで `{{ t "welcome_message" }}` を使用して参照します。
+**翻訳ファイル**は、環境ごとの共通のローカライズ文字列を保持します。言語ごとにテンプレート全体のコピーを重複して作成する代わりに、メール、SMS、またはプッシュ通知の任意のテンプレート内で `{{ t "key" }}` を使用してこれらの文字列を参照できます。
 
 <Callout type="info">
-  これは、 `contentTemplates` 内に完全なロケールバリアントを保存する
-  [マルチ言語テンプレート](/docs/platform/features/i18n)
-  を補完します。共有文字列には翻訳ファイルを使用し、チャネル固有のレイアウトの違いにはロケールテンプレートを使用します。
+  これは、`contentTemplates`
+  内に言語ごとのバリエーション全体を保存する[マルチ言語テンプレート](/docs/platform/features/i18n)を補完する機能です。再利用可能な短い共通文字列には**翻訳ファイル**を使用し、チャネルごとのレイアウトや構成全体が異なる場合は**ローカライズテンプレート**を使用します。
 </Callout>
+
+---
+
+## `t` ヘルパーの仕組み
+
+テンプレートのコンパイル時、`{{ t "key" }}` Handlebars ヘルパーは以下の動作を行います。
+
+1. サブスクライバーの現在のロケールを決定します（トリガー時の `_locale` の値による上書き → サブスクライバーの `locale` フィールドの値 → デフォルトの `en`）。
+2. そのロケールの翻訳ファイル内から該当するキーを検索します。
+3. 地域固有のロケールである場合、基本ロケール（例: `"en-US"` の場合は `"en"`) にフォールバックします。
+4. 一致するキーが見つからない場合、英語（`en`）にフォールバックします。
+5. どのロケールにも翻訳が存在しない場合、キー名（文字列）そのものをそのまま返します。
+
+---
 
 ## 翻訳のアップロード
 
-ダッシュボード： **Templates → Translations** 、またはAPI：
+**ダッシュボード**: **Templates → Translations** → ロケールを選択 → JSON を貼り付けるかアップロードします。
 
-ダッシュボード/ブラウザAPI：
+**Management API（`sk_*` キーを使用 — スクリプトや CI/CD 用）:**
+
+```http
+PUT /v1/management/translations
+Authorization: Bearer sk_prd_…
+Content-Type: application/json
+```
+
+**ダッシュボード API（JWT 認証 — ブラウザ統合用）:**
 
 ```http
 PUT /v1/translations
 Authorization: Bearer <jwt_token>
 ```
 
-管理/サーバーAPI（CLI/スクリプト）：
-
-```http
-PUT /v1/management/translations
-Authorization: Bearer sk_prd_…
-```
+**ペイロード:**
 
 ```json
 {
@@ -36,12 +52,17 @@ Authorization: Bearer sk_prd_…
   "content": {
     "welcome_message": "Bienvenido",
     "order_shipped": "Tu pedido ha sido enviado",
-    "cta_view_order": "Ver pedido"
+    "cta_view_order": "Ver pedido",
+    "invoice_due": "Factura vencida"
   }
 }
 ```
 
-## テンプレートでの使用
+`namespace` フィールドは、ダッシュボード上でキーを整理するためのラベルです。すべてのネームスペースのキーは、ネームスペースに関係なく `t` ヘルパーから利用できます。キーの検索は、該当ロケールのコンテンツ全体に対してフラットに行われます。
+
+---
+
+## テンプレートでの使用例
 
 ```html
 <h1>{{ t "welcome_message" }}</h1>
@@ -49,30 +70,82 @@ Authorization: Bearer sk_prd_…
 <a href="{{ data.trackingUrl }}">{{ t "cta_view_order" }}</a>
 ```
 
-## ロケールの解決チェーン
+サブスクライバーのロケールが `es` である場合、以下のようにレンダリングされます：
 
-1. 購読者の `locale` フィールド
-2. トリガーによる `_locale` のオーバーライド
-3. テナントのデフォルトロケール（テナントコンテキストが定義されている場合）
-4. 環境のデフォルトロケール (`en`)
-5. 翻訳が見つからない場合は生のキー
+```html
+<h1>Bienvenido</h1>
+<p>Tu pedido ha sido enviado — ORD-12345</p>
+<a href="https://track.example.com/xyz">Ver pedido</a>
+```
 
-## 名前空間 (Namespaces)
+---
 
-機能領域ごとに文字列を整理します：
+## ロケール解決の優先順位
+
+通知が送信される際、ロケールは以下の優先順位で解決されます。
+
+1. トリガーの `data` ペイロード内の `_locale` フィールド（トリガーごとの上書き指定）
+2. サブスクライバーの `locale` フィールド（例: `"es"`, `"ja"`)
+3. `"en"` へのフォールバック（環境のデフォルト値）
+
+**特定のトリガーでロケールを上書きする例:**
+
+```ts
+await nexus.workflows.trigger({
+  workflowName: 'order.shipped',
+  recipients: [{ externalId: 'user_42' }],
+  data: {
+    _locale: 'es',
+    orderId: 'ORD-12345',
+  },
+});
+```
+
+---
+
+## ネームスペースを使用したキーの整理
+
+ネームスペースは、ダッシュボード内で関連する文字列をグループ化するためのオプションの整理ツールです。テンプレート内でのキーの参照方法には**影響しません**。
+
+**推奨される手法**: `billing_invoice_due` や `auth_login_prompt` のように、キーの命名規則自体にネームスペースを含めることを推奨します。
 
 ```json
 {
   "locale": "ja",
   "namespace": "billing",
-  "content": { "invoice_due": "請求書の支払期限" }
+  "content": {
+    "billing_invoice_due": "請求書の支払期限",
+    "billing_pay_now": "今すぐ支払う"
+  }
 }
 ```
 
-参照： `{{ t "billing.invoice_due" }}` （名前空間対応の検索）。
+テンプレート内での記述： `{{ t "billing_invoice_due" }}` （単純なフラットなキー検索）。
+
+---
+
+## CLI でのワークフロー
+
+コマンドラインから翻訳ファイルを管理できます。
+
+```bash
+# 現在のすべての翻訳をローカルの JSON ファイルにプル（取得）します
+nexus translations pull --locale es --output ./translations/es.json
+
+# 更新した翻訳をプッシュ（送信）します
+nexus translations push --locale es --input ./translations/es.json
+```
+
+---
+
+## サポートされるロケール
+
+任意の BCP 47 ロケール文字列がサポートされます（例: `en`、`en-US`、`es`、`es-MX`、`ja`、`pt`、`pt-BR`、`fr`、`de`、`zh-CN` など）。`t` ヘルパーは地域サフィックスを取り除き、地域固有のファイルが見つからない場合は基本ロケールにフォールバックします。
+
+---
 
 ## 関連リンク
 
 - [マルチ言語テンプレート](/docs/platform/features/i18n)
-- [Translations API](/docs/api/translations)
-- [CLIによる翻訳のプル/プッシュ](/docs/sdk/devtools/cli)
+- [翻訳 API リファレンス](/docs/api/translations)
+- [CLI による翻訳の pull/push](/docs/sdk/devtools/cli)

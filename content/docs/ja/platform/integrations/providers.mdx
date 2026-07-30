@@ -1,65 +1,76 @@
 ---
-title: プロバイダーカタログ
-description: チャンネルレイヤーごとにサポートされる BYOP プロバイダーの完全リスト。
+title: プロバイダー認証情報カタログ
+description: サポートされるすべての BYOP（独自のプロバイダーアカウントの利用）チャネル、プロバイダー ID、および必要な認証情報の一覧。
 ---
 
-## メール
+Nexus Signal は、お客様自身の通信プロバイダーアカウントを利用して動作します。ダッシュボードの **Settings → Integrations** から、サポートされている以下のいずれかのプロバイダーを接続してご使用ください。すべてのキーは、保管時に AES-256-GCM を使用して暗号化されます。
 
-| ID | プロバイダー |
-|----|---------|
-| `sendgrid` | SendGrid |
-| `resend` | Resend |
-| `amazon_ses` | Amazon SES |
-| `postmark` | Postmark |
-| `mailgun` | Mailgun |
+---
 
-## SMS
+## メール（Email）インテグレーションレイヤー
 
-| ID | プロバイダー |
-|----|---------|
-| `twilio` | Twilio |
-| `vonage` | Vonage |
-| `plivo` | Plivo |
-| `sinch` | Sinch |
+| プロバイダー ID | プロバイダー名 | 必要とされる認証情報                                          | テレメトリ Webhook |
+| :-------------- | :------------- | :------------------------------------------------------------ | :----------------- |
+| `sendgrid`      | SendGrid       | `apiKey` (シークレットキー)                                   | ✅ サポート対象    |
+| `resend`        | Resend         | `apiKey` (シークレットキー)                                   | ✅ サポート対象    |
+| `ses`           | Amazon SES     | `accessKeyId`, `secretAccessKey` (シークレットキー), `region` | —                  |
+| `postmark`      | Postmark       | `serverToken` (シークレットキー)                              | ✅ サポート対象    |
+| `mailgun`       | Mailgun        | `apiKey` (シークレットキー), `domain`                         | —                  |
 
-## WhatsApp
+---
 
-| ID | プロバイダー |
-|----|---------|
-| `meta_whatsapp` | Meta Cloud Business API |
-| `twilio_whatsapp` | Twilio WhatsApp Gateway |
-| `infobip_whatsapp` | Infobip |
+## SMS インテグレーションレイヤー
 
-## プッシュ
+| プロバイダー ID | プロバイダー名 | 必要とされる認証情報                           | テレメトリ Webhook |
+| :-------------- | :------------- | :--------------------------------------------- | :----------------- |
+| `twilio`        | Twilio         | `accountSid`, `authToken` (シークレットキー)   | ✅ サポート対象    |
+| `vonage`        | Vonage         | `apiKey`, `apiSecret` (シークレットキー)       | —                  |
+| `plivo`         | Plivo          | `authId`, `authToken` (シークレットキー)       | —                  |
+| `sinch`         | Sinch          | `servicePlanId`, `apiToken` (シークレットキー) | —                  |
 
-| ID | プロバイダー |
-|----|---------|
-| `fcm` | Firebase Cloud Messaging |
-| `apns` | Apple Push Notification Service |
+---
 
-## メッセージング
+## WhatsApp インテグレーションレイヤー
 
-| ID | プロバイダー |
-|----|---------|
-| `slack` | Slack Incoming Webhook |
-| `discord` | Discord Webhook |
-| `ms_teams` | Microsoft Teams Incoming Webhook |
+| プロバイダー ID   | プロバイダー名          | 必要とされる認証情報                              | テレメトリ Webhook |
+| :---------------- | :---------------------- | :------------------------------------------------ | :----------------- |
+| `meta_whatsapp`   | Meta Cloud Business API | `phoneNumberId`, `accessToken` (シークレットキー) | ✅ サポート対象    |
+| `twilio_whatsapp` | Twilio WhatsApp Gateway | `accountSid`, `authToken` (シークレットキー)      | ✅ サポート対象    |
+| `infobip`         | Infobip WhatsApp        | `baseUrl`, `apiKey` (シークレットキー), `sender`  | —                  |
 
-## Webhook
+---
 
-| ID | プロバイダー |
-|----|---------|
-| `webhook_custom` | カスタム HTTP エンドポイント |
+## プッシュ通知（Push）レイヤー
 
-## AI（コンテンツ生成）
+| プロバイダー ID | プロバイダー名                 | 必要とされる認証情報                                                                  |
+| :-------------- | :----------------------------- | :------------------------------------------------------------------------------------ |
+| `fcm`           | Firebase Cloud Messaging       | `projectId`, `clientEmail`, `privateKey` (シークレットキー)                           |
+| `apns`          | Apple Push Notification (APNs) | `keyId`, `teamId`, `privateKey` (シークレットキー、`.p8` 形式), `bundleId` (トピック) |
 
-| ID | プロバイダー |
-|----|---------|
-| `openai_ai` | OpenAI |
-| `anthropic_ai` | Anthropic |
+---
 
-## 設定
+## チャット & Webhook レイヤー
 
-各プロバイダーはインテグレーションモーダル（API キー、Webhook URL、送信者 ID）を通じて認証情報を受け取ります。キーは保存時に暗号化されます。
+| プロバイダー ID  | プロバイダー名   | 必要とされる認証情報                                                                                                             | 説明                       |
+| :--------------- | :--------------- | :------------------------------------------------------------------------------------------------------------------------------- | :------------------------- |
+| `slack`          | Slack Webhook    | `webhookUrl` (シークレットキー)                                                                                                  | 送信先チャネルの Webhook   |
+| `discord`        | Discord Webhook  | `webhookUrl` (シークレットキー)                                                                                                  | 送信先チャネルの Webhook   |
+| `ms_teams`       | MS Teams Webhook | `webhookUrl` (シークレットキー)                                                                                                  | 送信先チャネルの Webhook   |
+| `webhook_custom` | カスタム Webhook | `url`, `authType`, `authToken` (シークレットキー), `username`, `password` (シークレットキー), `signingSecret` (シークレットキー) | 送信先 HTTP エンドポイント |
 
-**設定 → プロバイダーコスト**で[コスト分析](/docs/platform/features/cost-analytics)のためのメッセージあたりコストを設定します。
+---
+
+## AI（コンテンツ生成 & ワークフロー）
+
+| プロバイダー ID | プロバイダー名     | 必要とされる認証情報        | サポート対象モデル        |
+| :-------------- | :----------------- | :-------------------------- | :------------------------ |
+| `openai_ai`     | OpenAI             | `apiKey` (シークレットキー) | `gpt-4o-mini`             |
+| `anthropic_ai`  | Anthropic (Claude) | `apiKey` (シークレットキー) | `claude-3-haiku-20240307` |
+
+---
+
+## 関連リンク
+
+- [重み付けルーティング](/docs/platform/integrations#weight-configuration) — 複数のプロバイダーにトラフィックを分散します。
+- [コスト分析](/docs/platform/features/cost-analytics) — プロバイダーごとのメッセージ単価を設定します。
+- [配信 Webhook](/docs/platform/integrations/webhooks) — 配信ステータスの検証

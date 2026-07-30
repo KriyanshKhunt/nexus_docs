@@ -1,69 +1,129 @@
 ---
-title: HTTPデータ取得ノード
-description: ワークフローの途中でリアルタイムデータを使用して通知を充実させます — 送信時に追跡URL、口座残高、または任意のAPIを取得します。
+title: HTTP Fetch ノード
+description: ワークフローの途中で最新データを取得して通知をエンリッチする — 送信時に追跡 URL、アカウント残高、または任意の API をフェッチします。
 ---
 
-**HTTP Fetch** ノードは、ワークフローの実行中にHTTPリクエストを行い、その後のステップのためにレスポンスデータをワークフローコンテキストにマージします。
+**HTTP Fetch** ノードは、ワークフロー実行中に外部への HTTP リクエストを行い、JSON 応答をワークフローの `data` コンテキストにマージします。下流のステップ（テンプレート、ステップの条件、および AI ノードなど）は、フェッチされたデータを `{{ data.<responseKey>.<field> }}` として参照できます。
 
-## なぜ送信時に取得するのか
+---
 
-HTTP Fetchがない場合、すべてのデータはトリガー時に渡される必要があります。これにより、データが古くなったり（変更される追跡URLなど）、ペイロードが肥大化したりします。通知が実際に送信されるときに、動的にデータを取得します。
+## 送信時にフェッチする理由
+
+トリガーの実行時にすべてのデータを一度に渡す方式には、以下のような限界があります。
+
+- 追跡 URL がトリガーから配信までの間に変更される可能性がある。
+- API 呼び出しから通知送信までの数秒の間に注文ステータスが更新される可能性がある。
+- 決して使用されないかもしれないデータによって、トリガーのペイロードが肥大化する。
+
+HTTP Fetch は、通知がアセンブル（構築）されるまさにその瞬間に最新のデータをプルすることで、この課題を解決します。
 
 ```mermaid
 flowchart LR
-  T[Trigger: order.shipped] --> F[HTTP Fetch: carrier API]
-  F -->|merge into ctx.data| E[Email channel]
-  E --> Out[Send with live tracking URL]
+  T[トリガー: order.shipped] --> F[HTTP Fetch: プロバイダーAPI]
+  F -->|data.tracking にマージ| E[Email チャネル]
+  E --> Out[最新の追跡 URL で送信]
 ```
 
-## 設定
+---
 
-| フィールド    | 説明                                                                                         |
-| ------------- | -------------------------------------------------------------------------------------------- |
-| `url`         | リクエストURL — Handlebarsをサポート： `https://api.carrier.com/track/{{ data.trackingId }}` |
-| `method`      | `GET` または `POST`                                                                          |
-| `headers`     | オプションのヘッダーキー値ペア                                                               |
-| `body`        | POSTボディテンプレート (Handlebars)                                                          |
-| `responseKey` | 解析されたJSONを格納するコンテキストキー（デフォルト： `data` にマージ）                     |
+## 構成
 
-## 例
+| フィールド    | 型               | 必須 | 説明                                                                                               |
+| :------------ | :--------------- | :--- | :------------------------------------------------------------------------------------------------- |
+| `url`         | string           | ✅   | リクエスト URL。Handlebars をサポートします: `https://api.carrier.com/track/{{ data.trackingId }}` |
+| `method`      | `GET` \| `POST`  | —    | HTTP メソッド。デフォルトは `GET` です。                                                           |
+| `headers`     | `{key, value}[]` | —    | オプションのヘッダーのキー値ペア。キーと値の両方で Handlebars をサポートします。                   |
+| `body`        | string           | —    | POST リクエストボディのテンプレート（Handlebars）。`POST` リクエストの時のみ送信されます。         |
+| `responseKey` | string           | —    | 解析された JSON 応答を `data.*` 配下に格納するコンテキストキー名。デフォルトは `fetched` です。    |
 
-メール送信の前に最新の配送ステータスを取得します：
+<Callout type="info">
+  **デフォルトの `responseKey`**: `responseKey` を指定しない場合、応答は `data.fetched`
+  の下に格納されます。キー名は文字で始まり、英数字とアンダースコアのみを含める必要があります。
+</Callout>
+
+---
+
+## 制限事項
+
+| プロパティ                 | 値         |
+| :------------------------- | :--------- |
+| リクエストタイムアウト     | 10 秒      |
+| 最大応答サイズ             | 50 KB      |
+| 最大リクエスト URL 長      | 2,048 文字 |
+| 最大カスタムヘッダー数     | 10         |
+| 最大リクエストボディサイズ | 10 KB      |
+
+---
+
+## 例: 最新の出荷ステータスの取得
+
+**ノード構成:**
 
 ```
-URL:    https://api.shipping.com/v1/shipments/{{ data.shipmentId }}
-Method: GET
+URL:         https://api.shipping.com/v1/shipments/{{ data.shipmentId }}
+Method:      GET
 responseKey: shipment
 ```
 
-メールテンプレート：
+**メールテンプレート** (下流ステップ):
 
 ```html
-<p>Status: {{ shipment.status }}</p>
-<a href="{{ shipment.trackingUrl }}">パッケージを追跡</a>
+<p>Status: {{ data.shipment.status }}</p>
+<a href="{{ data.shipment.trackingUrl }}">Track your package →</a>
 ```
 
-## エラーハンドリング
+<Callout type="warn">
+  フェッチされたデータは常に `data.<responseKey>` として利用可能であり、直接 `{{ responseKey }}` として参照することはできません。これは、HTTP Fetch の結果を含むすべてのトリガーデータがテンプレートコンテキストの `data` 名前空間の下に配置されるためです。
+</Callout>
 
-- 構成可能なタイムアウト（デフォルトはワーカーのタイムアウト）
-- 失敗したフェッチは実行ライフサイクルに記録されます。 [ステップ条件](/docs/platform/features/step-conditions) またはフェイルオーバーノードで代替パスを構成します。
-- 環境ごとのドメインホワイトリスト（セキュリティ）
+---
+
+## エラー処理
+
+- リクエストが 10 秒後に**タイムアウト**した場合、実行は継続し、`data.<responseKey>` は `null` に設定されます。
+- 応答ボディが **JSON として解析できない**場合、`{ "_raw": "<テキストコンテンツ>" }` として格納されます。
+- フェッチ失敗時は、実行履歴に `HTTP_FETCH_FAILED` がログ記録されます。[ステップの条件](/docs/platform/features/step-conditions)を使用してフォールバックパス（代替ルート）を設定してください。
+- セキュリティを重視するセットアップのために、環境ごとに**ドメインの許可リスト（allowlisting）**を使用できます。
+
+---
 
 ## Workflow-as-code
 
 ```ts
-import { defineWorkflow } from "@nexus-signal/node";
+import { defineWorkflow } from '@nexus-signal/node';
 
-defineWorkflow("order.shipped")
+defineWorkflow('order.shipped')
   .addHttpFetch({
-    url: "https://api.carrier.com/track/{{ data.trackingId }}",
-    method: "GET",
-    responseKey: "tracking",
+    url: 'https://api.carrier.com/track/{{ data.trackingId }}',
+    method: 'GET',
+    responseKey: 'tracking',
   })
-  .addChannel("EMAIL");
+  .addChannel('EMAIL')
+  .toDefinition();
 ```
+
+このワークフローのメールテンプレートでは、`{{ data.tracking.estimatedDelivery }}`、`{{ data.tracking.status }}` などを参照できます。
+
+---
+
+## フェッチされたデータに基づく条件付き分岐
+
+下流のノードで [ステップの条件](/docs/platform/features/step-conditions) を使用して、フェッチされた結果に基づき分岐します。
+
+```json
+{
+  "logic": "AND",
+  "rules": [{ "variable": "data.tracking.status", "operator": "equals", "value": "DELAYED" }]
+}
+```
+
+これを SMS ノードに添付することで、運送業者が遅延を報告したときにのみ遅延アラートを送信できます。
+
+---
 
 ## 関連リンク
 
 - [ワークフロー](/docs/platform/concepts/workflows)
-- [Workflow-as-code](/docs/sdk/workflow/workflow-as-code)
+- [ステップの条件](/docs/platform/features/step-conditions)
+- [AI ワークフローノード](/docs/platform/features/ai-workflow-node)
+- [ワークフロー・アズ・コード](/docs/sdk/workflow/workflow-as-code)

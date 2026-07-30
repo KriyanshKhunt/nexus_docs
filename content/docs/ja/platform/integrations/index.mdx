@@ -1,39 +1,56 @@
 ---
 title: インテグレーション
-description: メール、SMS、プッシュ、メッセージング、AI プロバイダーを Nexus Signal に接続します。
+description: 独自のメール、SMS、プッシュ通知、Webhook、チャット、および AI プロバイダーを Nexus Signal に接続します。
 ---
 
-Nexus Signal は**既存のプロバイダーアカウント**と統合します。ダッシュボードの **Integrations（インテグレーション）** ハブでキーを1度設定するだけです。
+Nexus は、**お客様自身のプロバイダーアカウント**の前面に配置されるルーティングコントローラーとして機能します。ダッシュボードの **Integrations** ハブで一度 API 認証情報を構成するだけで、Nexus がルーティング、フェイルオーバー、テンプレート、および配信追跡を処理します。
 
-<Cards>
-  <Card title="プロバイダーカタログ" href="/docs/platform/integrations/providers" description="SendGrid、Twilio、FCM、Resend など。" />
-  <Card title="メッセージングチャンネル" href="/docs/platform/integrations/messaging-channels" description="サブスクライバーごとの Slack、Discord、Teams の Webhook。" />
-  <Card title="Webhook" href="/docs/platform/integrations/webhooks" description="任意のペイロード用のカスタム HTTP エンドポイント。" />
-</Cards>
+---
 
-## インテグレーションレイヤー
+## インテグレーションレイヤー & プロバイダー
 
-| レイヤー | 例 |
-|--------|--|
-| メール | SendGrid、Resend、Amazon SES、Postmark、Mailgun |
-| SMS | Twilio、Vonage、Plivo、Sinch |
-| WhatsApp | Meta Cloud API、Twilio WhatsApp、Infobip |
-| プッシュ | Firebase FCM、Apple APNs |
-| メッセージング | Slack、Discord、Microsoft Teams |
-| Webhook | カスタム HTTP エンドポイント |
-| AI | OpenAI、Anthropic（コンテンツ生成） |
+| レイヤー     | キー                               | サポートされるプロバイダー                      | 説明                                              |
+| :----------- | :--------------------------------- | :---------------------------------------------- | :------------------------------------------------ |
+| **Email**    | `email`                            | SendGrid, Resend, Amazon SES, Postmark, Mailgun | トランザクションメールおよびマーケティングメール  |
+| **SMS**      | `sms`                              | Twilio, Vonage, Plivo, Sinch                    | 高速な SMS アラートと OTP（ワンタイムパスワード） |
+| **WhatsApp** | `whatsapp`                         | Meta Cloud API, Twilio WhatsApp, Infobip        | リッチな B2C チャットコミュニケーション           |
+| **Push**     | `push`                             | Firebase Cloud Messaging (FCM), Apple APNs      | Web およびモバイルのプッシュ通知                  |
+| **Chat**     | `slack` \| `discord` \| `ms_teams` | Slack, Discord, Microsoft Teams                 | チャットワークスペースへの直接のアップデート      |
+| **Webhooks** | `webhook`                          | カスタム HTTP フェッチターゲット                | ダイレクトなサーバー間 Webhook                    |
+| **AI**       | `openai_ai` \| `anthropic_ai`      | OpenAI, Anthropic                               | コンテンツ生成 & 実行時 LLM ノード                |
 
-## ウェイト設定
+---
 
-1つのレイヤーに複数のプロバイダーが存在する場合、トラフィックウェイトを設定します（合計100になる必要があります）:
+## 重み付け構成（A/B ルーティング）
+
+単一のレイヤーに対して複数のインテグレーションを構成する場合、カスタムの比率（重み）を設定してトラフィックを分散させることができます。
 
 ```http
 PUT /v1/integrations/weights/email
-{ "sendgrid": 70, "resend": 30 }
+Authorization: Bearer <jwt_dashboard_token>
+Content-Type: application/json
+
+{
+  "weights": {
+    "sendgrid": 70,
+    "resend": 30
+  }
+}
 ```
 
-レイヤー: `email`、`sms`、`whatsapp`、`push`、`webhook`、`slack`、`discord`、`ms_teams`
+- **サポートされるレイヤー**: `email`、`sms`、`whatsapp`、`push`、`webhook`、`slack`、`discord`、`ms_teams`。
+- **バリデーション**: レイヤー内のすべての重みの合計は正確に **100** になる必要があります。
 
-<Callout type="info">
-Nexus がプロバイダーコストに手数料を上乗せしない理由は [BYOP](/docs/platform/concepts/byop) をご覧ください。
-</Callout>
+---
+
+## セキュリティ
+
+すべてのプロバイダーの API キー、トークン、およびクライアントシークレットは、データベースに書き込まれる前にサーバー側で AES-256-GCM を使用して暗号化されます。復号は、外部への発送時にワーカープロセスのメモリ上でのみ実行されます。
+
+---
+
+## 関連リンク
+
+- [BYOP（コンセプト）](/docs/platform/concepts/byop) — 手数料なしの価格モデルの詳細
+- [プロバイダー認証情報カタログ](/docs/platform/integrations/providers)
+- [Webhook のセットアップ](/docs/platform/integrations/webhooks)
