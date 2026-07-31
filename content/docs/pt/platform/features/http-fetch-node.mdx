@@ -19,9 +19,9 @@ O HTTP Fetch resolve isso buscando dados em tempo real exatamente no momento em 
 
 ```mermaid
 flowchart LR
-  T[Gatilho: order.shipped] --> F[Busca HTTP: API da operadora]
-  F -->|mesclar em data.tracking| E[Canal de E-mail]
-  E --> Out[Enviar com URL de rastreamento em tempo real]
+  T(Gatilho: order.shipped) --> F(Busca HTTP: API da operadora)
+  F -->|mesclar em data.tracking| E(Canal de E-mail)
+  E --> Out(Enviar com URL de rastreamento em tempo real)
 ```
 
 ## Configuração

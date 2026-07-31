@@ -20,12 +20,12 @@ O **Modo Sandbox** é ativado automaticamente para todos os canais externos no a
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar workflow em Dev] --> Compile[Compilar layout e modelos]
+  Trigger(Disparar workflow em Dev) --> Compile(Compilar layout e modelos)
   Compile --> Dispatch{Sandbox ativo?}
-  Dispatch -->|Sim| Simulate[Publicar evento sandbox_delivery]
-  Simulate --> Log[Definir status como DELIVERED e registrar SANDBOX_DELIVERED]
-  Dispatch -->|Não| Live[Chamar API do SendGrid / Twilio]
-  Live --> LogLive[Definir status como DISPATCHED]
+  Dispatch -->|Sim| Simulate(Publicar evento sandbox_delivery)
+  Simulate --> Log(Definir status como DELIVERED e registrar SANDBOX_DELIVERED)
+  Dispatch -->|Não| Live(Chamar API do SendGrid / Twilio)
+  Live --> LogLive(Definir status como DISPATCHED)
 ```
 
 ---

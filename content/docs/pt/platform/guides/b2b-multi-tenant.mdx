@@ -14,12 +14,12 @@ Se o seu produto atende a várias empresas, o recurso de **Tenants** (inquilinos
 ```mermaid
 flowchart TB
   subgraph Your SaaS [Seu SaaS]
-    App[Sua aplicação]
+    App(Sua aplicação)
   end
   subgraph Nexus Workspace [Workspace do Nexus]
-    T1[Tenant: acme]
-    T2[Tenant: globex]
-    W[Motor de workflow]
+    T1(Tenant: acme)
+    T2(Tenant: globex)
+    W(Motor de workflow)
   end
   App ---->|gatilho + tenant: tenant_acme| T1
   App ---->|gatilho + tenant: tenant_globex| T2

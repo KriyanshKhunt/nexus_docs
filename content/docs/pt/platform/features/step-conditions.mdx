@@ -13,9 +13,9 @@ Quando o mecanismo de workflow atinge uma etapa que possui condições configura
 
 ```mermaid
 flowchart LR
-  Trigger --> Eval{Avaliar condições}
-  Eval -->|true| Execute[Executar etapa]
-  Eval -->|false| Skip[Registrar CONDITION_SKIPPED → próxima etapa]
+  Trigger(Trigger) --> Eval{Avaliar condições}
+  Eval -->|true| Execute(Executar etapa)
+  Eval -->|false| Skip(Registrar CONDITION_SKIPPED → próxima etapa)
 ```
 
 ## Estrutura da Condição

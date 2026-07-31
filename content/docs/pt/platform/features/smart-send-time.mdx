@@ -18,14 +18,14 @@ O **Smart Send-Time** é um recurso de aprendizado de máquina (machine learning
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar Workflow] --> Channel{A etapa de canal tem smartTiming: true?}
-  Channel -->|Não| Send[Despachar imediatamente]
+  Trigger(Disparar Workflow) --> Channel{A etapa de canal tem smartTiming: true?}
+  Channel -->|Não| Send(Despachar imediatamente)
   Channel -->|Sim| CheckExclusions{Verificar exclusões}
   CheckExclusions -->|Corresponde a excluído| Send
   CheckExclusions -->|Elegível| Optimal{Hora atual == hora ideal?}
   Optimal -->|Sim| Send
-  Optimal -->|Não| Delay[Calcular atraso em ms]
-  Delay --> Queue[Enfileirar job atrasado e status: QUEUED]
+  Optimal -->|Não| Delay(Calcular atraso em ms)
+  Delay --> Queue(Enfileirar job atrasado e status: QUEUED)
   Queue -->|Hora ideal se abre| Send
 ```
 

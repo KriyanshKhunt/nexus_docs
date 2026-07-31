@@ -15,12 +15,12 @@ O nó de **Digest** intercepta a execução do workflow, armazena o contexto do 
 
 ```mermaid
 flowchart TD
-  T1[Gatilho 1] --> D[Nó de Digest]
-  T2[Gatilho 2] --> D
-  T3[Gatilho 3] --> D
+  T1(Gatilho 1) --> D(Nó de Digest)
+  T2(Gatilho 2) --> D
+  T3(Gatilho 3) --> D
   D -->|Acumular no Redis| Redis[(Lista do Redis)]
-  Redis -->|Liberar windowMinutes| Compile[Compilar modelo de resumo]
-  Compile --> Channel[E-mail / SMS / Push]
+  Redis -->|Liberar windowMinutes| Compile(Compilar modelo de resumo)
+  Compile --> Channel(E-mail / SMS / Push)
 ```
 
 ### Configuração
@@ -32,7 +32,7 @@ flowchart TD
 ### Como Funciona
 
 1. Quando um disparo atinge o nó de digest, o worker insere `{ logId, at, data }` na chave do Redis `digest:<workflowId>:<subscriberId>:<nodeId>`.
-2. O status do log é definido como `QUEUED_IN_DIGEST` e a execução é adiada (`deferred: true`). O ciclo de vida registra `DIGEST_HELD`.
+2. O status do log é definido como `QUEUED_IN_DIGEST` e a execução é adiada (`deferred: true`). El ciclo de vida registra `DIGEST_HELD`.
 3. Um job atrasado do BullMQ é agendado com o `jobId: "digest:<workflowId>:<nodeId>"` correspondente aos `windowMinutes` definidos.
 4. Quando o job é executado, ele limpa e lê a lista, atualiza o ciclo de vida para `DIGEST_FLUSH` e injeta um objeto `digest` consolidado no contexto do Handlebars:
 
@@ -71,11 +71,11 @@ O nó de **Throttle** limita a taxa de envio de notificações rastreando a freq
 
 ```mermaid
 flowchart TD
-  Trigger[Gatilho] --> Throttle{Contagem > maxCount?}
-  Throttle -->|Não| Pass[Etapa de entrega]
+  Trigger(Gatilho) --> Throttle{Contagem > maxCount?}
+  Throttle -->|Não| Pass(Etapa de entrega)
   Throttle -->|Sim| Divert{divertToDigest?}
-  Divert -->|Sim| Queue[Desviar para lista de Digest]
-  Divert -->|Não| Drop[Descartar / Status: SKIPPED_BY_PREFERENCE]
+  Divert -->|Sim| Queue(Desviar para lista de Digest)
+  Divert -->|Não| Drop(Descartar / Status: SKIPPED_BY_PREFERENCE)
 ```
 
 ### Configuração

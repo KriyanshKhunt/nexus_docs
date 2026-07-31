@@ -19,12 +19,12 @@ Os objetos movem esse relacionamento para dentro do Nexus, permitindo que um ún
 
 ```mermaid
 flowchart LR
-  App[Sua app] -->|disparar em objeto| Nexus[API do Nexus]
+  App(Sua app) -->|disparar em objeto| Nexus(API do Nexus)
   Nexus -->|resolver inscritos| DB[(Tabela ObjectSubscription)]
-  DB --> W[Motor de workflow]
-  W --> U1[Notificação do Usuário A]
-  W --> U2[Notificação do Usuário B]
-  W --> U3[Notificação do Usuário C]
+  DB --> W(Motor de workflow)
+  W --> U1(Notificação do Usuário A)
+  W --> U2(Notificação do Usuário B)
+  W --> U3(Notificação do Usuário C)
 ```
 
 ## Conceitos

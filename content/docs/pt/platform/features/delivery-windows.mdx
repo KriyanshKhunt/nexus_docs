@@ -9,10 +9,10 @@ O nó de **Janela de Entrega** (Delivery Window) verifica o horário local do in
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar notificação] --> Check{O horário local está dentro da janela?}
-  Check -->|Sim| Deliver[Entregar imediatamente]
-  Check -->|Não| Delay[Calcular atraso em ms]
-  Delay --> Queue[Agendar job atrasado no BullMQ]
+  Trigger(Disparar notificação) --> Check{O horário local está dentro da janela?}
+  Check -->|Sim| Deliver(Entregar imediatamente)
+  Check -->|Não| Delay(Calcular atraso em ms)
+  Delay --> Queue(Agendar job atrasado no BullMQ)
   Queue -->|Janela se abre| Deliver
 ```
 

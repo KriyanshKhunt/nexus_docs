@@ -9,13 +9,13 @@ O nó de **Failover** garante que alertas críticos cheguem aos seus inscritos p
 
 ```mermaid
 flowchart TD
-  Trigger[Nó do Gatilho] --> FailoverNode[Nó de Failover]
-  FailoverNode --> Primary[Executar canal primário]
+  Trigger(Nó do Gatilho) --> FailoverNode(Nó de Failover)
+  FailoverNode --> Primary(Executar canal primário)
   Primary -->|Sucesso| Check{Existe fallback?}
-  Primary -->|Falha imediata| RunFallback[Executar canal de fallback]
-  Check -->|Sim| Wait[Agendar job de timeout e registrar FAILOVER_WAIT]
-  Wait -->|Confirmação de leitura recebida| Cancel[Cancelar job de timeout e registrar FAILOVER_READ_RECEIVED]
-  Wait -->|Timeout expirou| Timeout[Registrar FAILOVER_TIMEOUT e FAILOVER_FALLBACK]
+  Primary -->|Falha imediata| RunFallback(Executar canal de fallback)
+  Check -->|Sim| Wait(Agendar job de timeout e registrar FAILOVER_WAIT)
+  Wait -->|Confirmação de leitura recebida| Cancel(Cancelar job de timeout e registrar FAILOVER_READ_RECEIVED)
+  Wait -->|Timeout expirou| Timeout(Registrar FAILOVER_TIMEOUT e FAILOVER_FALLBACK)
   Timeout --> RunFallback
 ```
 

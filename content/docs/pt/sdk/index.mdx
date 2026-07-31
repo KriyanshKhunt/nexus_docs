@@ -74,21 +74,21 @@ O diagrama a seguir rastreia os limites das transações entre os envios do lado
 ```mermaid
 flowchart TD
   subgraph Server Environment [Entorno do Servidor]
-    App[Seu Servidor de App] -->|1. Inicializar SDK com sk_*| SDK[SDK Node.js]
-    SDK -->|2. Disparar Workflow| API[API REST do Nexus]
+    App(Seu Servidor de App) -->|1. Inicializar SDK com sk_*| SDK(SDK Node.js)
+    SDK -->|2. Disparar Workflow| API(API REST do Nexus)
     SDK -->|3. Gerar HMAC| App
   end
 
   subgraph Client Environment [Entorno do Cliente]
-    App -->|4. Passar subscriberId + HMAC| FE[App no Navegador]
-    FE -->|5. Conectar WebSocket com pk_*| WebHost[Gateway Socket.IO]
+    App -->|4. Passar subscriberId + HMAC| FE(App no Navegador)
+    FE -->|5. Conectar WebSocket com pk_*| WebHost(Gateway Socket.IO)
   end
 
   subgraph Background Processing [Processamento em Segundo Plano]
     API -->|6. Enfileirar Job| Q[(Fila do Redis)]
-    Q -->|7. Processamento de Workers| Workers[Workers Assíncronos]
+    Q -->|7. Processamento de Workers| Workers(Workers Assíncronos)
     Workers -->|8. Enviar Evento ao Vivo| WebHost
-    Workers -->|9. Despachar Chamada à Operadora| Carriers["Provedores (Twilio/SendGrid)"]
+    Workers -->|9. Despachar Chamada à Operadora| Carriers("Provedores (Twilio/SendGrid)")
   end
 
   WebHost -->|10. Transmitir para o Feed| FE

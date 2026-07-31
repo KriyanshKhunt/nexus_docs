@@ -155,10 +155,10 @@ description: Entrega inteligente, mensagens de produto, inteligência de fluxo d
 
 ```mermaid
 flowchart LR
-  T[Gatilho] --> P{Presença?}
-  P -->|Online| I[Apenas In-App]
-  P -->|Offline| S[Smart timing]
-  S --> W[Janela de entrega]
-  W --> C[Despacho de canal]
-  C --> F[Monitor de Failover]
+  T(Gatilho) --> P{Presença?}
+  P -->|Online| I(Apenas In-App)
+  P -->|Offline| S(Smart timing)
+  S --> W(Janela de entrega)
+  W --> C(Despacho de canal)
+  C --> F(Monitor de Failover)
 ```

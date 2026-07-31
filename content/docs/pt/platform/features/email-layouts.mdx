@@ -78,12 +78,12 @@ Altere a parcial uma única vez — todos os modelos que a utilizam serão atual
 
 ```mermaid
 flowchart TD
-  T[HTML do modelo de e-mail] --> P[Resolver parciais]
-  P --> C[Compilar Handlebars — inscrito + dados do disparo]
-  C --> L[Envolver no HTML do layout ativo]
-  L --> B[Injetar variáveis de marca do tenant]
-  B --> H[Compilar Handlebars do layout]
-  H --> Out[HTML final enviado ao provedor de e-mail]
+  T(HTML do modelo de e-mail) --> P(Resolver parciais)
+  P --> C(Compilar Handlebars — inscrito + dados do disparo)
+  C --> L(Envolver no HTML do layout ativo)
+  L --> B(Injetar variáveis de marca do tenant)
+  B --> H(Compilar Handlebars do layout)
+  H --> Out(HTML final enviado ao provedor de e-mail)
 ```
 
 ## Atribuir um Layout a um Workflow

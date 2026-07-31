@@ -40,10 +40,10 @@ Com o BYOP, você não depende de uma única operadora. Você pode configurar v�
 
 ```mermaid
 flowchart TD
-    Trigger[Execução do Nó de E-mail] --> Router{Roteador Ponderado}
-    Router -->|70% Tráfego| SG[Adaptador do SendGrid]
-    Router -->|30% Tráfego| RS[Adaptador do Resend]
-    SG -->|Falha / Timeout| Fallback[Failover para o Resend]
+    Trigger(Execução do Nó de E-mail) --> Router{Roteador Ponderado}
+    Router -->|70% Tráfego| SG(Adaptador do SendGrid)
+    Router -->|30% Tráfego| RS(Adaptador do Resend)
+    SG -->|Falha / Timeout| Fallback(Failover para o Resend)
 ```
 
 - **Roteamento Ponderado**: Aloque `70%` do tráfego de e-mail para o SendGrid e `30%` para o Resend para manter seus endereços de IP aquecidos (warm IPs) em múltiplos fornecedores.

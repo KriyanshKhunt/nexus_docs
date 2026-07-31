@@ -48,9 +48,9 @@ Você pode anexar regras booleanas a **qualquer nó** dentro da sua árvore visu
 
 ```mermaid
 flowchart TD
-    Node[Nó de E-mail] --> Check{Condição: data.isAdmin == true}
-    Check -->|True| Send[Enviar E-mail]
-    Check -->|False| Skip[Pular & Continuar Pipeline]
+    Node(Nó de E-mail) --> Check{Condição: data.isAdmin == true}
+    Check -->|True| Send(Enviar E-mail)
+    Check -->|False| Skip(Pular & Continuar Pipeline)
 ```
 
 Exemplos de regras verificam parâmetros de:

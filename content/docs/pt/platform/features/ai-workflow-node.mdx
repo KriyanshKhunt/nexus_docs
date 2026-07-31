@@ -17,10 +17,10 @@ O **Nó de IA** chama um LLM configurado (OpenAI ou Anthropic) durante a execuç
 
 ```mermaid
 flowchart LR
-  T[Dados de gatilho + Inscrito] --> P[Compilar prompt com Handlebars]
-  P --> LLM[Chamar LLM: OpenAI / Anthropic]
-  LLM -->|Resposta JSON| D[Armazenar sob data.responseKey]
-  D --> Step[Etapas seguintes usam data.responseKey]
+  T(Dados de gatilho + Inscrito) --> P(Compilar prompt com Handlebars)
+  P --> LLM(Chamar LLM: OpenAI / Anthropic)
+  LLM -->|Resposta JSON| D(Armazenar sob data.responseKey)
+  D --> Step(Etapas seguintes usam data.responseKey)
 ```
 
 O LLM é instruído por meio de um prompt de sistema fixo a sempre retornar um **objeto JSON válido**. A resposta é analisada e armazenada sob `data.<responseKey>`.
@@ -66,10 +66,10 @@ Subject: {{ data.copy.subject }}
 
 ```mermaid
 flowchart TD
-  AI[Nó de IA: classificar risco de cancelamento] --> C{data.risk.level}
-  C -->|alto| SMS[SMS urgente + oferta de retenção]
-  C -->|médio| Email[E-mail padrão de reengajamento]
-  C -->|baixo| Skip[Nenhuma notificação]
+  AI(Nó de IA: classificar risco de cancelamento) --> C{data.risk.level}
+  C -->|alto| SMS(SMS urgente + oferta de retenção)
+  C -->|médio| Email(E-mail padrão de reengajamento)
+  C -->|baixo| Skip(Nenhuma notificação)
 ```
 
 **Prompt:**

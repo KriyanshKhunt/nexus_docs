@@ -86,16 +86,16 @@ El endpoint de trigger devuelve un payload **HTTP 202 Accepted** en menos de 10m
 
 ```mermaid
 flowchart TD
-    App[Seu Backend SDK] -->|POST trigger event| API[Express API Gateway]
+    App(Seu Backend SDK) -->|POST trigger event| API(Express API Gateway)
     API -->|1. Validar Chave API e Esquema| DB[(PostgreSQL)]
-    API -->|2. Enfileirar Trabalho de Ingestão| Q[Redis / BullMQ]
+    API -->|2. Enfileirar Trabalho de Ingestão| Q(Redis / BullMQ)
     API -->|3. Sub-10ms 202 Accepted| App
-    Q --> Worker[Async Worker Cluster]
+    Q --> Worker(Async Worker Cluster)
     Worker -->|Ler Preferências do Inscrito| DB
     Worker --> Presence{Usuário está Online?}
-    Presence -->|Sim| InApp[In-App WebSocket Gateway]
-    Presence -->|Não / Fallback| Carriers[Weighted Provider Dispatcher]
-    Carriers --> CarrierAPIs[SendGrid / Twilio / FCM / Resend]
+    Presence -->|Sim| InApp(In-App WebSocket Gateway)
+    Presence -->|Não / Fallback| Carriers(Weighted Provider Dispatcher)
+    Carriers --> CarrierAPIs(SendGrid / Twilio / FCM / Resend)
 ```
 
 ---
