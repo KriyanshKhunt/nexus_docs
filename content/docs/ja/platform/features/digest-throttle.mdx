@@ -13,12 +13,12 @@ Nexus には、リアルタイムコーディネーターとして Redis を使�
 
 ```mermaid
 flowchart TD
-  T1[トリガー 1] --> D[Digest ノード]
-  T2[トリガー 2] --> D
-  T3[トリガー 3] --> D
+  T1(トリガー 1) --> D(Digest ノード)
+  T2(トリガー 2) --> D
+  T3(トリガー 3) --> D
   D -->|Redis に蓄積| Redis[(Redis リスト)]
-  Redis -->|windowMinutes 経過後にフラッシュ| Compile[要約テンプレートをコンパイル]
-  Compile --> Channel[Email / SMS / Push]
+  Redis -->|windowMinutes 経過後にフラッシュ| Compile(要約テンプレートをコンパイル)
+  Compile --> Channel(Email / SMS / Push)
 ```
 
 ### 構成
@@ -69,11 +69,11 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  Trigger[トリガー] --> Throttle{送信件数 > maxCount?}
-  Throttle -->|いいえ| Pass[配信ステップを実行]
+  Trigger(トリガー) --> Throttle{送信件数 > maxCount?}
+  Throttle -->|いいえ| Pass(配信ステップを実行)
   Throttle -->|はい| Divert{divertToDigest が有効?}
-  Divert -->|はい| Queue[Digest リストへ迂回]
-  Divert -->|いいえ| Drop[破棄 / ステータス: SKIPPED_BY_PREFERENCE]
+  Divert -->|はい| Queue(Digest リストへ迂回)
+  Divert -->|いいえ| Drop(破棄 / ステータス: SKIPPED_BY_PREFERENCE)
 ```
 
 ### 構成

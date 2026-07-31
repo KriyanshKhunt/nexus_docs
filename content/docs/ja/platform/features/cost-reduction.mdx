@@ -15,9 +15,9 @@ Nexus には、不要な通知の送信費用を自動的に削減するよう�
 
 ```mermaid
 flowchart TD
-  Trigger[ワークフローの開始] --> Check{ユーザーはオンライン?}
-  Check -->|はい| Suppress[アプリ内通知のみ送信]
-  Check -->|いいえ| Dispatch[Email / SMS / Push / WhatsApp 配信]
+  Trigger(ワークフローの開始) --> Check{ユーザーはオンライン?}
+  Check -->|はい| Suppress(アプリ内通知のみ送信)
+  Check -->|いいえ| Dispatch(Email / SMS / Push / WhatsApp 配信)
 ```
 
 ### 抑制可能なチャネル

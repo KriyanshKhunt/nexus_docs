@@ -18,10 +18,10 @@ description: ワークフロー内でのランタイム LLM 実行 — ユーザ
 
 ```mermaid
 flowchart LR
-  T[トリガーデータ + サブスクライバー] --> P[Handlebars によるプロンプトのコンパイル]
-  P --> LLM[LLMの呼び出し: OpenAI / Anthropic]
-  LLM -->|JSON 応答| D[data.responseKey に保存]
-  D --> Step[下流のステップで data.responseKey を使用]
+  T(トリガーデータ + サブスクライバー) --> P(Handlebars によるプロンプトのコンパイル)
+  P --> LLM(LLMの呼び出し: OpenAI / Anthropic)
+  LLM -->|JSON 応答| D(data.responseKey に保存)
+  D --> Step(下流のステップで data.responseKey を使用)
 ```
 
 LLM は、常に**有効な JSON オブジェクト**を返すように固定のシステムプロンプトを通じて指示されます。応答は解析され、`data.<responseKey>` の下に格納されます。
@@ -72,10 +72,10 @@ Subject: {{ data.copy.subject }}
 
 ```mermaid
 flowchart TD
-  AI[AIノード: 解約リスクの分類] --> C{data.risk.level}
-  C -->|高| SMS[緊急 SMS + 引き止めオファー]
-  C -->|中| Email[通常の再エンゲージメントメール]
-  C -->|低| Skip[通知なし]
+  AI(AIノード: 解約リスクの分類) --> C{data.risk.level}
+  C -->|高| SMS(緊急 SMS + 引き止めオファー)
+  C -->|中| Email(通常の再エンゲージメントメール)
+  C -->|低| Skip(通知なし)
 ```
 
 **プロンプト:**

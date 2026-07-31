@@ -19,9 +19,9 @@ HTTP Fetch は、通知がアセンブル（構築）されるまさにその瞬
 
 ```mermaid
 flowchart LR
-  T[トリガー: order.shipped] --> F[HTTP Fetch: プロバイダーAPI]
-  F -->|data.tracking にマージ| E[Email チャネル]
-  E --> Out[最新の追跡 URL で送信]
+  T(トリガー: order.shipped) --> F(HTTP Fetch: プロバイダーAPI)
+  F -->|data.tracking にマージ| E(Email チャネル)
+  E --> Out(最新の追跡 URL で送信)
 ```
 
 ---

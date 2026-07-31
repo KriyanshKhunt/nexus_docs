@@ -7,10 +7,10 @@ description: タイムゾーンを考慮した静止時間設定 — サブス�
 
 ```mermaid
 flowchart TD
-  Trigger[通知のトリガー] --> Check{ローカル時間は配信枠内?}
-  Check -->|はい| Deliver[即座に配信]
-  Check -->|いいえ| Delay[ミリ秒単位の遅延を計算]
-  Delay --> Queue[BullMQ に遅延ジョブをスケジュール]
+  Trigger(通知のトリガー) --> Check{ローカル時間は配信枠内?}
+  Check -->|はい| Deliver(即座に配信)
+  Check -->|いいえ| Delay(ミリ秒単位の遅延を計算)
+  Delay --> Queue(BullMQ に遅延ジョブをスケジュール)
   Queue -->|配信枠がオープン| Deliver
 ```
 

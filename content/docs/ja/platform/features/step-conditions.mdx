@@ -13,9 +13,9 @@ description: ワークフロー内の任意のノードに対するブール値�
 
 ```mermaid
 flowchart LR
-  Trigger --> Eval{条件の評価}
-  Eval -->|true| Execute[ステップの実行]
-  Eval -->|false| Skip[CONDITION_SKIPPED を記録 → 次のステップへ]
+  Trigger(Trigger) --> Eval{条件の評価}
+  Eval -->|true| Execute(ステップの実行)
+  Eval -->|false| Skip(CONDITION_SKIPPED を記録 → 次のステップへ)
 ```
 
 ---

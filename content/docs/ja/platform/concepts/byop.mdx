@@ -40,10 +40,10 @@ BYOP を使用すると、単一の通信事業者に依存する必要がなく
 
 ```mermaid
 flowchart TD
-    Trigger[Emailノードの実行] --> Router{重み付きルーター}
-    Router -->|70%のトラフィック| SG[SendGrid アダプター]
-    Router -->|30%のトラフィック| RS[Resend アダプター]
-    SG -->|失敗 / タイムアウト| Fallback[Resendへのフェイルオーバー]
+    Trigger(Emailノードの実行) --> Router{重み付きルーター}
+    Router -->|70%のトラフィック| SG(SendGrid アダプター)
+    Router -->|30%のトラフィック| RS(Resend アダプター)
+    SG -->|失敗 / タイムアウト| Fallback(Resendへのフェイルオーバー)
 ```
 
 - **重み付きルーティング**: メールの 70% を SendGrid に、30% を Resend にルーティングすることで、複数のプロバイダーの IP アドレスのウォームアップ状態を適切に維持できます。

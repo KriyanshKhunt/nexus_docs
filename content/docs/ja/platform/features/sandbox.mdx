@@ -18,12 +18,12 @@ description: 実際のプロバイダー API を呼び出すことなく、開�
 
 ```mermaid
 flowchart TD
-  Trigger[開発環境でワークフローをトリガー] --> Compile[レイアウト & テンプレートをコンパイル]
+  Trigger(開発環境でワークフローをトリガー) --> Compile(レイアウト & テンプレートをコンパイル)
   Compile --> Dispatch{サンドボックスが有効?}
-  Dispatch -->|はい| Simulate[sandbox_delivery イベントを発行]
-  Simulate --> Log[ステータスを DELIVERED に設定 & SANDBOX_DELIVERED を記録]
-  Dispatch -->|いいえ| Live[SendGrid / Twilio API の呼び出し]
-  Live --> LogLive[ステータスを DISPATCHED に設定]
+  Dispatch -->|はい| Simulate(sandbox_delivery イベントを発行)
+  Simulate --> Log(ステータスを DELIVERED に設定 & SANDBOX_DELIVERED を記録)
+  Dispatch -->|いいえ| Live(SendGrid / Twilio API の呼び出し)
+  Live --> LogLive(ステータスを DISPATCHED に設定)
 ```
 
 ---

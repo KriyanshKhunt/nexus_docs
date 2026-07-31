@@ -14,12 +14,12 @@ description: 顧客ごとのホワイトレーベル通知 — テナントご�
 ```mermaid
 flowchart TB
   subgraph Your SaaS [あなたのSaaS]
-    App[あなたのアプリケーション]
+    App(あなたのアプリケーション)
   end
   subgraph Nexus Workspace [Nexus ワークスペース]
-    T1[テナント: acme]
-    T2[テナント: globex]
-    W[ワークフローエンジン]
+    T1(テナント: acme)
+    T2(テナント: globex)
+    W(ワークフローエンジン)
   end
   App ---->|トリガー + tenant: tenant_acme| T1
   App ---->|トリガー + tenant: tenant_globex| T2

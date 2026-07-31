@@ -18,10 +18,10 @@ description: オーディエンスセグメントに対してダッシュボー�
 
 ```mermaid
 flowchart LR
-  PM[プロダクトマネージャー] -->|ブロードキャストの作成| Dash[ダッシュボード]
-  Dash -->|送信時にオーディエンスを解決| Aud[オーディエンスエンジン]
-  Aud -->|バッチ単位でファンアウト| Worker[ワークフローワーカー]
-  Worker --> Ch[Email / SMS / Push / In-App]
+  PM(プロダクトマネージャー) -->|ブロードキャストの作成| Dash(ダッシュボード)
+  Dash -->|送信時にオーディエンスを解決| Aud(オーディエンスエンジン)
+  Aud -->|バッチ単位でファンアウト| Worker(ワークフローワーカー)
+  Worker --> Ch(Email / SMS / Push / In-App)
 ```
 
 ---

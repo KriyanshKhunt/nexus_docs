@@ -7,13 +7,13 @@ description: プライマリ配信が失敗したとき、サーキットブレ�
 
 ```mermaid
 flowchart TD
-  Trigger[トリガーノード] --> FailoverNode[フェイルオーバーノード]
-  FailoverNode --> Primary[プライマリチャネルの実行]
+  Trigger(トリガーノード) --> FailoverNode(フェイルオーバーノード)
+  FailoverNode --> Primary(プライマリチャネルの実行)
   Primary -->|成功| Check{フォールバック先が存在する?}
-  Primary -->|即時失敗| RunFallback[フォールバックチャネルの実行]
-  Check -->|はい| Wait[タイムアウトジョブをスケジュール & FAILOVER_WAIT を記録]
-  Wait -->|既読の確認応答を受信| Cancel[タイムアウトジョブをキャンセル & FAILOVER_READ_RECEIVED を記録]
-  Wait -->|タイムアウト満了| Timeout[FAILOVER_TIMEOUT & FAILOVER_FALLBACK を記録]
+  Primary -->|即時失敗| RunFallback(フォールバックチャネルの実行)
+  Check -->|はい| Wait(タイムアウトジョブをスケジュール & FAILOVER_WAIT を記録)
+  Wait -->|既読の確認応答を受信| Cancel(タイムアウトジョブをキャンセル & FAILOVER_READ_RECEIVED を記録)
+  Wait -->|タイムアウト満了| Timeout(FAILOVER_TIMEOUT & FAILOVER_FALLBACK を記録)
   Timeout --> RunFallback
 ```
 

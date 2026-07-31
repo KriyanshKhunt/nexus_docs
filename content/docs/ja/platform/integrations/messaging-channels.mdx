@@ -16,11 +16,11 @@ Nexus には、**Slack**、**Discord**、および **Microsoft Teams** 向けの
 
 ```mermaid
 flowchart TD
-  Trigger[チャットステップの起動] --> Sub{カスタム Webhook を設定済み?}
-  Sub -->|はい| Custom[ユーザーの接続 URL を使用]
+  Trigger(チャットステップの起動) --> Sub{カスタム Webhook を設定済み?}
+  Sub -->|はい| Custom(ユーザーの接続 URL を使用)
   Sub -->|いいえ| Fallback{組織のインテグレーションが有効?}
-  Fallback -->|はい| Default[組織のデフォルト Webhook URL を使用]
-  Fallback -->|いいえ| Fail[PROVIDER_ERROR を記録 & ステップ失敗]
+  Fallback -->|はい| Default(組織のデフォルト Webhook URL を使用)
+  Fallback -->|いいえ| Fail(PROVIDER_ERROR を記録 & ステップ失敗)
 ```
 
 ---

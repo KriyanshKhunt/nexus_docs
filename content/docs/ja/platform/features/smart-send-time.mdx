@@ -18,14 +18,14 @@ description: AI を活用した配信タイミング最適化 — 各サブス�
 
 ```mermaid
 flowchart TD
-  Trigger[ワークフローのトリガー] --> Channel{チャネルステップは smartTiming: true?}
-  Channel -->|いいえ| Send[即座に発送]
+  Trigger(ワークフローのトリガー) --> Channel{チャネルステップは smartTiming: true?}
+  Channel -->|いいえ| Send(即座に発送)
   Channel -->|はい| CheckExclusions{除外条件の確認}
   CheckExclusions -->|除外に一致| Send
   CheckExclusions -->|対象| Optimal{現在時刻 == 最適な時刻?}
   Optimal -->|はい| Send
-  Optimal -->|いいえ| Delay[ミリ秒単位の遅延を計算]
-  Delay --> Queue[遅延ジョブをキューイング & ステータス: QUEUED]
+  Optimal -->|いいえ| Delay(ミリ秒単位の遅延を計算)
+  Delay --> Queue(遅延ジョブをキューイング & ステータス: QUEUED)
   Queue -->|最適な時刻に到達| Send
 ```
 

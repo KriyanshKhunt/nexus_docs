@@ -74,21 +74,21 @@ Nexus Signal を開発スタックに統合するための、公式のライブ�
 ```mermaid
 flowchart TD
   subgraph Server Environment [サーバー環境]
-    App[アプリサーバー] -->|1. sk_* でSDKを初期化| SDK[Node.js SDK]
-    SDK -->|2. ワークフローをトリガー| API[Nexus REST API]
+    App(アプリサーバー) -->|1. sk_* でSDKを初期化| SDK(Node.js SDK)
+    SDK -->|2. ワークフローをトリガー| API(Nexus REST API)
     SDK -->|3. HMAC署名を生成| App
   end
 
   subgraph Client Environment [クライアント環境]
-    App -->|4. subscriberId + HMACを渡す| FE[ブラウザアプリケーション]
-    FE -->|5. pk_* でWebSocket接続| WebHost[Socket.IO ゲートウェイ]
+    App -->|4. subscriberId + HMACを渡す| FE(ブラウザアプリケーション)
+    FE -->|5. pk_* でWebSocket接続| WebHost(Socket.IO ゲートウェイ)
   end
 
   subgraph Background Processing [バックグラウンド処理]
     API -->|6. ジョブをキューイング| Q[(Redisキュー)]
-    Q -->|7. ワーカーによる処理| Workers[非同期ワーカー]
+    Q -->|7. ワーカーによる処理| Workers(非同期ワーカー)
     Workers -->|8. ライブイベントの送信| WebHost
-    Workers -->|9. プロバイダーの呼び出し| Carriers["プロバイダー (Twilio/SendGrid)"]
+    Workers -->|9. プロバイダーの呼び出し| Carriers("プロバイダー (Twilio/SendGrid)")
   end
 
   WebHost -->|10. フィードへのストリーム配信| FE
