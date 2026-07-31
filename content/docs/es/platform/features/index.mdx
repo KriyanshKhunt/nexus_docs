@@ -153,10 +153,10 @@ description: Entrega inteligente, mensajería de producto, inteligencia de workf
 
 ```mermaid
 flowchart LR
-  T[Trigger] --> P{¿Presencia?}
-  P -->|En línea| I[Solo In-App]
-  P -->|Fuera de línea| S[Temporización inteligente]
-  S --> W[Ventana de entrega]
-  W --> C[Despacho de canal]
-  C --> F[Vigilancia de failover]
+  T(Trigger) --> P{¿Presencia?}
+  P -->|En línea| I(Solo In-App)
+  P -->|Fuera de línea| S(Temporización inteligente)
+  S --> W(Ventana de entrega)
+  W --> C(Despacho de canal)
+  C --> F(Vigilancia de failover)
 ```

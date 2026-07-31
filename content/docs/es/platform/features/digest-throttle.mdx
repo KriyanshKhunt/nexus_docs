@@ -13,12 +13,12 @@ El nodo **Digest** intercepta la ejecución del workflow, inserta el contexto de
 
 ```mermaid
 flowchart TD
-  T1[Trigger 1] --> D[Nodo Digest]
-  T2[Trigger 2] --> D
-  T3[Trigger 3] --> D
+  T1(Trigger 1) --> D(Nodo Digest)
+  T2(Trigger 2) --> D
+  T3(Trigger 3) --> D
   D -->|Acumular en Redis| Redis[(Lista de Redis)]
-  Redis -->|Vaciar windowMinutes| Compile[Compilar plantilla de resumen]
-  Compile --> Channel[Email / SMS / Push]
+  Redis -->|Vaciar windowMinutes| Compile(Compilar plantilla de resumen)
+  Compile --> Channel(Email / SMS / Push)
 ```
 
 ### Configuración
@@ -69,11 +69,11 @@ El nodo **Throttle** limita la tasa de notificaciones rastreando la frecuencia d
 
 ```mermaid
 flowchart TD
-  Trigger[Trigger] --> Throttle{¿Count > maxCount?}
-  Throttle -->|No| Pass[Entregar paso]
+  Trigger(Trigger) --> Throttle{¿Count > maxCount?}
+  Throttle -->|No| Pass(Entregar paso)
   Throttle -->|Sí| Divert{¿divertToDigest?}
-  Divert -->|Sí| Queue[Desviar a lista de Digest]
-  Divert -->|No| Drop[Descartar / Estado: SKIPPED_BY_PREFERENCE]
+  Divert -->|Sí| Queue(Desviar a lista de Digest)
+  Divert -->|No| Drop(Descartar / Estado: SKIPPED_BY_PREFERENCE)
 ```
 
 ### Configuración

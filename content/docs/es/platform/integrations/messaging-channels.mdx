@@ -16,11 +16,11 @@ Al despachar notificaciones de chat, Nexus determina qué URL de webhook usar en
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar paso de Chat] --> Sub{¿El suscriptor tiene webhook personalizado?}
-  Sub -->|Sí| Custom[Usar URL de conexión del suscriptor]
+  Trigger(Disparar paso de Chat) --> Sub{¿El suscriptor tiene webhook personalizado?}
+  Sub -->|Sí| Custom(Usar URL de conexión del suscriptor)
   Sub -->|No| Fallback{¿Integración de organización activa?}
-  Fallback -->|Sí| Default[Usar URL de webhook por defecto de la organización]
-  Fallback -->|No| Fail[Registrar PROVIDER_ERROR y fallar el paso]
+  Fallback -->|Sí| Default(Usar URL de webhook por defecto de la organización)
+  Fallback -->|No| Fail(Registrar PROVIDER_ERROR y fallar el paso)
 ```
 
 ---

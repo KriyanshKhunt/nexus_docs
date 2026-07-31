@@ -17,10 +17,10 @@ El **AI Node** realiza una llamada a un LLM configurado (OpenAI o Anthropic) dur
 
 ```mermaid
 flowchart LR
-  T[Datos del Trigger + Suscriptor] --> P[Compilar prompt con Handlebars]
-  P --> LLM[Llamar al LLM: OpenAI / Anthropic]
-  LLM -->|Respuesta JSON| D[Almacenar bajo data.responseKey]
-  D --> Step[Pasos posteriores usan data.responseKey]
+  T(Datos del Trigger + Suscriptor) --> P(Compilar prompt con Handlebars)
+  P --> LLM(Llamar al LLM: OpenAI / Anthropic)
+  LLM -->|Respuesta JSON| D(Almacenar bajo data.responseKey)
+  D --> Step(Pasos posteriores usan data.responseKey)
 ```
 
 El LLM recibe instrucciones a través de un prompt del sistema fijo para devolver siempre un **objeto JSON válido**. La respuesta se analiza y se almacena bajo `data.<responseKey>`.
@@ -72,10 +72,10 @@ Subject: {{ data.copy.subject }}
 
 ```mermaid
 flowchart TD
-  AI[AI Node: clasificar riesgo de abandono] --> C{data.risk.level}
-  C -->|high| SMS[SMS urgente + oferta de retención]
-  C -->|medium| Email[Email estándar de reactivación]
-  C -->|low| Skip[Sin notificación]
+  AI(AI Node: clasificar riesgo de abandono) --> C{data.risk.level}
+  C -->|high| SMS(SMS urgente + oferta de retención)
+  C -->|medium| Email(Email estándar de reactivación)
+  C -->|low| Skip(Sin notificación)
 ```
 
 **Prompt:**

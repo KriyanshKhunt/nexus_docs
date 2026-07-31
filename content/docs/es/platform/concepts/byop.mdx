@@ -40,10 +40,10 @@ Con BYOP, no dependes de un solo operador. Puedes configurar múltiples cuentas 
 
 ```mermaid
 flowchart TD
-    Trigger[Ejecución de nodo de Email] --> Router{Enrutador ponderado}
-    Router -->|70% Tráfico| SG[Adaptador SendGrid]
-    Router -->|30% Tráfico| RS[Adaptador Resend]
-    SG -->|Falla / Tiempo agotado| Fallback[Failover a Resend]
+    Trigger(Ejecución de nodo de Email) --> Router{Enrutador ponderado}
+    Router -->|70% Tráfico| SG(Adaptador SendGrid)
+    Router -->|30% Tráfico| RS(Adaptador Resend)
+    SG -->|Falla / Tiempo agotado| Fallback(Failover a Resend)
 ```
 
 - **Enrutamiento ponderado**: Distribuye el `70%` del tráfico de correo electrónico a SendGrid y el `30%` a Resend para mantener las direcciones IP templadas (warm) entre múltiples proveedores.

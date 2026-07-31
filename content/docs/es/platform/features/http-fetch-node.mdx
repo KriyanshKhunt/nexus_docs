@@ -19,9 +19,9 @@ HTTP Fetch resuelve esto obteniendo datos en vivo exactamente cuando se está en
 
 ```mermaid
 flowchart LR
-  T[Trigger: order.shipped] --> F[HTTP Fetch: API del transportista]
-  F -->|fusionar en data.tracking| E[Canal de Email]
-  E --> Out[Send con URL de seguimiento en vivo]
+  T(Trigger: order.shipped) --> F(HTTP Fetch: API del transportista)
+  F -->|fusionar en data.tracking| E(Canal de Email)
+  E --> Out(Send con URL de seguimiento en vivo)
 ```
 
 ---

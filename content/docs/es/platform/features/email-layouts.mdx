@@ -82,12 +82,12 @@ Cambia el parcial una vez — cada plantilla que lo utilice se actualiza en el p
 
 ```mermaid
 flowchart TD
-  T[HTML de la plantilla de Email] --> P[Resolver parciales]
-  P --> C[Compilar Handlebars — datos del suscriptor + trigger]
-  C --> L[Envolver en el HTML del layout activo]
-  L --> B[Inyectar variables de branding del tenant]
-  B --> H[Compilar Handlebars del layout]
-  H --> Out[HTML final enviado al proveedor de email]
+  T(HTML de la plantilla de Email) --> P(Resolver parciales)
+  P --> C(Compilar Handlebars — datos del suscriptor + trigger)
+  C --> L(Envolver en el HTML del layout activo)
+  L --> B(Inyectar variables de branding del tenant)
+  B --> H(Compilar Handlebars del layout)
+  H --> Out(HTML final enviado al proveedor de email)
 ```
 
 ---

@@ -18,14 +18,14 @@ description: Temporización de entrega con IA — retrasa los despachos para lle
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar Workflow] --> Channel{¿El paso de canal tiene smartTiming: true?}
-  Channel -->|No| Send[Despachar Inmediatamente]
+  Trigger(Disparar Workflow) --> Channel{¿El paso de canal tiene smartTiming: true?}
+  Channel -->|No| Send(Despachar Inmediatamente)
   Channel -->|Sí| CheckExclusions{Verificar Exclusiones}
   CheckExclusions -->|Coincide con Excluido| Send
   CheckExclusions -->|Elegible| Optimal{¿Hora actual == hora óptima?}
   Optimal -->|Sí| Send
-  Optimal -->|No| Delay[Calcular retraso en ms]
-  Delay --> Queue[Poner en cola trabajo diferido y estado: QUEUED]
+  Optimal -->|No| Delay(Calcular retraso en ms)
+  Delay --> Queue(Poner en cola trabajo diferido y estado: QUEUED)
   Queue -->|Se abre la hora óptima| Send
 ```
 

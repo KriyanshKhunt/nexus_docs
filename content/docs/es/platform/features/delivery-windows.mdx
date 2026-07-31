@@ -7,10 +7,10 @@ El paso de **Ventana de entrega** (Delivery Window) comprueba la hora local del 
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar notificación] --> Check{¿La hora local está dentro de la ventana?}
-  Check -->|Sí| Deliver[Entregar inmediatamente]
-  Check -->|No| Delay[Calcular retraso en ms]
-  Delay --> Queue[Programar trabajo diferido en BullMQ]
+  Trigger(Disparar notificación) --> Check{¿La hora local está dentro de la ventana?}
+  Check -->|Sí| Deliver(Entregar inmediatamente)
+  Check -->|No| Delay(Calcular retraso en ms)
+  Delay --> Queue(Programar trabajo diferido en BullMQ)
   Queue -->|Se abre la ventana| Deliver
 ```
 

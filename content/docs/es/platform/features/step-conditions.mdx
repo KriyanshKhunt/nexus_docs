@@ -13,9 +13,9 @@ Cuando el motor de workflows llega a un paso que tiene condiciones configuradas,
 
 ```mermaid
 flowchart LR
-  Trigger --> Eval{Evaluar condiciones}
-  Eval -->|true| Execute[Ejecutar paso]
-  Eval -->|false| Skip[Registrar CONDITION_SKIPPED → siguiente paso]
+  Trigger(Trigger) --> Eval{Evaluar condiciones}
+  Eval -->|true| Execute(Ejecutar paso)
+  Eval -->|false| Skip(Registrar CONDITION_SKIPPED → siguiente paso)
 ```
 
 ---

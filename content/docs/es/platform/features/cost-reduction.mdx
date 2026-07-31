@@ -15,9 +15,9 @@ Cuando un suscriptor tiene una conexión activa del SDK cliente (React, Angular 
 
 ```mermaid
 flowchart TD
-  Trigger[Disparar workflow] --> Check{¿Suscriptor en línea?}
-  Check -->|Sí| Suppress[Solo feed in-app]
-  Check -->|No| Dispatch[Email / SMS / Push / WhatsApp]
+  Trigger(Disparar workflow) --> Check{¿Suscriptor en línea?}
+  Check -->|Sí| Suppress(Solo feed in-app)
+  Check -->|No| Dispatch(Email / SMS / Push / WhatsApp)
 ```
 
 ### Canales suprimibles

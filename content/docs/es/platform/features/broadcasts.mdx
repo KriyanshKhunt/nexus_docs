@@ -18,10 +18,10 @@ Los **broadcasts** permiten a los equipos de producto y marketing enviar anuncio
 
 ```mermaid
 flowchart LR
-  PM[Product manager] -->|crea broadcast| Dash[Panel de control]
-  Dash -->|resolver audiencia al enviar| Aud[Motor de audiencias]
-  Aud -->|envío en abanico por lotes| Worker[Worker de workflow]
-  Worker --> Ch[Email / SMS / Push / In-App]
+  PM(Product manager) -->|crea broadcast| Dash(Panel de control)
+  Dash -->|resolver audiencia al enviar| Aud(Motor de audiencias)
+  Aud -->|envío en abanico por lotes| Worker(Worker de workflow)
+  Worker --> Ch(Email / SMS / Push / In-App)
 ```
 
 ---
