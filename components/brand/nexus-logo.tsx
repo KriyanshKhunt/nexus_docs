@@ -6,15 +6,57 @@ export function NexusLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 834 177"
       fill="none"
-      className={className}
+      className={className || 'h-8 w-auto'}
       {...props}
     >
+      <style>
+        {`@keyframes smoothXLeft45 {
+          0% {
+            transform: translate(-70px, -50px) scale(0.92);
+            opacity: 0;
+          }
+          3% {
+            opacity: 1;
+          }
+          4.5% {
+            transform: translate(2px, 1.5px) scale(1.01);
+          }
+          5.5%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes smoothXRight45 {
+          0%, 0.8% {
+            transform: translate(70px, 50px) scale(0.92);
+            opacity: 0;
+          }
+          3.8% {
+            opacity: 1;
+          }
+          5.3% {
+            transform: translate(-2px, -1.5px) scale(1.01);
+          }
+          6.3%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 1;
+          }
+        }
+        .pro-x-arm1 {
+          transform-origin: 326px 37px;
+          animation: smoothXLeft45 45s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+        }
+        .pro-x-arm2 {
+          transform-origin: 516px 158px;
+          animation: smoothXRight45 45s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+        }`}
+      </style>
       <path
         d="M16 51.3039V139.304H32V55.3039L130 133.804C130 133.804 137 139.971 145 137.304C153 134.637 153 126.304 153 126.304V37.3039H137V117.304L42 41.3039C42 41.3039 34.5 35.3039 25.5 38.8039C16.5 42.3039 16 51.3039 16 51.3039Z"
         fill="currentColor"
         stroke="currentColor"
       />
-      <g>
+      <g className="pro-e">
         <path
           d="M273.5 52.8039H173C173 52.8039 174.75 47.3039 179.5 42.5539C184.25 37.8039 191.5 37.3039 191.5 37.3039H292C292 37.3039 290.25 42.8039 285.5 47.5539C280.75 52.3039 273.5 52.8039 273.5 52.8039Z"
           fill="currentColor"
@@ -40,27 +82,27 @@ export function NexusLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
           stroke="currentColor"
         />
       </g>
-      <g>
+      <g className="pro-x-arm1">
         <path
           d="M394 84.6078L326 37.6078H363C363 37.6078 368.06 38.0606 371 39.3088C373.801 40.4982 377.5 43.6078 377.5 43.6078L430.5 91.1078H411C411 91.1078 406.01 90.6296 403 89.6078C399.193 88.3154 394 84.6078 394 84.6078Z"
-          fill="url(#docs_logo_paint1)"
+          fill="url(#nexus_global_paint1)"
         />
         <path
           d="M394 84.6078L326 37.6078H363C363 37.6078 368.06 38.0606 371 39.3088C373.801 40.4982 377.5 43.6078 377.5 43.6078L430.5 91.1078H411C411 91.1078 406.01 90.6296 403 89.6078C399.193 88.3154 394 84.6078 394 84.6078Z"
           stroke="currentColor"
         />
       </g>
-      <g>
+      <g className="pro-x-arm2">
         <path
           d="M442 105.608H418.5L469 151.608C469 151.608 473.226 155.814 476.5 157.108C479.456 158.276 484.5 158.108 484.5 158.108H516L456 110.608C456 110.608 452.182 107.591 449.5 106.608C446.668 105.57 442 105.608 442 105.608Z"
-          fill="url(#docs_logo_paint0)"
+          fill="url(#nexus_global_paint0)"
         />
         <path
           d="M442 105.608H418.5L469 151.608C469 151.608 473.226 155.814 476.5 157.108C479.456 158.276 484.5 158.108 484.5 158.108H516L456 110.608C456 110.608 452.182 107.591 449.5 106.608C446.668 105.57 442 105.608 442 105.608Z"
           stroke="currentColor"
         />
       </g>
-      <g>
+      <g className="pro-x-arm3">
         <path
           d="M384 92.6079L312 160.608C312 160.608 323 160.582 328.5 159.108C334 157.634 340.5 153.108 340.5 153.108L401.5 106.108L384 92.6079Z"
           fill="currentColor"
@@ -70,7 +112,7 @@ export function NexusLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
           stroke="currentColor"
         />
       </g>
-      <g>
+      <g className="pro-x-arm4">
         <path
           d="M423 68.6079L440.5 82.1079L510 16.1079C510 16.1079 501 15.5153 495.057 17.1079C489.113 18.7004 483 23.1079 483 23.1079L423 68.6079Z"
           fill="currentColor"
@@ -90,30 +132,6 @@ export function NexusLogo({ className, ...props }: SVGProps<SVGSVGElement>) {
         fill="currentColor"
         stroke="currentColor"
       />
-      <defs>
-        <linearGradient
-          id="docs_logo_paint0"
-          x1="326"
-          y1="38"
-          x2="516"
-          y2="158"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#DA5454" />
-          <stop offset="1" stopColor="#581313" />
-        </linearGradient>
-        <linearGradient
-          id="docs_logo_paint1"
-          x1="326"
-          y1="38"
-          x2="516"
-          y2="158"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor="#DA5454" />
-          <stop offset="1" stopColor="#581313" />
-        </linearGradient>
-      </defs>
     </svg>
   );
 }
